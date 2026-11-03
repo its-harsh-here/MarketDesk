@@ -251,3 +251,27 @@ test("production build: SPA deep links load and unknown API routes return JSON 4
   await expect(page.getByRole("button", { name: "Add transaction" })).toBeDisabled();
   await expect(page.getByText(/INR-only with no currency conversion/)).toBeVisible();
 });
+
+test("instrument header: a long symbol never overlaps the price at any width", async ({ page }) => {
+  // Regression: at ~450–550 px and ~1040–1140 px the symbol column shrank below the ticker's width and
+  // RELIANCE.NS ran into the large price figure.
+  await page.goto("/instrument/SX%3AGLASSWING");
+  await expect(page.getByRole("heading", { name: "SX:GLASSWING" })).toBeVisible();
+  await expect(page.locator(".num").filter({ hasText: /^₹[\d,]+\.\d{2}$/ }).first()).toBeVisible();
+  const problems: string[] = [];
+  for (let w = 360; w <= 1400; w += 20) {
+    await page.setViewportSize({ width: w, height: 800 });
+    const r = await page.evaluate(() => {
+      const h1 = document.querySelector("#inst-title")!;
+      const idCol = h1.parentElement!.parentElement!;
+      const price = idCol.nextElementSibling!.getBoundingClientRect();
+      const sameRow = Math.abs(price.top - idCol.getBoundingClientRect().top) < 4;
+      return {
+        overlap: sameRow && h1.getBoundingClientRect().right > price.left + 0.5,
+        pageOverflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+      };
+    });
+    if (r.overlap || r.pageOverflow) problems.push(`${w}px${r.overlap ? " overlap" : ""}${r.pageOverflow ? " page-overflow" : ""}`);
+  }
+  expect(problems).toEqual([]);
+});

@@ -77,7 +77,7 @@ and test the migration on a copy (a Neon branch, or `pg_restore --no-owner --dbn
 | pytest (PostgreSQL 17, scratch DB) | 93 passed, 1 skipped (SQLite-only backup test) |
 | tsc + ESLint | clean |
 | Vitest | 21 passed |
-| Playwright journeys (production build, real API + worker, fixture harness) | 10 passed |
+| Playwright journeys (production build, real API + worker, fixture harness) | 10 passed (11 after the header regression test was added) |
 | Live service | health/readiness/sign-in 200; worker running; DB round trip 1.3 ms |
 
 ## Changes in this session
@@ -99,6 +99,15 @@ and test the migration on a copy (a Neon branch, or `pg_restore --no-owner --dbn
   unchanged). Measured: no table or page overflow at 1280, 1366, 1400, 1440, 1600, 1024, or 390 px. Screenshots
   inspected. Files: `apps/web/src/features/watchlists/WatchlistTable.tsx`, `apps/web/src/components/ui/Panel.tsx`,
   `apps/web/src/features/overview/OverviewPage.tsx`.
+- **Fix (owner screenshot): on Instrument Detail, a long symbol overlapped the large price.** A width sweep
+  (320–1600 px, 10 px steps) showed RELIANCE.NS and HINDUNILVR.NS running into the price at about 450–550 px and
+  1040–1140 px. The symbol column was allowed to shrink below the unbreakable ticker (`min-w-0`). Now it never shrinks
+  below the symbol; the price and actions wrap to the next line instead, the company name wraps (2 lines max), and the
+  price block keeps its own width. After the fix the same sweep found no overlap or page overflow for RELIANCE.NS,
+  HINDUNILVR.NS, BHARTIARTL.NS, ULTRACEMCO.NS, BRK-B, SMR, and ^NSEBANK. Screenshots inspected at 1440, 1100,
+  1060, 500, and 390 px; the 1440 px layout is unchanged. New Playwright regression test (sweep 360–1400 px): it
+  failed on the old code (overlap at 460–540 and 980–1040 px) and passes now.
+  Files: `apps/web/src/features/instrument/InstrumentPage.tsx`, `tests/e2e/journeys.spec.ts`.
 - Docs: `CLAUDE.md` (Grok optional, India + US, USD accounts in scope, streaming when entitled, fixed config
   names), `docs/UPGRADE_RULES.md`, this file, and `docs/STATUS.md` (new live URL).
 - Checks after both fixes: Vitest 21 passed, Playwright journeys 10/10, tsc/ESLint clean; CI on `main` for commit

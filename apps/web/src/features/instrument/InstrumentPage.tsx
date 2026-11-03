@@ -109,7 +109,9 @@ export function InstrumentPage() {
     <div className="grid grid-cols-1 gap-4 p-4 md:p-6 lg:grid-cols-12 lg:gap-5">
       <section className="lg:col-span-12" aria-labelledby="inst-title">
         <div className="flex flex-wrap items-start gap-x-6 gap-y-3 rounded-[var(--radius-panel)] border border-line-subtle bg-panel px-5 py-4">
-          <div className="min-w-0 flex-1">
+          {/* No min-w-0 here: the column must never be narrower than the (unbreakable) symbol, otherwise a long
+              ticker such as RELIANCE.NS overlaps the price. When space runs short the price/actions wrap instead. */}
+          <div className="flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 id="inst-title" className="num text-xl font-semibold text-fg">{symbol}</h1>
               {inst?.exchange && <Pill>{inst.exchange}</Pill>}
@@ -117,9 +119,9 @@ export function InstrumentPage() {
               {inst?.kind && <Pill>{inst.kind}</Pill>}
               {s && <FreshnessBadge meta={s.meta} />}
             </div>
-            <div className="mt-1 truncate text-[13px] text-fg-2">{snap.isLoading ? <Skeleton className="h-4 w-56" /> : inst?.name ?? "Name not reported"}</div>
+            <div className="mt-1 line-clamp-2 text-[13px] break-words text-fg-2">{snap.isLoading ? <Skeleton className="h-4 w-56" /> : inst?.name ?? "Name not reported"}</div>
           </div>
-          <div className="min-w-0">
+          <div>
             {snap.isLoading ? (
               <Skeleton className="h-8 w-40" />
             ) : s?.quote ? (
