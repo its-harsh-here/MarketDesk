@@ -31,6 +31,34 @@ jobs:
       - name: Migrations match models
         run: DATABASE_URL=sqlite:///$RUNNER_TEMP/check.db uv run alembic upgrade head && DATABASE_URL=sqlite:///$RUNNER_TEMP/check.db uv run alembic check
 
+  api-postgres:
+    name: API on PostgreSQL
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: marketdesk_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: apps/api
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:ci@localhost:5432/marketdesk_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.32"
+      - run: uv python install 3.13
+      - run: uv sync --frozen
+      - run: uv run pytest -q
+      - name: Migrations match models on PostgreSQL
+        run: DATABASE_URL=$TEST_DATABASE_URL uv run alembic upgrade head && DATABASE_URL=$TEST_DATABASE_URL uv run alembic check
+
   web:
     name: Web (types, lint, unit tests, build)
     runs-on: ubuntu-24.04
@@ -53,7 +81,7 @@ jobs:
   e2e:
     name: Browser journeys (fixture mode)
     runs-on: ubuntu-24.04
-    needs: [api, web]
+    needs: [api, api-postgres, web]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6

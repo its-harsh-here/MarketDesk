@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import text
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
 from marketdesk import __version__
@@ -65,6 +66,20 @@ ATTRIBUTION = [
 def storage_status(settings: Settings, db: Session | None = None) -> dict:
     """Is the database on persistent storage? Container hosts discard unmounted files on restart."""
     path = settings.data_dir.resolve()
+    if not settings.uses_sqlite:
+        url = make_url(settings.effective_database_url)
+        where = f"{url.get_backend_name()}://{url.host or 'localhost'}/{url.database or ''}"
+        created = None
+        if db is not None:
+            row = db.get(AppSetting, "database_created_at")
+            created = row.value if row is not None else None
+        return {
+            "path": where,
+            "persistent": True,
+            "warning": False,
+            "message": f"Data is stored in an external PostgreSQL database ({where}); it survives restarts.",
+            "database_created_at": created,
+        }
     persistent, reason = is_persistent(path)
     created = None
     if db is not None:

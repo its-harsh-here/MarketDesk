@@ -28,7 +28,9 @@ def make_engine(url: str) -> Engine:
         engine = create_engine(url, connect_args={"check_same_thread": False, "timeout": 5})
         event.listen(engine, "connect", _sqlite_pragmas)
     else:
-        engine = create_engine(url, pool_pre_ping=True)
+        # Hosted Postgres (e.g. Neon's free tier) suspends idle compute and drops connections:
+        # verify connections before use, recycle them, and keep the pool small for free-tier limits.
+        engine = create_engine(url, pool_pre_ping=True, pool_recycle=300, pool_size=3, max_overflow=2)
     return engine
 
 
@@ -36,6 +38,8 @@ def init_engine(settings: Settings | None = None) -> Engine:
     global _engine, _session_factory
     settings = settings or get_settings()
     settings.data_dir.mkdir(parents=True, exist_ok=True)
+    if _engine is not None:
+        _engine.dispose()
     _engine = make_engine(settings.effective_database_url)
     _session_factory = sessionmaker(bind=_engine, expire_on_commit=False, autoflush=False)
     return _engine

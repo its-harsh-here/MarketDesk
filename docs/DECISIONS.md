@@ -99,3 +99,10 @@ Consequential choices, newest last. Routine choices live in code comments.
     anonymous volume, which is a mount point but is discarded with the container. The instruction is removed, and
     the check reads `/proc/self/mountinfo`, treating anonymous volumes (64-hex names) and tmpfs as not persistent.
     `/api/status` also reports when the database was first created, so a reset is visible in Settings.
+33. **PostgreSQL support for free hosting (owner request: no paid services).** Render's Free plan has no disk, so the
+    supported free setup is Render Free + an external free Postgres (Neon). `DATABASE_URL` accepts plain
+    `postgres://` URLs (normalised to the bundled psycopg 3 driver); the engine uses pre-ping, recycling and a small
+    pool because free Postgres suspends idle compute. The whole pytest suite runs against PostgreSQL 17 when
+    `TEST_DATABASE_URL` is set (CI job `api-postgres`), `alembic check` passes on both databases, and Postgres
+    missing-table errors map to the same 503 as SQLite. This supersedes CLAUDE.md §4's "no untested second
+    deployment" because it is now tested. `render.yaml` targets the Free plan with `DATABASE_URL` and no disk.

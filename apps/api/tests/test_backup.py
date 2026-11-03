@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from marketdesk.api.app import create_app
 from marketdesk.cli import backup_database, restore_database
 
-from .conftest import Api, make_settings, migrated
+from .conftest import PG_URL, Api, make_settings, migrated
 
 
+@pytest.mark.skipif(bool(PG_URL), reason="SQLite backup API; Postgres uses the host's own backups")
 def test_backup_and_restore_preserve_core_records(tmp_path):
     live = tmp_path / "live"
     s = migrated(make_settings(live, marketdesk_env="development", dev_auth_bypass=True))

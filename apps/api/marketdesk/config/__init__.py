@@ -80,8 +80,12 @@ class Settings(BaseSettings):
     @property
     def effective_database_url(self) -> str:
         if self.database_url:
-            return self.database_url
+            return normalize_database_url(self.database_url)
         return f"sqlite:///{(self.data_dir / 'marketdesk.db').as_posix()}"
+
+    @property
+    def uses_sqlite(self) -> bool:
+        return self.effective_database_url.startswith("sqlite")
 
     @property
     def effective_cookie_secure(self) -> bool:
@@ -98,6 +102,15 @@ class Settings(BaseSettings):
         if self.dev_auth_bypass:
             return "dev_bypass"
         return "owner"
+
+
+def normalize_database_url(url: str) -> str:
+    """Accept the plain URLs hosts hand out (postgres://, postgresql://) and use the bundled psycopg 3 driver."""
+    url = url.strip()
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix) :]
+    return url
 
 
 def validate_settings(settings: Settings) -> None:
