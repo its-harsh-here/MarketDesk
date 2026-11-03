@@ -130,7 +130,30 @@ Measured in this environment (same code before → after):
 
 Checks: pytest 94 passed (SQLite) and 93 passed + 1 skipped (PostgreSQL 17); Vitest 21 passed; Playwright journeys
 10/10 on SQLite and 10/10 on PostgreSQL (the PostgreSQL run caught a connection-pool starvation, fixed before commit).
-Live re-measurement after deploy: see below.
+CI on PR #2: all five jobs green; merged as 8e78311 and auto-deployed by Render (live 13:54 UTC).
+
+Live after deploy (same client, signed in, 3 rounds, medians; Server-Timing from the live responses):
+| Endpoint | Before | After | Server time / statements |
+| --- | --- | --- | --- |
+| `/api/auth/session` | 1459 ms | 367 ms | 1.4 ms / 0 |
+| `/api/settings` | 1138 ms | 460 ms | 181 ms / 1 |
+| `/api/watchlists` | 1149 ms | 452 ms | 178 ms / 1 |
+| `/api/alerts` | 1232 ms | 459 ms | 178 ms / 1 |
+| `/api/briefing` | 2233 ms | 1355 ms | 1055 ms / 6 |
+| `/api/journal?limit=5` | 1913 ms | 964 ms | 706 ms / 4 |
+| first quotes for 6 symbols (cold cache) | 10.7 s | 3.5 s | — |
+| 11 Overview requests in parallel (wall) | — | 1.5–1.9 s | — |
+
+**Remaining cause, measured:** one database round trip from the Render service to Neon takes **~175 ms** (Settings →
+Data status now shows it). Neon is in AWS ap-southeast-1 (Singapore); a same-region round trip is a few milliseconds,
+so the Render service is in another region (175 ms is typical of US-West). Every remaining statement costs 175 ms.
+Owner action (free, no data migration): create the Render web service in **Singapore** (Blueprint from `render.yaml`
+selects it), copy the same environment variables (including `SESSION_SECRET` to stay signed in), then delete the old
+service. The URL changes unless a custom domain is used. Singapore is also the nearest Render region to India.
+
+Read-only live browser pass (1440×900 and 390×844, every page): no console errors, no failed API calls, no page
+overflow; full page loads 1.7–3.9 s from a US-East client. Found and fixed: Settings → Export and backup showed the
+SQLite backup command on a PostgreSQL deployment; it now gives `pg_dump`/provider-backup guidance.
 
 ## Next — deployment (owner chose Render)
 1. Generate the password hash (README → Deploy).
