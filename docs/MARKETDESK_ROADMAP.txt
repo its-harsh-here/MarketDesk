@@ -1,0 +1,240 @@
+MARKETDESK — ROADMAP FOR THE EXISTING APPLICATION
+Prepared 3 November 2026
+
+Purpose
+Extend the existing MarketDesk into a useful personal research terminal for India and the US. This is an upgrade plan, not a claim that the existing repository has been inspected or that these features are implemented. The repository URL and deployed URL have not been supplied. Claude must inspect the real code before selecting exact files, migrations, libraries, or commands.
+
+The last reported problem is an "Unexpected server error" during login. Resolve that before enabling paid model calls or introducing more deployment complexity.
+
+How to use this roadmap
+There are 75 capabilities across 15 milestones, five per milestone. Some overlap with your first release: retain working implementations, improve them where required, and skip duplicate work. Do not ask Claude to implement all 75 in one unattended run. Use the companion prompt pack: first its one-time bootstrap, then one numbered milestone prompt at a time.
+
+Effort labels are relative planning estimates, not completion promises:
+S = focused extension using existing components.
+M = multiple screens/services and integration testing.
+L = schema changes, external data, or a substantial correctness burden.
+Actual effort depends on the repository. A milestone may take multiple sessions.
+
+Running-cost labels:
+BASE = existing hosting/storage plus public data where permitted; no mandatory LLM calls.
+GROK = metered xAI model calls; search/tools can add charges.
+DATA = an account and feed entitlement may be required; prices, exchanges, geography, and display rights must be checked.
+EXTRA = optional notification, storage, or other service costs.
+Claude Code cloud credits pay for development sessions, not these recurring services.
+
+Recommended sequence
+M00 -> M01 -> M02 -> M03 -> M04 -> M05.
+Then M06 and M07; add M08 after portfolio correctness is established.
+M09-M14 are later modules. M13 depends on a legitimate historical dataset.
+A compelling daily-use release is M00-M07, not necessarily the entire roadmap.
+Do not wait for M14 to implement basic security, backups, or restore verification.
+
+Milestone map
+M00 | Operational foundation       | M | BASE       | Required first
+M01 | India + US market support    | M | BASE/DATA  | M00
+M02 | Company research workspace   | L | BASE/DATA  | M01
+M03 | Cited Grok analyst           | L | GROK       | M02
+M04 | Streaming market dashboard   | L | DATA       | M01; optional alongside M03
+M05 | Alerts and daily review      | M | BASE/EXTRA | M02 + M04 where streaming is used
+M06 | Stock discovery and peers    | L | DATA       | M01 + M02
+M07 | Earnings and filing analysis | L | GROK/DATA  | M02 + M03
+M08 | USD portfolios and FX        | L | DATA       | M01; preserves current INR ledger
+M09 | Risk and performance         | L | BASE/DATA  | M08 + validated history
+M10 | Investment decision journal  | M | BASE/GROK  | M02; M03 for optional critique
+M11 | Scenario and valuation lab   | L | BASE/GROK  | M02 + verified calculations
+M12 | Macro and sector context     | M | BASE/DATA  | M01 + M02
+M13 | Research simulation          | L | DATA       | M04 + licensed/usable historical data
+M14 | Personal workspace polish    | M | BASE/EXTRA | Core workflows already reliable
+
+M00 — Operational foundation
+01. Reliable production login with clear invalid-credential and service-error states.
+02. A sanitized health/status screen for API, database, worker, and providers.
+03. Persistent storage with backup, restore, and migration checks.
+04. Connection/freshness banners with real retry and recovery actions.
+05. An onboarding flow that distinguishes sample mode, private real-data mode, and missing integrations.
+Done when: login and persistence work in the actual production configuration, error responses contain no secrets, and a backup can be restored to a separate test database.
+Avoid: disabling auth to make the deployment pass, deleting the database, or assuming a successful Docker build proves the app works.
+
+M01 — India + US market support
+06. Search Indian and US stocks/ETFs with explicit exchange, security type, and currency.
+07. Mixed-market watchlists with region/currency filters.
+08. Market-session indicators using exchange calendars, holidays, and DST.
+09. Instrument metadata and validated provider-symbol mappings.
+10. Chart comparison for instruments on compatible date and adjustment bases.
+Done when: known Indian and US symbols are disambiguated, data renders in its native currency, and holidays/DST do not generate false "market open" indicators.
+First retain INR portfolio restrictions if needed; adding US research does not require prematurely converting the ledger.
+
+M02 — Company research workspace
+11. Company profile with sector, industry, description, exchange, and source dates.
+12. Income statement, balance sheet, and cash-flow tables with annual/quarterly views.
+13. Valuation and operating-ratio panels with formulas, units, and reporting periods.
+14. A filings/announcements timeline linking to original publications.
+15. Corporate-action and earnings-event calendar with confirmed/estimated status.
+Done when: a figure can be traced to its period, unit, source, and update date. Missing data is explicit.
+Sources: SEC EDGAR for US filings/XBRL; existing Yahoo integration or a selected provider for other coverage; Indian announcements require suitable exchange/issuer sources or a permitted provider.
+Do not assume every company reports every field or that US XBRL mappings work for all industries.
+
+M03 — Cited Grok analyst
+16. A contextual "Ask about this company" research drawer.
+17. Latest-results summaries grounded in retrieved documents.
+18. Two- or three-company comparisons using aligned reporting periods.
+19. A possible-catalysts research action with supporting evidence and uncertainty.
+20. Saved research answers with source snapshots, data cutoff, model, and usage.
+Done when: the answer is connected to specific evidence, calculations are performed in code, unsupported claims are identified, and missing credentials gracefully disable AI.
+Run analyses on demand. Keep deterministic dashboards available when xAI is down.
+Store citations from the actual API/tool result; a URL merely encountered during search is not proof for every claim.
+
+M04 — Streaming market dashboard
+21. Live US quote/trade updates for the selected subscribed feed.
+22. A compact market overview and prioritized watchlist streaming.
+23. Candlestick/line chart updates without full-page refresh.
+24. Feed/source/delay labels and connection recovery with gap detection.
+25. Event overlays linking chart dates to results, dividends, and major filings.
+Done when: disconnects, out-of-order/duplicate events, subscription limits, and stale markets are handled; IEX-only prices are not described as consolidated market data.
+A free IEX feed can be useful for personal use but has narrower coverage. Paid full-market data is optional. Market prices must never come from Grok text.
+India remains explicitly polled/delayed unless a suitable streaming source is configured.
+
+M05 — Alerts and daily review
+26. Price thresholds and sampled crossing alerts with cooldown and rearm.
+27. Volume/volatility alerts with comparable-session baselines.
+28. New filing/result and corporate-action alerts.
+29. A morning/end-of-session briefing with a deterministic core and optional Grok narrative.
+30. A unified notification inbox with read state, deduplication, and configurable quiet hours.
+Done when: worker restarts do not duplicate alerts, stale data cannot trigger a misleading event, and a failed delivery is visible.
+In-app delivery first; email/Telegram/browser push only when actually configured.
+Grok should not be invoked for every tick or every alert evaluation.
+
+M06 — Stock discovery and peers
+31. A bounded-universe screener with valuation, growth, liquidity, and leverage filters.
+32. Saved screens and a transparent indicator of data coverage/as-of dates.
+33. A peer-comparison table with user-editable peer membership.
+34. Results-to-watchlist workflow with sorting, export, and quick detail preview.
+35. A sector performance heatmap using a declared universe and weighting method.
+Done when: screening queries run from normalized cached data, missing values are not treated as passes/zeros, and the universe is explicitly named.
+Start with an imported universe or user watchlists. Do not crawl every listed company on every screen refresh or imply a complete global universe.
+
+M07 — Earnings and filing analysis
+36. Earnings calendar and configurable reminders.
+37. Reported-period growth/margin/debt changes with source-linked calculations.
+38. "What changed since the previous filing?" comparisons with quoted evidence.
+39. Guidance and risk-factor timelines, including date and source.
+40. On-demand Grok bull/base/bear research briefs with explicit assumptions.
+Done when: annual, quarterly, and year-to-date values are not accidentally mixed; restatements remain distinguishable.
+Earnings surprises require verified consensus data. If unavailable, show reported changes rather than inventing consensus.
+Use earnings transcripts only from available, permitted sources; a missing transcript must not produce a fabricated Q&A.
+
+M08 — USD portfolios and FX
+41. Separate INR and USD cash ledgers/portfolio accounts.
+42. US-stock/ETF transactions with correct fees and lot/cost-basis handling.
+43. Explicit FX conversion events recording rate, timestamp, source, and fees.
+44. Base-currency portfolio overview with native amounts and valuation FX separated.
+45. Previewed broker-CSV imports with source mapping, idempotency, and validation.
+Done when: existing INR holdings survive migration unchanged, USD values are never relabeled as INR, and missing FX prevents an unqualified consolidated total.
+Historical returns require historical FX; a current display conversion must not rewrite the original transaction.
+
+M09 — Risk and performance
+46. Cash-flow-aware performance and benchmark comparison.
+47. Concentration/exposure by company, sector, geography, and currency.
+48. Historical volatility, drawdown, and recovery charts.
+49. Correlation matrix with aligned observations and sample sizes.
+50. User-set allocation targets and hypothetical rebalance calculations.
+Done when: metrics have documented formulas, test vectors, sufficient observations, and explicit benchmark/FX/adjustment policies.
+Rebalance outputs are editable simulations. They do not submit orders.
+Avoid unsupported precision and cross-market correlations calculated from misaligned timestamps.
+
+M10 — Investment decision journal
+51. Structured investment theses with risks and invalidation criteria.
+52. Price/filing/research snapshots attached to decisions.
+53. Scheduled review queue and review-completion history.
+54. Thesis-version comparison and an optional cited Grok counterargument.
+55. Post-decision review comparing the original assumptions with later evidence.
+Done when: original notes and evidence remain immutable/versioned, edits are explicit, and today's data cannot silently replace the original snapshot.
+Daily utility: see what you believed, why you believed it, and what has changed.
+
+M11 — Scenario and valuation lab
+56. Editable DCF scenarios with documented assumptions and cash-flow definitions.
+57. Peer-multiple valuation ranges with comparable metrics.
+58. Sensitivity heatmaps for selected assumptions.
+59. Portfolio stress scenarios for prices and exchange rates.
+60. Saved bear/base/bull scenarios with an optional explanation from Grok.
+Done when: calculations are deterministic and independently tested, inputs are labeled, invalid discount/growth assumptions are rejected, and outputs are clearly hypothetical.
+Do not auto-apply a generic DCF to banks/insurers or present scenario values as guaranteed fair values.
+
+M12 — Macro and sector context
+61. A macro watchboard for supported rates, inflation, FX, commodities, and benchmarks.
+62. Release/event calendar with timezones and actual publication dates.
+63. A sector-relative performance view.
+64. A company exposure map containing only supported links or user-entered assumptions.
+65. A cited briefing on changes in selected macro series and possible implications.
+Done when: each series shows its provider, frequency, observation date, release date where available, and revision status.
+Add macro providers only after validating their keys, licenses, and update schedules. Correlation is not causal proof.
+
+M13 — Research simulation
+66. An isolated paper portfolio with simulated fills and a cash ledger.
+67. Simple historical rule tests using explicitly available price data.
+68. Transaction-cost/slippage controls and benchmark comparison.
+69. A run ledger recording parameters, data versions, and reproducibility details.
+70. A review page explaining sample limits, look-ahead risk, and survivorship bias.
+Done when: simulated trades are clearly labeled, signal timing precedes execution, splits/dividends are handled, and results can be reproduced.
+Start long-only, daily bars, no leverage, and a small verified universe. A strategy cannot fill at the same closing price used to discover its signal without a justified execution model.
+Do not claim historical screen results are point-in-time if only today's fundamentals are available.
+
+M14 — Personal workspace polish
+71. Saved Research/Portfolio/Market workspace presets with density preferences.
+72. Installable PWA with a clearly labeled last-synced offline read-only view.
+73. Comprehensive keyboard navigation and command-palette actions.
+74. Shareable research exports with citations, source dates, and private-data controls.
+75. Provider/AI usage dashboard with configurable quotas and refresh preferences.
+Done when: presets survive reload, offline views cannot masquerade as live, private caches clear on logout, and keyboard/mobile workflows are usable.
+Avoid caching authentication responses or exposing private exports by default.
+
+Cross-cutting requirements for every milestone
+- Preserve the current UI language; introduce new screens using existing components.
+- Work on main as requested; preserve other work and honor repository protections. No force pushes or published-history rewriting.
+- Add the user's confirmed co-author name and GitHub-associated email to every new commit. Ask for missing identity before committing; continue implementation while waiting.
+- Keep existing portfolio/journal/watchlist data. Test migrations on a copied database and document a valid rollback/recovery path.
+- Model keys and provider credentials remain server-side. Never use a VITE_ key for secrets.
+- Read-only research tools for Grok: no arbitrary shell, unrestricted URL fetching, or brokerage execution. Treat news and filings as untrusted content, not instructions.
+- Validate structured outputs; source IDs must resolve to retrieved documents. Provide concise reasoning summaries with evidence rather than requesting private model chain-of-thought.
+- Use a freshness record: event/observation time, publication time where known, reporting period, fetched_at, last_successful_check, source, feed, currency, and status.
+- Do not confuse "last checked today" with "new financial results today."
+- Day/weekend/holiday behavior follows market sessions. Do not falsely call a closed market stale simply because no new trade occurred.
+- Health and request IDs must help diagnose errors without logging secrets or whole private portfolios.
+- Backend usage limits must work across concurrent requests. Reserve a maximum allowed request budget before dispatch, reconcile actual usage, and include tool charges. If pricing/account usage is uncertain, conservative request/token/tool limits remain mandatory; never claim an exact provider-level dollar ceiling without verification.
+- Each new paid integration is feature-flagged, defaults safely, and fails without breaking existing functions.
+- Test real backend workflows with fixtures, then verify configured live providers separately.
+- Verify critical desktop/mobile layouts, keyboard interaction, charts, auth, provider failure, and persistence. Record actual commands and results.
+- A public showcase and a private personal installation have different data-display rights. Do not assume an individual feed subscription permits public redistribution.
+
+Suggested integration configuration (names must be adapted to the repository)
+XAI_API_KEY: required only for Grok; server secret.
+XAI_MODEL: an available model verified through current documentation/account access.
+GROK_ENABLED: optional AI feature flag.
+GROK_WEB_SEARCH_ENABLED / GROK_X_SEARCH_ENABLED: separately controlled paid tools.
+AI_DAILY_BUDGET_USD / AI_MAX_OUTPUT_TOKENS / AI_MAX_TOOL_CALLS: application controls.
+ALPACA_API_KEY / ALPACA_API_SECRET: credentials if Alpaca is selected.
+US_MARKET_FEED: explicitly chosen iex, sip, or another permitted feed.
+SEC_USER_AGENT: application identity with a real contact address; not a private API key.
+Retain the deployed app's SESSION_SECRET, OWNER_USERNAME, and OWNER_PASSWORD_HASH names unless its actual config says otherwise.
+
+Practical data choices
+- Keep the existing Yahoo adapter for permitted personal research and initial historical coverage; it is unofficial and cannot guarantee availability.
+- Alpaca's personal Basic plan currently lists IEX-only real-time US data and 30 streaming symbols. A broader feed is a separate entitlement. Verify availability in the owner's account and locality; do not open/fund trading accounts automatically.
+- SEC public submissions/companyfacts endpoints do not require an API key. Use an identifying User-Agent, caching, bounded requests, and current SEC fair-access rules.
+- Grok analyzes supplied/retrieved evidence; it is not the authoritative quote source. Web/X search and model tokens have separate billing considerations.
+- News completeness, consensus estimates, institutional ownership, transcripts, options, and depth-of-book require separate coverage and sometimes paid rights. These cannot all be promised from one free API.
+
+Definition of a useful daily release
+The user can sign in, inspect Indian and US watchlists, open a source-dated company workspace, request cited Grok analysis, receive reliable alerts, and maintain a correct portfolio without being misled by stale data or incomplete feed coverage. Advanced simulation and valuation can follow after this workflow is trustworthy.
+
+Reference sources checked for this plan
+https://docs.x.ai/developers/models
+https://docs.x.ai/developers/tools/web-search
+https://docs.x.ai/developers/tools/citations
+https://docs.x.ai/developers/pricing
+https://docs.alpaca.markets/us/docs/about-market-data-api
+https://docs.alpaca.markets/us/docs/market-data-faq
+https://www.sec.gov/search-filings/edgar-application-programming-interfaces
+https://www.sec.gov/about/webmaster-frequently-asked-questions
+https://ranaroussi.github.io/yfinance/
+
