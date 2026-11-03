@@ -281,6 +281,58 @@ New dependency: `exchange-calendars==4.13.2` (pandas-based; Apache-2.0). No new 
 **Known visual issue (pre-existing, not M01):** the price axis can label the area reserved for volume bars with
 negative prices (e.g. "−4.00"). Fix candidate: move volume to its own chart pane (Lightweight Charts 5 panes).
 
+## Phase 3 — M02 Company research workspace (3 Nov 2026)
+**What changed.**
+- **Instrument Detail tabs:** Overview (the existing panels), Financials, Filings and Events.
+  - The tabs are a keyboard-operable tablist (arrow keys), and the selected tab lives in the URL (`?tab=`).
+- **SEC EDGAR adapter (`providers/sec.py`, stdlib):**
+  - Sources: `company_tickers.json` for ticker→CIK, `data.sec.gov` submissions, and XBRL company facts.
+  - Sends nothing unless `SEC_USER_AGENT` (application name + contact email) is set, as SEC fair access requires.
+    The SEC documentation and webmaster FAQ were read on 3 Nov 2026.
+  - Rate limit: a process-wide budget (default 5 requests/s, capped at 9, under SEC's 10/s), with bounded retries
+    and backoff on 429/5xx.
+- **Normalization (`services/financials.py`, pure):**
+  - Every value carries tag, unit, start/end, form, filing date, accession and a link to the filing index.
+  - Balance-sheet values are instants; income and cash-flow values are durations.
+  - Annual means 340–380 days and a standalone quarter 80–100 days; year-to-date values are excluded and Q4 is never
+    derived.
+  - The latest filing wins, with restatement provenance (marked "R").
+  - One reporting currency per filer: no mixing, no conversion.
+  - Templates: industrial; financial companies (SIC 6000–6499 leave revenue, gross profit and similar unmapped);
+    IFRS filers.
+- **Ratios:** computed in code with their formula and inputs: gross/operating/net margin, long-term debt to equity,
+  ROE (ending equity, stated), P/E (latest annual diluted EPS, price date stated, same currency only) and free cash
+  flow.
+- **Scope:** US listings only. Indian listings get "SEC data does not apply". ADRs use their own US registrant's
+  filings.
+- **Caching:** submissions 6 h. Company facts are keyed by the latest periodic filing's accession, so a new 10-K/10-Q
+  invalidates them and tab switches reuse the cache. A failed refresh shows the last good data marked stale, with
+  the error.
+- **Check tracking:** migration 0003 `research_checks` records last checked, last success, last error and latest
+  filing, separately from the dates of the facts.
+- **Refresh:** the worker re-checks watchlisted US companies once per `RESEARCH_REFRESH_HOURS` (default 24) and
+  refetches facts only after a new periodic filing. It is isolated from alert evaluation.
+- **Events:** confirmed events only — 8-K Item 2.02 results announcements, periodic reports, and Yahoo corporate
+  actions. No estimated earnings dates are shown, because no verified source is configured.
+
+**Not verified live (credential needed):**
+- SEC requests require the owner's contact address in `SEC_USER_AGENT`. Until it is set, the production tabs show
+  "not configured" (US) or "not applicable" (India).
+- All SEC behaviour was tested with fictitious fixtures and a fake client. The tabs were visually checked with a
+  local-only harness serving fixture data under a real ticker.
+
+**Checks.**
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 17 | 141 passed, 2 skipped / 142 passed, 1 skipped (normalizer 7, research service 8) |
+| `alembic check` on PostgreSQL | clean (0003) |
+| Vitest / Playwright | 28 passed / 13 passed (new: research tabs) |
+| Visual (local harness, fixture SEC data) | Financials annual + quarterly, Filings, Events at 1440/1024/390; no page overflow; fixed doubled "××" on P/E, phone table width, wrapped filing dates |
+| Production after deploying the backend (22e3e01) | schema 0003 up to date; owner data identical before/after (backup taken first, then deleted); research endpoints report "not configured"/"not applicable" |
+
+New environment variables: `SEC_USER_AGENT` (required for SEC data, e.g. `MarketDesk you@example.com`),
+`SEC_MAX_REQUESTS_PER_SECOND` (default 5), `RESEARCH_REFRESH_HOURS` (default 24). Data migration: 0003 (additive).
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.

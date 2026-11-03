@@ -191,7 +191,7 @@ def test_research_endpoints(tmp_path):
     with TestClient(create_app(s)) as c:
         api = Api(c)
         r = api.get("/api/research/financials", params={"symbol": "SX:AURORA"}).json()
-        assert r["status"] == "not_configured"  # SEC_USER_AGENT unset in tests
+        assert r["status"] == "not_applicable"  # fictitious sample listing: not a US listing
         assert api.get("/api/status").json()["research"]["sec"]["enabled"] is False
     s2 = migrated(
         make_settings(

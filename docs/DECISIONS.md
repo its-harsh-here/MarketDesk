@@ -144,4 +144,10 @@ Consequential choices, newest last. Routine choices live in code comments.
     for special sessions it does not model. Comparisons align on dates where every instrument traded and are labelled
     as own-currency price returns without dividends. Backups restore across schema revisions by building the backup's
     revision first and migrating forward.
+37. **M02 research data.** SEC EDGAR is the source for US registrants' filings and XBRL facts; it needs no key but a
+    User-Agent with a real contact, so the adapter refuses to send requests until the owner sets `SEC_USER_AGENT`
+    (no contact address is invented). Statements are normalized by explicit tag lists with full provenance, never
+    mixing year-to-date with quarterly values or currencies, never deriving Q4, and leaving industrial lines unmapped
+    for banks/insurers. Non-US listings show "not applicable" instead of borrowing another listing's facts. Cached
+    payloads reuse the market cache table; check history lives in `research_checks`.
 

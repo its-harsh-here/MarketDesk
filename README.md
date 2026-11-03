@@ -86,6 +86,8 @@ cookies and survive restarts on their own.
 | `MARKETDESK_ENV` | set by the Blueprint | `production` (secure cookies, startup checks, no API docs). |
 | `DATA_PROVIDER` | no | Defaults to `yahoo`. |
 | `ALERT_POLL_SECONDS`, `WORKER_START_DELAY_SECONDS`, `WORKER_NICE` | no | Worker sampling interval (300 s) and start-up pacing. |
+| `SEC_USER_AGENT` | for US filings | Application name and **your** contact email (SEC fair-access rule), e.g. `MarketDesk you@example.com`. Without it the Financials/Filings/Events tabs explain that SEC data is off. |
+| `SEC_MAX_REQUESTS_PER_SECOND`, `RESEARCH_REFRESH_HOURS` | no | SEC request budget (default 5/s; SEC allows 10) and the daily re-check interval. |
 
 - **Start command:** none — the image's default `python -m marketdesk.serve` runs the web server and, 45 s after it
   answers, the alert worker in the same container. Leave Render's *Start Command* empty.
@@ -205,6 +207,15 @@ are different instruments. Market session states (open, closed with the reason, 
 respected; dates beyond the calendar's data (India: after 2026-12-31) and special sessions such as Muhurat trading are
 shown as unknown. Session states describe the exchange schedule only; quotes keep their own market time and freshness.
 The portfolio remains INR-only until USD accounts arrive (roadmap M08).
+
+## Company research
+
+Instrument Detail has Overview, Financials, Filings and Events tabs. For US registrants (matched to a CIK through
+SEC's ticker file) MarketDesk reads SEC EDGAR submissions and XBRL company facts server-side, normalizes annual and
+quarterly statements (each value links to its filing and keeps its tag, unit, period, form and accession; restated
+values are marked; year-to-date values are not mixed with quarters), and computes margins, leverage, ROE, P/E and free
+cash flow with their formulas. Banks and insurers do not get industrial lines such as revenue. Non-US listings show
+that SEC data does not apply. Requires `SEC_USER_AGENT`; data is cached and re-checked daily by the worker.
 
 ## Accounting rules
 

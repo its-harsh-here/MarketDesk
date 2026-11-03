@@ -34,4 +34,5 @@ earlier as soon as their credentials exist.
 ## Progress
 - Phase 1 (M00): ✅ done — verified locally and on the live service (`docs/UPGRADE_STATUS.md`).
 - Phase 2 (M01): ✅ done — verified locally, rehearsed on a copy of production data, and verified on the live service.
-- Phase 3 (M02): next.
+- Phase 3 (M02): ✅ implemented and tested with fixtures; deployed. Live SEC verification waits for `SEC_USER_AGENT` (owner's contact).
+- Phase 4 (M05): next.

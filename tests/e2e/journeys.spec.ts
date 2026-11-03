@@ -292,3 +292,20 @@ test("compare: two instruments rebased to 100 with method, table alternative and
   await cmp.getByRole("button", { name: "Remove SX:BANYAN from the comparison" }).click();
   await expect(cmp.getByText(/Add one or two instruments/)).toBeVisible();
 });
+
+test("research tabs: keyboard navigation, URL state, and an explicit reason when SEC data does not apply", async ({ page }) => {
+  await page.goto("/instrument/SX%3AAURORA");
+  const tabs = page.getByRole("tablist", { name: "Instrument sections" });
+  await tabs.getByRole("tab", { name: "Overview" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(tabs.getByRole("tab", { name: "Financials" })).toHaveAttribute("aria-selected", "true");
+  await expect(page).toHaveURL(/tab=financials/);
+  await expect(page.getByText(/SEC filings cover US-registered issuers/)).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("tab", { name: "Financials" })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("tab", { name: "Events" }).click();
+  await expect(page.getByRole("heading", { name: "Corporate actions" })).toBeVisible();
+  await page.getByRole("tab", { name: "Overview" }).click();
+  await expect(page.getByRole("heading", { name: "Price history" })).toBeVisible();
+  await expect(page).not.toHaveURL(/tab=/);
+});

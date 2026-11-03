@@ -148,6 +148,13 @@ class ResearchService:
     def envelope(self, db: Session, inst: Instrument, build) -> dict:
         """Common shape: status, reason, source, check times and the dataset-specific data."""
         base = {"symbol": inst.symbol, "source": SOURCE}
+        if inst.country != "US":
+            return {
+                **base,
+                "status": "not_applicable",
+                "reason": "SEC filings cover US-registered issuers; this is not a US listing, so SEC data does not apply.",  # noqa: E501
+                "data": None,
+            }
         if not self.client.enabled:
             return {**base, "status": "not_configured", "reason": self.client.problem, "data": None}
         try:

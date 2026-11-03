@@ -1,8 +1,10 @@
 import { Bell, NotebookPen, Plus } from "lucide-react";
-import { useParams } from "react-router";
+import { useRef } from "react";
+import { useParams, useSearchParams } from "react-router";
 import { Link } from "react-router";
 import { useDialogs } from "@/app/dialogs";
 import { Panel } from "@/components/ui/Panel";
+import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
 import { ChangeText } from "@/components/ui/Change";
 import { FreshnessBadge, Pill } from "@/components/ui/Badges";
@@ -23,6 +25,7 @@ import {
 import { ChartPanel } from "@/features/market/ChartPanel";
 import { useActions, useFundamentals, useSessions, useSnapshots } from "@/features/market/api";
 import { ComparePanel } from "@/features/market/ComparePanel";
+import { EventsTab, FilingsTab, FinancialsTab } from "@/features/research/ResearchTabs";
 import { REGION_LABEL, sessionFor, sessionText } from "@/lib/markets";
 import { usePrefs, useSession } from "@/features/settings/api";
 import { StarToggle } from "@/features/watchlists/StarToggle";
@@ -84,6 +87,14 @@ export function InstrumentPage() {
   const notes = useJournal({ symbol });
   const s = snap.data?.[0];
   const sessions = useSessions();
+  const [params, setParams] = useSearchParams();
+  const tab = (TABS.find((t) => t.value === params.get("tab"))?.value ?? "overview") as Tab;
+  const setTab = (t: Tab) => setParams((p) => {
+    const next = new URLSearchParams(p);
+    if (t === "overview") next.delete("tab");
+    else next.set("tab", t);
+    return next;
+  }, { replace: true });
   const tz = prefs?.display_timezone ?? "Asia/Kolkata";
   const inst = s?.instrument;
   const marketSession = sessionFor(sessions.data, inst?.country);
@@ -179,6 +190,15 @@ export function InstrumentPage() {
         </div>
       </section>
 
+      <ResearchTabList value={tab} onChange={setTab} />
+      {tab === "financials" ? (
+        <FinancialsTab symbol={symbol} />
+      ) : tab === "filings" ? (
+        <FilingsTab symbol={symbol} />
+      ) : tab === "events" ? (
+        <EventsTab symbol={symbol} />
+      ) : (
+        <>
       <ChartPanel symbol={symbol} currency={ccy} title="Price history" className="lg:col-span-8" height={400} defaultRange="1Y" />
 
       <Panel title="Fundamentals" titleId="fund-title" className="lg:col-span-4" meta={fund.data ? <FreshnessBadge meta={fund.data.meta} /> : undefined}>
@@ -275,6 +295,49 @@ export function InstrumentPage() {
         )}
       </Panel>
       <ComparePanel symbol={symbol} className="lg:col-span-12" />
+        </>
+      )}
+    </div>
+  );
+}
+
+const TABS = [
+  { value: "overview", label: "Overview" },
+  { value: "financials", label: "Financials" },
+  { value: "filings", label: "Filings" },
+  { value: "events", label: "Events" },
+] as const;
+type Tab = (typeof TABS)[number]["value"];
+
+/** Accessible tab strip (arrow keys move between tabs); the choice lives in the URL so it survives reloads. */
+function ResearchTabList({ value, onChange }: { value: Tab; onChange: (t: Tab) => void }) {
+  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  return (
+    <div role="tablist" aria-label="Instrument sections" className="scrollbar-thin flex gap-1 overflow-x-auto border-b border-line-subtle lg:col-span-12"
+      onKeyDown={(e) => {
+        const i = TABS.findIndex((t) => t.value === value);
+        const next = e.key === "ArrowRight" ? (i + 1) % TABS.length : e.key === "ArrowLeft" ? (i - 1 + TABS.length) % TABS.length : -1;
+        if (next >= 0) {
+          e.preventDefault();
+          onChange(TABS[next].value);
+          refs.current[next]?.focus();
+        }
+      }}
+    >
+      {TABS.map((t, i) => (
+        <button
+          key={t.value}
+          ref={(el) => { refs.current[i] = el; }}
+          role="tab"
+          type="button"
+          aria-selected={value === t.value}
+          tabIndex={value === t.value ? 0 : -1}
+          onClick={() => onChange(t.value)}
+          className={cn("-mb-px border-b-2 px-3 py-2 text-[13px] whitespace-nowrap max-md:min-h-11", value === t.value ? "border-accent font-medium text-fg" : "border-transparent text-fg-3 hover:text-fg-2")}
+        >
+          {t.label}
+        </button>
+      ))}
     </div>
   );
 }
