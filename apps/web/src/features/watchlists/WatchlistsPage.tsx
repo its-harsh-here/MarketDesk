@@ -74,6 +74,7 @@ export function AddSymbolDialog() {
   const toast = useToast();
   const [symbol, setSymbol] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [suggestion, setSuggestion] = useState<string | null>(null);
   const isOpen = state.kind === "add-symbol";
   const wid = state.kind === "add-symbol" ? state.watchlistId : null;
   const wl = lists?.find((l) => l.id === wid);
@@ -81,19 +82,25 @@ export function AddSymbolDialog() {
     if (isOpen) {
       setSymbol("");
       setErr(null);
+      setSuggestion(null);
     }
   }, [isOpen]);
-  const submit = () => {
-    if (!symbol || !wid) return setErr("Choose an instrument.");
+  const submit = (chosen: string = symbol) => {
+    if (!chosen || !wid) return setErr("Choose an instrument.");
+    setSuggestion(null);
     addSymbol.mutate(
-      { id: wid, symbol },
+      { id: wid, symbol: chosen },
       {
         onSuccess: () => {
-          toast("success", `Added ${symbol} to ${wl?.name ?? "watchlist"}.`);
+          toast("success", `Added ${chosen} to ${wl?.name ?? "watchlist"}.`);
           setSymbol("");
           close();
         },
-        onError: (e) => setErr(errorMessage(e)),
+        onError: (e) => {
+          setErr(errorMessage(e));
+          const s = (e as ApiError).details as { suggestions?: string[] } | null;
+          setSuggestion(Array.isArray(s?.suggestions) && s!.suggestions[0] ? s!.suggestions[0] : null);
+        },
       },
     );
   };
@@ -106,15 +113,27 @@ export function AddSymbolDialog() {
       footer={
         <>
           <Button variant="ghost" onClick={close}>Cancel</Button>
-          <Button variant="primary" loading={addSymbol.isPending} disabled={!symbol} onClick={submit}>Add</Button>
+          <Button variant="primary" loading={addSymbol.isPending} disabled={!symbol} onClick={() => submit()}>Add</Button>
         </>
       }
     >
       <Field label="Instrument" error={err ?? undefined} required>
         {({ id, describedBy, invalid }) => (
-          <SymbolPicker id={id} describedBy={describedBy} invalid={invalid} value={symbol} autoFocus onChange={(s) => { setSymbol(s); setErr(null); }} />
+          <SymbolPicker id={id} describedBy={describedBy} invalid={invalid} value={symbol} autoFocus onChange={(s) => { setSymbol(s); setErr(null); setSuggestion(null); }} />
         )}
       </Field>
+      {suggestion && (
+        <Button
+          className="mt-3"
+          variant="secondary"
+          onClick={() => {
+            setSymbol(suggestion);
+            submit(suggestion);
+          }}
+        >
+          Use {suggestion} instead
+        </Button>
+      )}
     </Dialog>
   );
 }

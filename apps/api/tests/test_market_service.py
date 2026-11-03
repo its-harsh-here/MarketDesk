@@ -152,3 +152,26 @@ def test_memory_cache_is_bounded(tmp_path):
     for s in "ABCDE":
         asyncio.run(svc.quote(s))
     assert len(svc._mem) == 3
+
+
+def test_fundamentals_failures_do_not_pause_quotes(tmp_path):
+    svc, p = service(tmp_path, persisted=False, provider_max_retries=0, circuit_failure_threshold=2)
+
+    def refused(symbol):
+        raise ProviderError("upstream_unavailable", "HTTP 503", retryable=True)
+
+    p.fundamentals = refused
+    for sym in ("A", "B", "C"):
+        assert asyncio.run(svc.fundamentals(sym)).meta.status == "unavailable"
+    health = svc.health()
+    assert health["endpoints"]["fundamentals"]["circuit"] == "open"
+    assert health["circuit"] == "closed"  # prices unaffected
+    assert asyncio.run(svc.quote("TEST.NS")).meta.status == "available"
+
+
+def test_non_transient_errors_never_open_the_circuit(tmp_path):
+    svc, p = service(tmp_path, persisted=False, provider_max_retries=0, circuit_failure_threshold=2)
+    p.fail = ProviderError("upstream_unavailable", "HTTP 401 for an unknown symbol", retryable=False)
+    for sym in ("X1", "X2", "X3", "X4"):
+        asyncio.run(svc.quote(sym))
+    assert svc.health()["circuit"] == "closed"

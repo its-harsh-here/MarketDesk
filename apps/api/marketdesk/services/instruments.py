@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -66,7 +68,31 @@ async def resolve_instrument(db: Session, market: MarketDataService, symbol: str
                 return existing
             reason = quote.meta.message or hist.meta.message or "The provider has no data for this symbol."
             status = 503 if quote.meta.status == "unavailable" else 422
+            suggestion = await _exchange_hint(market, sym)
+            if suggestion:
+                suggested, label = suggestion
+                raise AppError(
+                    422,
+                    "symbol_unverified",
+                    f"{sym} is not a Yahoo symbol. Did you mean {label}?",
+                    {"suggestions": [suggested]},
+                )
             raise AppError(status, "symbol_unverified", f"Could not verify {sym}: {reason}")
     inst = upsert_instrument(db, market.source, ref)
     db.commit()
     return inst
+
+
+_BARE = re.compile(r"^[A-Z0-9&-]{1,20}$")
+
+
+async def _exchange_hint(market: MarketDataService, sym: str) -> tuple[str, str] | None:
+    """For a bare name like RELIANCE, return (symbol, label) of the NSE or BSE listing if one exists."""
+    if market.source != "yahoo" or not _BARE.match(sym):
+        return None
+    for suffix, venue in ((".NS", "NSE"), (".BO", "BSE")):
+        candidate = await market.quote(sym + suffix)
+        if candidate.value is not None:
+            name = candidate.value.instrument.name
+            return sym + suffix, f"{sym}{suffix} ({venue}{', ' + name if name else ''})"
+    return None

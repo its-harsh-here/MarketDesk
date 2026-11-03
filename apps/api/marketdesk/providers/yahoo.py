@@ -10,7 +10,8 @@ from __future__ import annotations
 import logging
 import math
 import re
-from datetime import UTC, date, datetime
+import time
+from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any
@@ -200,6 +201,7 @@ class YahooProvider:
 
         self._yf = yf
         self.timeout = timeout
+        self._summary_blocked_until = 0.0
         # Raise errors instead of logging and returning empty frames.
         yf.config.debug.hide_exceptions = False
         yf.config.network.retries = 0  # MarketDesk applies its own bounded retry policy
@@ -241,9 +243,25 @@ class YahooProvider:
             raise ProviderError("timeout", f"Yahoo {what} request timed out.", retryable=True) from exc
         except Exception as exc:  # network errors from curl_cffi / requests
             name = type(exc).__name__
-            log.warning("yahoo %s failed: %s", what, name)
+            status = _http_status(exc)
+            log.warning("yahoo %s failed: %s %s", what, name, status or "")
+            if status == 429:
+                raise ProviderError(
+                    "rate_limited", f"Yahoo rate-limited the {what} request (HTTP 429).", retryable=True
+                ) from exc
+            if status in (401, 403, 404) and _says_not_found(exc):
+                raise ProviderError("missing", f"Yahoo has no {what} for this symbol (not found).") from exc
+            if status in (401, 403):
+                raise ProviderError(
+                    "upstream_unavailable",
+                    f"Yahoo returned HTTP {status} for this {what} request: the symbol may not exist, or Yahoo is "
+                    "limiting requests from this server.",
+                ) from exc
+            if status == 404:
+                raise ProviderError("missing", f"Yahoo has no {what} for this symbol (HTTP 404).") from exc
             kind = "timeout" if "Timeout" in name else "upstream_unavailable"
-            raise ProviderError(kind, f"Yahoo {what} request failed ({name}).", retryable=True) from exc
+            detail = f"HTTP {status}" if status else name
+            raise ProviderError(kind, f"Yahoo {what} request failed ({detail}).", retryable=True) from exc
 
     # -- interface ---------------------------------------------------------------
     def search(self, query: str, limit: int) -> list[InstrumentRef]:
@@ -314,15 +332,132 @@ class YahooProvider:
         return self._call(run, "history")
 
     def fundamentals(self, symbol: str) -> Fundamentals:
+        """Company summary (quoteSummary) when Yahoo allows it; otherwise derived fields.
+
+        Yahoo's company-summary endpoint needs a cookie+crumb and is often refused for cloud IPs.
+        The fallback uses endpoints that keep working there: price history (52-week range,
+        dividends), valuation measures (market cap, trailing P/E, P/B), statements (dates) and
+        search (sector, industry). Each derived field is labelled in the notes.
+        """
         symbol = self.validate_symbol(symbol)
+        primary: ProviderError | None = None
+        if time.monotonic() >= self._summary_blocked_until:
 
-        def run():
-            info = self._yf.Ticker(symbol).info or {}
-            if len(info) < 5:
-                raise ProviderError("missing", "Yahoo returned no company information for this symbol.")
-            return fundamentals_from_info(symbol, info)
+            def run():
+                info = self._yf.Ticker(symbol).info or {}
+                if len(info) < 5:
+                    raise ProviderError("missing", "Yahoo returned an empty company summary.")
+                return fundamentals_from_info(symbol, info)
 
-        return self._call(run, "fundamentals")
+            try:
+                return self._call(run, "company summary")
+            except ProviderError as err:
+                if err.kind == "unsupported":
+                    raise
+                primary = err
+                if err.kind in ("upstream_unavailable", "rate_limited"):
+                    # Don't hammer an endpoint that refuses this server; retry it in an hour.
+                    self._summary_blocked_until = time.monotonic() + 3600
+        else:
+            primary = ProviderError("upstream_unavailable", "Yahoo's company summary was recently refused.")
+        return self._call(lambda: self._derived_fundamentals(symbol, primary), "fundamentals")
+
+    def _derived_fundamentals(self, symbol: str, primary: ProviderError | None) -> Fundamentals:
+        t = self._yf.Ticker(symbol)
+        df = t.history(period="1y", interval="1d", auto_adjust=False, actions=True, timeout=self.timeout)
+        meta = dict(t.history_metadata or {})
+        ref = instrument_from_meta(symbol, meta)
+        places = int(meta.get("priceHint") or 2)
+        is_index = (ref.kind or "").upper() == "INDEX"
+        bars = normalize_bars(df, places, is_index)
+        if not bars:
+            raise ProviderError("missing", "Yahoo returned no price history for this symbol.")
+        reason = primary.message if primary else "Yahoo's company summary was unavailable."
+        notes = [f"{reason} Figures below are derived from Yahoo's other endpoints."]
+        last = _dec(meta.get("regularMarketPrice"), places) or bars[-1].close
+        high = _dec(meta.get("fiftyTwoWeekHigh"), places) or max((b.high or b.close) for b in bars)
+        low = _dec(meta.get("fiftyTwoWeekLow"), places) or min((b.low or b.close) for b in bars)
+
+        dividend_yield = None
+        if is_index:
+            notes.append("Valuation figures are not applicable to an index.")
+        else:
+            cutoff = bars[-1].session_date - timedelta(days=365)
+            total = Decimal(0)
+            if df is not None and "Dividends" in getattr(df, "columns", []):
+                for idx, row in df.iterrows():
+                    d = _dec(row.get("Dividends"))
+                    if d and d > 0 and _session_date(idx) > cutoff:
+                        total += d
+            if total > 0 and last:
+                dividend_yield = (total / last * 100).quantize(Decimal("0.01"))
+                notes.append("Dividend yield = dividends paid in the last 12 months ÷ last price.")
+            else:
+                notes.append("No dividends in the last 12 months of Yahoo's price history.")
+
+        market_cap = pe = pb = None
+        last_fy = mrq = None
+        sector = industry = None
+        if not is_index:
+            try:
+                vm = t.get_valuation_measures(freq="quarterly")
+                if vm is not None and not vm.empty:
+                    col = "Current" if "Current" in vm.columns else vm.columns[0]
+
+                    def cell(label: str, digits: int) -> Decimal | None:
+                        return _dec(vm.at[label, col], digits) if label in vm.index else None
+
+                    market_cap, pe, pb = cell("Market Cap", 0), cell("Trailing P/E", 2), cell("Price/Book", 2)
+                    notes.append("Market cap, trailing P/E and P/B come from Yahoo valuation measures (latest).")
+            except Exception as exc:  # optional enrichment
+                notes.append(f"Valuation measures unavailable ({_describe(exc)}).")
+            for freq in ("quarterly", "yearly"):
+                try:
+                    stmt = t.get_income_stmt(freq=freq)
+                    dates = [_session_date(c) for c in getattr(stmt, "columns", [])]
+                    if dates:
+                        if freq == "quarterly":
+                            mrq = max(dates)
+                        else:
+                            last_fy = max(dates)
+                except Exception as exc:
+                    notes.append(f"{freq.title()} statement dates unavailable ({_describe(exc)}).")
+            try:
+                found = (
+                    self._yf.Search(
+                        symbol,
+                        max_results=5,
+                        news_count=0,
+                        lists_count=0,
+                        include_cb=False,
+                        recommended=0,
+                        timeout=self.timeout,
+                        raise_errors=True,
+                    ).quotes
+                    or []
+                )
+                match = next((q for q in found if str(q.get("symbol", "")).upper() == symbol), None)
+                if match:
+                    sector, industry = (
+                        match.get("sectorDisp") or match.get("sector"),
+                        match.get("industryDisp") or match.get("industry"),
+                    )
+            except Exception as exc:
+                notes.append(f"Sector and industry unavailable ({_describe(exc)}).")
+        return Fundamentals(
+            instrument=ref,
+            market_cap=market_cap,
+            pe_ratio=pe,
+            dividend_yield_percent=dividend_yield,
+            fifty_two_week_high=high,
+            fifty_two_week_low=low,
+            price_to_book=pb,
+            sector=sector,
+            industry=industry,
+            last_fiscal_year_end=last_fy,
+            most_recent_quarter=mrq,
+            notes=notes,
+        )
 
     def corporate_actions(self, symbol: str) -> list[CorporateAction]:
         symbol = self.validate_symbol(symbol)
@@ -343,6 +478,29 @@ class YahooProvider:
             return sorted(out, key=lambda a: a.action_date, reverse=True)
 
         return self._call(run, "corporate actions")
+
+
+def _http_status(exc: BaseException) -> int | None:
+    """HTTP status from requests/curl_cffi HTTPError-style exceptions, if present."""
+    response = getattr(exc, "response", None)
+    status = getattr(response, "status_code", None) or getattr(exc, "status_code", None)
+    try:
+        return int(status) if status is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _says_not_found(exc: BaseException) -> bool:
+    try:
+        text = (getattr(getattr(exc, "response", None), "text", "") or "").lower()
+    except Exception:
+        return False
+    return "not found" in text or "no data found" in text
+
+
+def _describe(exc: BaseException) -> str:
+    status = _http_status(exc)
+    return f"HTTP {status}" if status else type(exc).__name__
 
 
 def fundamentals_from_info(symbol: str, info: dict) -> Fundamentals:

@@ -69,7 +69,8 @@ def cmd_revoke_sessions(_: argparse.Namespace) -> None:
 
     init_engine()
     with db_session() as db:
-        print(f"revoked {revoke_all_sessions(db)} session(s)")
+        revoke_all_sessions(db)
+        print("all existing sign-ins revoked; every browser must sign in again")
 
 
 def backup_database(src_path: Path, out_path: Path) -> None:

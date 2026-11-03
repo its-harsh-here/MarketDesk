@@ -242,6 +242,13 @@ export function OverviewPage() {
   return (
     <>
       <MarketStrip />
+      {status?.storage.warning && (
+        <div className="px-4 pt-4 md:px-6">
+          <InlineNotice tone="warn">
+            <strong className="font-semibold">Your data is not on a persistent disk.</strong> {status.storage.message}
+          </InlineNotice>
+        </div>
+      )}
       <div className="grid grid-cols-1 gap-4 p-4 md:p-6 lg:grid-cols-12 lg:gap-5">
         {chartSymbol ? (
           <ChartPanel

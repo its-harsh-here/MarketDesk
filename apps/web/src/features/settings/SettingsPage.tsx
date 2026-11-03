@@ -107,9 +107,19 @@ export function SettingsPage() {
               <Row label="Provider health">{health.circuit === "closed" ? "Healthy" : health.circuit === "open" ? "Paused after repeated failures" : "Recovering"}{health.consecutive_failures ? ` · ${health.consecutive_failures} recent failure(s)` : ""}</Row>
               <Row label="Last successful fetch">{health.last_success_at ? `${formatRelative(health.last_success_at)}` : "None in this server process yet"}</Row>
               {health.last_error && <Row label="Last error"><span className="text-warn">{health.last_error.message}</span></Row>}
+              <Row label="Storage">
+                {status.storage.persistent ? (
+                  <span>Persistent disk · <span className="num">{status.storage.path}</span></span>
+                ) : status.storage.warning ? (
+                  <span className="text-warn">Not persistent — see warning below</span>
+                ) : (
+                  <span className="num">{status.storage.path}</span>
+                )}
+              </Row>
               <Row label="Alert worker">{status.worker.running ? `Running · last cycle ${formatRelative(status.worker.last_cycle_at)}` : status.worker.message}</Row>
               <Row label="Server mode">{status.environment} · {status.auth_mode === "dev_bypass" ? "development auth bypass" : "owner login"}</Row>
             </dl>
+            {status.storage.warning && <InlineNotice tone="warn" className="mt-3">{status.storage.message}</InlineNotice>}
             <p className="mt-3 text-xs leading-4 text-fg-3">
               Server cache defaults: quotes 5 min, history 1 h, fundamentals and search 24 h. A cached or recent fetch does not prove a fresh market quotation; always check the market time. When the provider fails, the last successful result is shown and marked stale.
             </p>

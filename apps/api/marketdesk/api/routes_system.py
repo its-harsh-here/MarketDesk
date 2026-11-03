@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import UTC, datetime
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import text
@@ -59,6 +61,30 @@ ATTRIBUTION = [
     },
     {"name": "Lucide icons", "license": "ISC", "url": "https://lucide.dev/", "note": "Interface icons."},
 ]
+
+
+def storage_status(settings: Settings) -> dict:
+    """Is the database on a mounted (persistent) disk? Containers lose unmounted files on restart."""
+    path = settings.data_dir.resolve()
+    probe = path
+    while not probe.exists() and probe != probe.parent:
+        probe = probe.parent
+    mounted = any(os.path.ismount(p) for p in (probe, *probe.parents) if p != Path("/"))
+    if mounted:
+        message = f"Database and sign-in data are stored on a mounted disk at {path}."
+    elif settings.is_production:
+        message = (
+            f"{path} is not on a mounted disk. On container hosts this data (watchlists, transactions, journal, "
+            "alerts) is lost on every restart or redeploy. Attach a persistent disk mounted at this path."
+        )
+    else:
+        message = f"Database stored at {path} (local directory)."
+    return {
+        "path": str(path),
+        "persistent": mounted,
+        "warning": bool(settings.is_production and not mounted),
+        "message": message,
+    }
 
 
 def worker_status(db: Session, settings: Settings) -> dict:
@@ -142,16 +168,35 @@ def status(
         ),
         "provider_health": market.health(),
         "worker": worker_status(db, settings),
+        "storage": storage_status(settings),
         "benchmarks": benchmark_symbols(settings, market),
         "attribution": ATTRIBUTION,
     }
 
 
 # ----------------------------------------------------------------------------- auth
+def _set_session_cookie(response: Response, settings: Settings, token: str) -> None:
+    response.set_cookie(
+        auth.COOKIE_NAME,
+        token,
+        max_age=settings.session_ttl_hours * 3600,
+        httponly=True,
+        samesite="lax",
+        secure=settings.effective_cookie_secure,
+        path="/",
+    )
+
+
 @router.get("/auth/session", response_model=SessionOut)
-def session(settings: Settings = Depends(settings_dep), principal=Depends(current_principal)):
+def session(response: Response, settings: Settings = Depends(settings_dep), principal=Depends(current_principal)):
     if principal is None:
         return {"authenticated": False, "mode": "owner", "read_only": False}
+    if principal.mode == "owner" and principal.claims and auth.needs_refresh(principal.claims):
+        # Sliding expiry: while you keep using MarketDesk, the sign-in keeps renewing.
+        token, _ = auth.issue_session(
+            settings, principal.username, csrf=principal.claims["csrf"], sid=principal.claims["sid"]
+        )
+        _set_session_cookie(response, settings, token)
     return {
         "authenticated": True,
         "mode": principal.mode,
@@ -184,29 +229,21 @@ def login(
         auth.record_attempt(db, key, False)
         raise AppError(401, "invalid_credentials", "Incorrect username or password.")
     auth.record_attempt(db, key, True)
-    token, row = auth.create_session(db, settings, body.username)
-    response.set_cookie(
-        auth.COOKIE_NAME,
-        token,
-        max_age=settings.session_ttl_hours * 3600,
-        httponly=True,
-        samesite="lax",
-        secure=settings.effective_cookie_secure,
-        path="/",
-    )
+    token, claims = auth.issue_session(settings, settings.owner_username or body.username)
+    _set_session_cookie(response, settings, token)
     return {
         "authenticated": True,
         "mode": "owner",
-        "username": row.username,
-        "csrf_token": row.csrf_token,
+        "username": claims["u"],
+        "csrf_token": claims["csrf"],
         "read_only": False,
     }
 
 
 @router.post("/auth/logout", status_code=204)
 def logout(response: Response, db: Session = Depends(get_db), principal=Depends(require_writer)):
-    if principal.session_id:
-        auth.revoke_session(db, principal.session_id)
+    if principal.claims:
+        auth.revoke_session(db, principal.claims)
     response.delete_cookie(auth.COOKIE_NAME, path="/")
     response.status_code = 204
     return response

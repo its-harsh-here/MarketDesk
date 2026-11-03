@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     owner_username: str | None = None
     owner_password_hash: str | None = None  # argon2 hash; generate with `marketdesk hash-password`
     session_secret: str | None = None
-    session_ttl_hours: int = 24 * 14
+    session_ttl_hours: int = 24 * 90  # sliding: renewed daily while you use the app
     cookie_secure: bool | None = None  # defaults to True in production
     dev_auth_bypass: bool = False
     allowed_origins: str = ""  # comma-separated extra origins allowed for CSRF Origin checks / CORS

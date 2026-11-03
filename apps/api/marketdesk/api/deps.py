@@ -15,7 +15,7 @@ from marketdesk.services.auth import (
     COOKIE_NAME,
     Principal,
     dev_bypass_principal,
-    lookup_session,
+    read_session,
 )
 from marketdesk.services.market import MarketDataService
 
@@ -33,10 +33,10 @@ def current_principal(
 ) -> Principal | None:
     if settings.dev_auth_bypass and settings.marketdesk_env == "development":
         return dev_bypass_principal(settings)
-    row = lookup_session(db, settings, request.cookies.get(COOKIE_NAME))
-    if row is None:
+    claims = read_session(db, settings, request.cookies.get(COOKIE_NAME))
+    if claims is None:
         return None
-    return Principal("owner", row.username, row.csrf_token, False, row.id)
+    return Principal("owner", claims["u"], claims["csrf"], False, claims["sid"], claims)
 
 
 def require_reader(principal: Principal | None = Depends(current_principal)) -> Principal:

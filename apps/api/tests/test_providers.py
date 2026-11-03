@@ -180,3 +180,116 @@ def test_fixture_dataset_regenerates_identically(tmp_path):
         committed = hashlib.sha256((REPO_ROOT / "fixtures" / "market" / name).read_bytes()).hexdigest()
         regenerated = hashlib.sha256((tmp_path / name).read_bytes()).hexdigest()
         assert committed == regenerated, name
+
+
+class _Resp:
+    def __init__(self, code):
+        self.status_code = code
+
+
+class _HTTPError(Exception):
+    def __init__(self, code):
+        super().__init__(f"HTTP {code}")
+        self.response = _Resp(code)
+
+
+def test_http_status_codes_are_mapped():
+    yp = YahooProvider(timeout=1)
+    cases = {
+        429: ("rate_limited", True),
+        401: ("upstream_unavailable", False),
+        403: ("upstream_unavailable", False),
+        404: ("missing", False),
+        503: ("upstream_unavailable", True),
+    }
+    for code, (kind, retryable) in cases.items():
+
+        def boom(code=code):
+            raise _HTTPError(code)
+
+        with pytest.raises(ProviderError) as exc:
+            yp._call(boom, "fundamentals")
+        assert (exc.value.kind, exc.value.retryable) == (kind, retryable), code
+        assert f"HTTP {code}" in exc.value.message
+
+
+def test_fundamentals_are_derived_when_company_summary_is_refused():
+    import types
+
+    calls = {"info": 0}
+    idx = pd.DatetimeIndex([pd.Timestamp(d, tz="Asia/Kolkata") for d in ("2026-06-04", "2026-06-05", "2026-11-03")])
+    df = pd.DataFrame(
+        {
+            "Open": [100, 101, 120],
+            "High": [102, 103, 125],
+            "Low": [99, 100, 118],
+            "Close": [101, 102, 120],
+            "Volume": [10, 10, 10],
+            "Dividends": [0.0, 6.0, 0.0],
+        },
+        index=idx,
+    )
+
+    class FakeTicker:
+        def __init__(self, symbol):
+            self.history_metadata = {
+                **META,
+                "regularMarketPrice": 120.0,
+                "fiftyTwoWeekHigh": 130.0,
+                "fiftyTwoWeekLow": 90.0,
+            }
+
+        @property
+        def info(self):
+            calls["info"] += 1
+            raise _HTTPError(401)
+
+        def history(self, **kwargs):
+            return df
+
+        def get_valuation_measures(self, freq):
+            return pd.DataFrame(
+                {"Current": [1.5e12, 21.104, 1.744]}, index=["Market Cap", "Trailing P/E", "Price/Book"]
+            )
+
+        def get_income_stmt(self, freq):
+            when = "2026-09-30" if freq == "quarterly" else "2026-03-31"
+            return pd.DataFrame(columns=[pd.Timestamp(when)])
+
+    class FakeSearch:
+        def __init__(self, *args, **kwargs):
+            self.quotes = [{"symbol": "EXAMPLE.NS", "sectorDisp": "Energy", "industryDisp": "Refining"}]
+
+    yp = YahooProvider(timeout=1)
+    yp._yf = types.SimpleNamespace(Ticker=FakeTicker, Search=FakeSearch)
+    f = yp.fundamentals("EXAMPLE.NS")
+    assert (
+        f.market_cap == Decimal("1500000000000")
+        and f.pe_ratio == Decimal("21.10")
+        and f.price_to_book == Decimal("1.74")
+    )
+    assert f.dividend_yield_percent == Decimal("5.00")  # 6 paid in last 12 months / 120
+    assert (f.fifty_two_week_low, f.fifty_two_week_high) == (Decimal("90.00"), Decimal("130.00"))
+    assert f.most_recent_quarter == date(2026, 9, 30) and f.last_fiscal_year_end == date(2026, 3, 31)
+    assert (f.sector, f.industry) == ("Energy", "Refining")
+    assert "HTTP 401" in f.notes[0] and any("12 months" in n for n in f.notes)
+    yp.fundamentals("EXAMPLE.NS")
+    assert calls["info"] == 1  # the refused endpoint is not retried on every request
+
+
+def test_not_found_body_means_missing_whatever_the_status():
+    yp = YahooProvider(timeout=1)
+
+    class Resp:
+        status_code = 401
+        text = '{"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found"}}}'
+
+    class Err(Exception):
+        response = Resp()
+
+    def boom():
+        raise Err()
+
+    with pytest.raises(ProviderError) as exc:
+        yp._call(boom, "quote")
+    assert exc.value.kind == "missing" and not exc.value.retryable

@@ -42,6 +42,13 @@ from marketdesk.providers.serialize import CODECS
 
 log = logging.getLogger("marketdesk.market")
 T = TypeVar("T")
+CIRCUIT_GROUPS = {
+    "quote": "prices",
+    "history": "prices",
+    "actions": "prices",
+    "fundamentals": "fundamentals",
+    "search": "search",
+}
 Status = Literal["sample", "available", "cached", "stale", "missing", "unsupported", "unavailable"]
 
 
@@ -138,7 +145,11 @@ class MarketDataService:
         self._executor = ThreadPoolExecutor(
             max_workers=max(1, settings.provider_max_concurrency), thread_name_prefix="provider"
         )
-        self.circuit = CircuitBreaker(settings.circuit_failure_threshold, settings.circuit_open_seconds)
+        # One breaker per endpoint family, so e.g. a refused fundamentals endpoint can never pause quotes.
+        self.circuits = {
+            group: CircuitBreaker(settings.circuit_failure_threshold, settings.circuit_open_seconds)
+            for group in set(CIRCUIT_GROUPS.values())
+        }
         self._writes = 0
         self.ttl = {
             "quote": settings.quote_ttl_seconds,
@@ -180,9 +191,15 @@ class MarketDataService:
     def invalidate(self) -> None:
         self._mem.clear()
 
+    @property
+    def circuit(self) -> CircuitBreaker:
+        """The price-data breaker (quotes, history, corporate actions) — what most screens depend on."""
+        return self.circuits["prices"]
+
     def reset_circuit(self) -> None:
-        self.circuit.failures = 0
-        self.circuit.open_until = 0.0
+        for c in self.circuits.values():
+            c.failures = 0
+            c.open_until = 0.0
 
     def health(self) -> dict:
         c = self.circuit
@@ -194,6 +211,10 @@ class MarketDataService:
             "last_success_at": c.last_success_at.isoformat() if c.last_success_at else None,
             "last_failure_at": c.last_failure_at.isoformat() if c.last_failure_at else None,
             "last_error": c.last_error,
+            "endpoints": {
+                group: {"circuit": b.state(), "consecutive_failures": b.failures, "last_error": b.last_error}
+                for group, b in sorted(self.circuits.items())
+            },
         }
 
     # ------------------------------------------------------------------ internals
@@ -261,8 +282,9 @@ class MarketDataService:
         return result
 
     async def _fetch(self, kind, key, fn, entry: _MemEntry | None, persisted) -> Result:
+        circuit = self.circuits[CIRCUIT_GROUPS[kind]]
         try:
-            if not self.circuit.allow():
+            if not circuit.allow():
                 raise ProviderError(
                     "upstream_unavailable",
                     "Provider requests are paused briefly after repeated failures.",
@@ -270,8 +292,10 @@ class MarketDataService:
                 )
             value = await self._run_with_retry(fn)
         except ProviderError as err:
-            if err.kind not in ("missing", "unsupported") and self.circuit.allow():
-                self.circuit.record_failure(err)
+            # Only transient failures (timeouts, 429, 5xx, network) trip the breaker; a refused or unknown
+            # symbol is not an outage and must never pause every other request.
+            if err.retryable and circuit.allow():
+                circuit.record_failure(err)
             # Prefer the last successful value (explicitly stale) over an empty panel.
             fallback = None
             if entry is not None and entry.error is None:
@@ -289,7 +313,7 @@ class MarketDataService:
                 self._mem_put(key, _MemEntry(None, datetime.now(UTC), time.monotonic() + 300, error=err))
             return Result(None, self._error_meta(err))
 
-        self.circuit.record_success()
+        circuit.record_success()
         fetched_at = datetime.now(UTC)
         self._mem_put(key, _MemEntry(value, fetched_at, time.monotonic() + self.ttl[kind]))
         self._persist_put(key, kind, value, fetched_at)

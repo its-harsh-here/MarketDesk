@@ -75,3 +75,22 @@ Consequential choices, newest last. Routine choices live in code comments.
     startup (no-op at head, serialised by a file lock in `DATA_DIR`, revision re-checked under the lock). Database
     errors return an explicit 503 `database_unavailable` instead of an anonymous 500. Compose names its web command
     explicitly so it never starts a second worker.
+27. **Signed session cookies (owner request: stay signed in).** Sessions were database rows, so a database reset
+    (a platform restart without a persistent disk) signed the owner out. The cookie is now an HMAC-signed token
+    (`SESSION_SECRET`) carrying user, issue/expiry times, session id and CSRF token, valid for 90 days and renewed
+    daily while used (sliding). Sign-out revokes the session id server-side; `marketdesk revoke-sessions` sets a
+    revocation epoch; rotating `SESSION_SECRET` or `OWNER_USERNAME` invalidates every cookie. The old
+    `auth_sessions` table is no longer used (left in place; no destructive migration).
+28. **Fundamentals without Yahoo's company summary.** Render's IPs are refused by `quoteSummary` (crumb required). On
+    refusal the provider derives fundamentals from endpoints that still work: chart metadata/history (52-week range,
+    trailing-12-month dividend yield), valuation measures (market cap, trailing P/E, P/B), income statements
+    (statement dates) and search (sector/industry); each derived field is labelled. The refused endpoint is skipped
+    for an hour instead of being retried on every request.
+29. **Circuit breakers per endpoint family, transient errors only.** Separate breakers for prices, fundamentals and
+    search; only retryable failures (timeouts, 429, 5xx, network) count. Yahoo answers unknown symbols with 401/404
+    depending on crumb state, so those must never pause quotes. A "not found" error body maps to `missing`.
+30. **Storage check.** `/api/status` reports whether `DATA_DIR` is on a mounted disk; production shows a warning on
+    Overview and Settings when it is not, because container hosts discard unmounted files on restart.
+31. **Symbol picker.** Results are selectable only once they match the current text; Enter during a search picks the
+    top result when it arrives. Bare names that fail (e.g. `RELIANCE`) get a server suggestion (`RELIANCE.NS`) with a
+    one-click fix in the Add symbol dialog.

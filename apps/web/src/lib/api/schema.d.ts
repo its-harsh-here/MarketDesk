@@ -1357,12 +1357,24 @@ export interface components {
                 [key: string]: unknown;
             };
             worker: components["schemas"]["WorkerStatusOut"];
+            storage: components["schemas"]["StorageOut"];
             /** Benchmarks */
             benchmarks: string[];
             /** Attribution */
             attribution: {
                 [key: string]: unknown;
             }[];
+        };
+        /** StorageOut */
+        StorageOut: {
+            /** Path */
+            path: string;
+            /** Persistent */
+            persistent: boolean;
+            /** Warning */
+            warning: boolean;
+            /** Message */
+            message: string;
         };
         /** TransactionIn */
         TransactionIn: {

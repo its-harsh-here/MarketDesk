@@ -1,21 +1,24 @@
-"""Single-owner authentication: argon2 password hash from the environment, server-side
-sessions (only an HMAC of the token is stored), CSRF tokens and login rate limiting."""
+"""Single-owner authentication: argon2 password hash from the environment, signed session
+cookies (HMAC with SESSION_SECRET, server-side revocation), CSRF tokens and login rate limiting."""
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
+import json
 import secrets
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from marketdesk.config import Settings, session_secret_bytes
-from marketdesk.models import AuthSession, LoginAttempt
+from marketdesk.models import AppSetting, LoginAttempt
 
 COOKIE_NAME = "md_session"
 _hasher = PasswordHasher()
@@ -28,7 +31,8 @@ class Principal:
     username: str
     csrf_token: str | None
     read_only: bool
-    session_id: int | None = None
+    session_id: str | None = None
+    claims: dict | None = None
 
 
 def hash_password(password: str) -> str:
@@ -86,49 +90,96 @@ def record_attempt(db: Session, key: str, succeeded: bool) -> None:
     db.commit()
 
 
-def create_session(db: Session, settings: Settings, username: str) -> tuple[str, AuthSession]:
-    token = secrets.token_urlsafe(32)
-    now = datetime.now(UTC)
-    row = AuthSession(
-        token_hash=_hmac(settings, token),
-        csrf_token=secrets.token_urlsafe(24),
-        username=username,
-        created_at=now,
-        last_seen_at=now,
-        expires_at=now + timedelta(hours=settings.session_ttl_hours),
-    )
-    db.add(row)
-    db.execute(delete(AuthSession).where(AuthSession.expires_at < now))
-    db.commit()
-    return token, row
+# --------------------------------------------------------------------------- sessions
+# Signed session cookies: the cookie carries {user, issued-at, expiry, session id, csrf} plus an
+# HMAC-SHA256 signature keyed by SESSION_SECRET. Sign-ins therefore survive restarts, redeploys and
+# database resets. They end on expiry (sliding: renewed daily while used), explicit sign-out (the
+# session id is revoked server-side), "sign out everywhere" (a revocation epoch), rotating
+# SESSION_SECRET, or changing OWNER_USERNAME.
+REFRESH_AFTER_SECONDS = 24 * 3600
+_REVOKED_KEY = "revoked_sessions"
+_EPOCH_KEY = "sessions_valid_after"
 
 
-def lookup_session(db: Session, settings: Settings, token: str | None) -> AuthSession | None:
-    if not token or len(token) > 200:
+def _b64(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+
+def _unb64(text: str) -> bytes:
+    return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
+
+
+def _signature(settings: Settings, payload: str) -> str:
+    return _b64(hmac.new(session_secret_bytes(settings), f"md1.{payload}".encode(), hashlib.sha256).digest())
+
+
+def issue_session(settings: Settings, username: str, *, csrf: str | None = None, sid: str | None = None):
+    now = int(time.time())
+    claims = {
+        "u": username,
+        "iat": now,
+        "exp": now + settings.session_ttl_hours * 3600,
+        "sid": sid or secrets.token_urlsafe(12),
+        "csrf": csrf or secrets.token_urlsafe(24),
+    }
+    payload = _b64(json.dumps(claims, separators=(",", ":")).encode())
+    return f"{payload}.{_signature(settings, payload)}", claims
+
+
+def _setting(db: Session, key: str):
+    row = db.get(AppSetting, key)
+    return row.value if row is not None else None
+
+
+def read_session(db: Session, settings: Settings, token: str | None) -> dict | None:
+    if not token or len(token) > 1024 or token.count(".") != 1:
         return None
-    row = db.scalar(select(AuthSession).where(AuthSession.token_hash == _hmac(settings, token)))
-    now = datetime.now(UTC)
-    if row is None or row.revoked_at is not None or row.expires_at <= now:
+    payload, sig = token.split(".")
+    if not hmac.compare_digest(sig, _signature(settings, payload)):
         return None
-    if settings.owner_username and row.username != settings.owner_username:
-        return None  # owner username was rotated
-    if (now - row.last_seen_at) > timedelta(minutes=5):
-        row.last_seen_at = now
-        db.commit()
-    return row
+    try:
+        claims = json.loads(_unb64(payload))
+    except (ValueError, json.JSONDecodeError):
+        return None
+    now = time.time()
+    if not isinstance(claims, dict) or claims.get("exp", 0) <= now:
+        return None
+    if not settings.owner_username or claims.get("u") != settings.owner_username:
+        return None  # owner username was changed
+    epoch = _setting(db, _EPOCH_KEY)
+    if isinstance(epoch, (int, float)) and claims.get("iat", 0) < epoch:
+        return None
+    revoked = _setting(db, _REVOKED_KEY)
+    if isinstance(revoked, dict) and claims.get("sid") in revoked:
+        return None
+    return claims
 
 
-def revoke_session(db: Session, session_id: int) -> None:
-    db.execute(update(AuthSession).where(AuthSession.id == session_id).values(revoked_at=datetime.now(UTC)))
+def needs_refresh(claims: dict) -> bool:
+    return time.time() - claims.get("iat", 0) > REFRESH_AFTER_SECONDS
+
+
+def revoke_session(db: Session, claims: dict) -> None:
+    row = db.get(AppSetting, _REVOKED_KEY)
+    now = time.time()
+    revoked = {k: v for k, v in (row.value or {}).items() if v > now} if row is not None else {}
+    revoked[claims["sid"]] = claims["exp"]
+    if row is None:
+        db.add(AppSetting(key=_REVOKED_KEY, value=revoked))
+    else:
+        row.value = revoked
     db.commit()
 
 
-def revoke_all_sessions(db: Session) -> int:
-    result = db.execute(
-        update(AuthSession).where(AuthSession.revoked_at.is_(None)).values(revoked_at=datetime.now(UTC))
-    )
+def revoke_all_sessions(db: Session) -> None:
+    """Sign out every browser: sessions issued before now stop working."""
+    now = int(time.time()) + 1
+    row = db.get(AppSetting, _EPOCH_KEY)
+    if row is None:
+        db.add(AppSetting(key=_EPOCH_KEY, value=now))
+    else:
+        row.value = now
     db.commit()
-    return result.rowcount or 0
 
 
 def dev_bypass_principal(settings: Settings) -> Principal:

@@ -426,6 +426,13 @@ class FixtureStateOut(Model):
     fault: bool = False
 
 
+class StorageOut(Model):
+    path: str
+    persistent: bool
+    warning: bool
+    message: str
+
+
 class StatusOut(Model):
     version: str
     environment: str
@@ -438,6 +445,7 @@ class StatusOut(Model):
     market_status: str
     provider_health: dict
     worker: WorkerStatusOut
+    storage: StorageOut
     benchmarks: list[str]
     attribution: list[dict]
 
