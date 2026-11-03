@@ -1,0 +1,55 @@
+{
+ "cik": 3,
+ "entityName": "Example Overseas Ltd (fictitious, IFRS)",
+ "facts": {
+  "ifrs-full": {
+   "Revenue": {
+    "units": {
+     "USD": [
+      {
+       "val": 19000,
+       "end": "2025-03-31",
+       "form": "20-F",
+       "filed": "2025-06-20",
+       "accn": "0000000003-25-000005",
+       "fy": 2025,
+       "fp": "FY",
+       "start": "2024-04-01"
+      }
+     ]
+    }
+   },
+   "ProfitLoss": {
+    "units": {
+     "USD": [
+      {
+       "val": 3200,
+       "end": "2025-03-31",
+       "form": "20-F",
+       "filed": "2025-06-20",
+       "accn": "0000000003-25-000005",
+       "fy": 2025,
+       "fp": "FY",
+       "start": "2024-04-01"
+      }
+     ]
+    }
+   },
+   "Equity": {
+    "units": {
+     "USD": [
+      {
+       "val": 11000,
+       "end": "2025-03-31",
+       "form": "20-F",
+       "filed": "2025-06-20",
+       "accn": "0000000003-25-000005",
+       "fy": 2025,
+       "fp": "FY"
+      }
+     ]
+    }
+   }
+  }
+ }
+}
