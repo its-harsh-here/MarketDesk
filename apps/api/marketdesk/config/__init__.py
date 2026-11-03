@@ -64,6 +64,10 @@ class Settings(BaseSettings):
 
     # Worker
     alert_poll_seconds: int = 300
+    # SEC EDGAR (US filings). No key exists; SEC requires an application name and a contact email in the User-Agent.
+    sec_user_agent: str | None = None
+    sec_max_requests_per_second: float = 5.0  # SEC fair-access limit is 10/s
+    research_refresh_hours: int = 24  # how often tracked companies are re-checked for new filings
     worker_heartbeat_stale_seconds: int = 900
 
     # Limits

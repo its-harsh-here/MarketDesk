@@ -271,6 +271,23 @@ class MarketCacheEntry(Base):
     last_access_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, index=True)
 
 
+class ResearchCheck(Base):
+    """When a company dataset was last checked, separately from how recent the reported facts are."""
+
+    __tablename__ = "research_checks"
+    __table_args__ = (UniqueConstraint("instrument_id", "dataset", name="uq_research_check"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    instrument_id: Mapped[int] = mapped_column(ForeignKey("instruments.id", ondelete="CASCADE"), nullable=False)
+    dataset: Mapped[str] = mapped_column(String(32), nullable=False)  # sec_submissions | sec_companyfacts
+    source_id: Mapped[str | None] = mapped_column(String(32))  # e.g. the CIK
+    last_checked_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    last_success_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    last_error: Mapped[str | None] = mapped_column(String(200))
+    latest_filing_date: Mapped[date | None] = mapped_column(Date)
+    latest_accession: Mapped[str | None] = mapped_column(String(32))
+
+
 class WorkerStatus(Base):
     __tablename__ = "worker_status"
     name: Mapped[str] = mapped_column(String(32), primary_key=True)

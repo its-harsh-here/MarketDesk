@@ -237,6 +237,12 @@ def status(
         "worker": worker_status(db, settings),
         "storage": storage_status(settings, db),
         "schema": schema_status(db),
+        "research": {
+            "sec": {
+                "enabled": request.app.state.research.client.enabled,
+                "reason": request.app.state.research.client.problem,
+            }
+        },
         "benchmarks": benchmark_symbols(settings, market),
         "attribution": ATTRIBUTION,
     }

@@ -496,6 +496,7 @@ class StatusOut(Model):
     worker: WorkerStatusOut
     storage: StorageOut
     schema_: SchemaOut = Field(alias="schema", serialization_alias="schema")
+    research: dict = {}
     benchmarks: list[str]
     attribution: list[dict]
 

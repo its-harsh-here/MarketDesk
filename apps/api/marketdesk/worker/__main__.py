@@ -32,6 +32,21 @@ def _status(db, provider: str) -> WorkerStatus:
     return row
 
 
+async def _refresh_research(market) -> dict:
+    """Daily filing checks for watchlisted US companies (SEC); isolated so it can never stop alert evaluation."""
+    from marketdesk.services.research import ResearchService
+
+    def run():
+        with db_session() as db:
+            return ResearchService(market.settings).refresh_tracked(db)
+
+    try:
+        return await asyncio.to_thread(run)
+    except Exception as exc:  # never let research refresh break the alert worker
+        log.warning("research refresh failed: %s", type(exc).__name__)
+        return {"error": type(exc).__name__}
+
+
 async def run_cycle(market) -> dict:
     with db_session() as db:
         row = _status(db, market.source)
@@ -43,6 +58,7 @@ async def run_cycle(market) -> dict:
             log.exception("evaluation cycle failed")
             summary = {"error": type(exc).__name__}
             row.last_error = f"Evaluation failed ({type(exc).__name__})."
+        summary["research"] = await _refresh_research(market)
         skipped = summary.get("skipped") or []
         if skipped and not row.last_error:
             row.last_error = f"{len(skipped)} symbol(s) skipped: provider data was stale or unavailable."

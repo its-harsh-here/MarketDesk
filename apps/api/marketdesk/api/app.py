@@ -21,6 +21,7 @@ from marketdesk.api import (
     routes_journal,
     routes_market,
     routes_portfolio,
+    routes_research,
     routes_system,
     routes_watchlists,
     timing,
@@ -104,6 +105,9 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
     )
     app.state.settings = settings
     app.state.market = market or build_market_service(settings, session_factory())
+    from marketdesk.services.research import ResearchService
+
+    app.state.research = ResearchService(settings)
     install_error_handlers(app)
 
     if settings.extra_origins:
@@ -143,7 +147,15 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
             response.headers.setdefault("Cache-Control", "no-store")
         return response
 
-    for r in (routes_system, routes_market, routes_watchlists, routes_portfolio, routes_alerts, routes_journal):
+    for r in (
+        routes_system,
+        routes_market,
+        routes_research,
+        routes_watchlists,
+        routes_portfolio,
+        routes_alerts,
+        routes_journal,
+    ):
         app.include_router(r.router)
 
     @app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"], include_in_schema=False)

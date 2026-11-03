@@ -1,0 +1,129 @@
+"""SEC EDGAR client (server-side only; https://www.sec.gov/search-filings/edgar-application-programming-interfaces).
+
+- data.sec.gov submissions and XBRL company facts plus www.sec.gov/files/company_tickers.json; no API key exists.
+- Fair access (SEC webmaster FAQ, checked 3 Nov 2026): at most 10 requests per second, and every request must declare
+  a User-Agent with the application name and an administrative contact email. MarketDesk stays well below the limit
+  (SEC_MAX_REQUESTS_PER_SECOND, default 5) with a process-wide token bucket, and sends nothing at all unless
+  SEC_USER_AGENT is configured with a contact address.
+- 429/5xx responses are retried a bounded number of times with backoff; no limit is ever bypassed.
+"""
+
+from __future__ import annotations
+
+import gzip
+import json
+import random
+import re
+import threading
+import time
+import urllib.error
+import urllib.request
+
+from marketdesk.providers.base import ProviderError
+
+SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
+COMPANYFACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
+TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
+_UA_RE = re.compile(r"^\S.{2,}\s\S+@\S+\.\S+$")
+
+
+def user_agent_problem(ua: str | None) -> str | None:
+    if not ua:
+        return (
+            "SEC_USER_AGENT is not set. SEC data needs an application name and a contact email, "
+            "e.g. 'MarketDesk you@example.com'."
+        )
+    if not _UA_RE.match(ua.strip()):
+        return "SEC_USER_AGENT must be an application name followed by a contact email address."
+    return None
+
+
+def filing_index_url(cik: int, accession: str) -> str:
+    return f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession.replace('-', '')}/{accession}-index.htm"
+
+
+def filing_document_url(cik: int, accession: str, document: str) -> str:
+    return f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession.replace('-', '')}/{document}"
+
+
+class _RateLimiter:
+    def __init__(self, per_second: float):
+        self.interval = 1.0 / max(0.1, min(per_second, 9.0))  # never above SEC's 10/s
+        self._next = 0.0
+        self._lock = threading.Lock()
+
+    def wait(self) -> None:
+        with self._lock:
+            now = time.monotonic()
+            delay = self._next - now
+            self._next = max(now, self._next) + self.interval
+        if delay > 0:
+            time.sleep(delay)
+
+
+class SecClient:
+    def __init__(self, user_agent: str | None, per_second: float = 5.0, timeout: float = 20.0, retries: int = 2):
+        self.user_agent = (user_agent or "").strip()
+        self.problem = user_agent_problem(self.user_agent)
+        self.timeout = timeout
+        self.retries = retries
+        self._limiter = _RateLimiter(per_second)
+
+    @property
+    def enabled(self) -> bool:
+        return self.problem is None
+
+    def _get_json(self, url: str):
+        if not self.enabled:
+            raise ProviderError("unsupported", self.problem or "SEC access is not configured.")
+        for attempt in range(self.retries + 1):
+            self._limiter.wait()
+            req = urllib.request.Request(  # noqa: S310 (only the fixed https SEC URLs above are ever requested)
+                url, headers={"User-Agent": self.user_agent, "Accept-Encoding": "gzip", "Accept": "application/json"}
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # noqa: S310 (fixed SEC hosts)
+                    raw = resp.read()
+                    if resp.headers.get("Content-Encoding") == "gzip":
+                        raw = gzip.decompress(raw)
+                try:
+                    return json.loads(raw)
+                except ValueError as exc:
+                    raise ProviderError("malformed", "SEC returned data that is not valid JSON.") from exc
+            except urllib.error.HTTPError as exc:
+                if exc.code == 404:
+                    raise ProviderError("missing", "SEC has no data for this company.") from exc
+                retryable = exc.code == 429 or exc.code >= 500
+                if not retryable or attempt == self.retries:
+                    kind = "rate_limited" if exc.code == 429 else "upstream_unavailable"
+                    raise ProviderError(kind, f"SEC request failed (HTTP {exc.code}).", retryable=retryable) from exc
+            except (urllib.error.URLError, TimeoutError) as exc:
+                if attempt == self.retries:
+                    raise ProviderError("timeout", "SEC did not respond in time.", retryable=True) from exc
+            time.sleep(min(8.0, 0.5 * 2**attempt) * (0.5 + random.random()))  # noqa: S311 (jitter only)
+        raise AssertionError("unreachable")  # pragma: no cover
+
+    def ticker_map(self) -> dict[str, tuple[int, str]]:
+        """Ticker -> (CIK, registrant name) from SEC's published association file."""
+        data = self._get_json(TICKERS_URL)
+        if not isinstance(data, dict):
+            raise ProviderError("malformed", "SEC ticker file had an unexpected shape.")
+        out = {}
+        for row in data.values():
+            try:
+                out[str(row["ticker"]).upper()] = (int(row["cik_str"]), str(row["title"]))
+            except (KeyError, TypeError, ValueError):
+                continue
+        return out
+
+    def submissions(self, cik: int) -> dict:
+        data = self._get_json(SUBMISSIONS_URL.format(cik=cik))
+        if not isinstance(data, dict) or "filings" not in data:
+            raise ProviderError("malformed", "SEC submissions had an unexpected shape.")
+        return data
+
+    def companyfacts(self, cik: int) -> dict:
+        data = self._get_json(COMPANYFACTS_URL.format(cik=cik))
+        if not isinstance(data, dict) or not isinstance(data.get("facts"), dict):
+            raise ProviderError("malformed", "SEC company facts had an unexpected shape.")
+        return data

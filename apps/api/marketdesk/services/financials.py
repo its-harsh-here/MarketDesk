@@ -240,9 +240,7 @@ def reporting_currency(facts: dict, taxonomy: str) -> str | None:
     return max(counts, key=lambda u: (counts[u], u)) if counts else None
 
 
-def _candidates(
-    facts: dict, taxonomy: str, tag: str, line: Line, period: str, currency: str | None
-) -> list[FactValue]:
+def _candidates(facts: dict, taxonomy: str, tag: str, line: Line, period: str, currency: str | None) -> list[FactValue]:
     concept = (facts.get(taxonomy) or {}).get(tag) or {}
     out = []
     for unit, items in (concept.get("units") or {}).items():

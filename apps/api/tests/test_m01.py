@@ -265,7 +265,8 @@ def test_pre_m01_backup_restores_into_the_current_schema(tmp_path):
     # Rewrite it as the previous version (schema 0001) would have produced it.
     old = json.loads(json.dumps(data))
     old["schema_revision"] = "0001"
-    old["tables"].pop("instrument_identifiers")
+    for table in ("instrument_identifiers", "research_checks"):  # tables added after revision 0001
+        old["tables"].pop(table, None)
     inst = old["tables"]["instruments"]
     keep = [
         i
@@ -291,5 +292,7 @@ def test_pre_m01_backup_restores_into_the_current_schema(tmp_path):
         assert [(w["name"], [i["symbol"] for i in w["items"]]) for w in lists] == [("Keep", ["SX:AURORA"])]
         assert api.get("/api/portfolio/summary").json()["cash"] == "500.25"
     with session_factory()() as db:
-        assert db.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0002"
+        from marketdesk.db.migrations import head_revision
+
+        assert db.execute(text("SELECT version_num FROM alembic_version")).scalar() == head_revision()
         assert db.execute(text("SELECT count(*) FROM instrument_identifiers")).scalar() == 1  # backfilled
