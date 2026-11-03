@@ -69,3 +69,9 @@ Consequential choices, newest last. Routine choices live in code comments.
 25. **Entrypoint privilege drop.** The image no longer sets `USER`; `python -m marketdesk.entrypoint` chowns
     `DATA_DIR` (platform disks mount root-owned) and drops to uid 10001 before exec. The CLI does the same when run as
     root inside the image, so operator commands cannot leave root-owned files on the volume.
+26. **Self-migrating startup (fix for the first Render deploy).** The live service ran the image's old default command
+    (web only), so no migration ran and sign-in failed with a 500 on missing tables. Now the image's default command is
+    `python -m marketdesk.serve` (migrate + web + worker), and the web app and worker both call `ensure_migrated` on
+    startup (no-op at head, serialised by a file lock in `DATA_DIR`, revision re-checked under the lock). Database
+    errors return an explicit 503 `database_unavailable` instead of an anonymous 500. Compose names its web command
+    explicitly so it never starts a second worker.

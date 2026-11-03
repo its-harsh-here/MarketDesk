@@ -58,6 +58,9 @@ async def main_async(once: bool) -> None:
     settings = get_settings()
     validate_settings(settings)
     init_engine(settings)
+    from marketdesk.db.migrations import ensure_migrated
+
+    ensure_migrated(settings.effective_database_url, settings.data_dir)
     market = build_market_service(settings, session_factory())
     with db_session() as db:
         row = _status(db, market.source)

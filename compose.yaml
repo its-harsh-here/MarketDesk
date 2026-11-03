@@ -22,6 +22,8 @@ services:
 
   web:
     <<: *app
+    # Web only; migrate and worker are separate services here (the image default runs all three).
+    command: ["uvicorn", "marketdesk.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
     depends_on:
       migrate:
         condition: service_completed_successfully

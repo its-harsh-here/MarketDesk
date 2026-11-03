@@ -76,6 +76,13 @@ Token contrast was computed: all text pairs ≥ 4.5:1 in both themes.
 - Yahoo may rate-limit some cloud IP ranges; the app then shows stale/unavailable states.
 - No licence chosen for the project's own code.
 
+## Deployment
+- Live URL: https://marketdesk-9vmi.onrender.com/ (deployed by the owner on Render).
+- 2026-11-03 diagnosis: `/api/health` 200 but `/api/readiness` 503 and login 500 — the service ran the image's old
+  web-only default command, so migrations never ran (and no worker). Fixed by the self-migrating startup (decision 26);
+  verified in a Render-like container (root-owned empty disk, PORT=10000) with both the new default command and a
+  web-only command: readiness ready, wrong password 401, correct password 200, writes 201.
+
 ## Next — deployment (owner chose Render)
 1. Generate the password hash (README → Deploy).
 2. Render dashboard → New → Blueprint → this repository, branch `main`; enter `OWNER_USERNAME` and

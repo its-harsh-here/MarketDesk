@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import OperationalError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 log = logging.getLogger("marketdesk.api")
@@ -62,6 +63,18 @@ def install_error_handlers(app: FastAPI) -> None:
         message = exc.detail if isinstance(exc.detail, str) else "Request failed."
         return JSONResponse(
             error_body(code, message), status_code=exc.status_code, headers=getattr(exc, "headers", None)
+        )
+
+    @app.exception_handler(OperationalError)
+    async def _db(_: Request, exc: OperationalError):
+        log.error("database error: %s", type(exc.orig).__name__ if exc.orig else type(exc).__name__)
+        return JSONResponse(
+            error_body(
+                "database_unavailable",
+                "The database is unavailable or not initialised. Check the server logs; restarting the "
+                "service applies any pending migrations.",
+            ),
+            status_code=503,
         )
 
     @app.exception_handler(Exception)

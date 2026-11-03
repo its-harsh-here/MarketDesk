@@ -53,6 +53,10 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        # Hosts that only run the web command (no separate migrate step) still get a working schema.
+        from marketdesk.db.migrations import ensure_migrated
+
+        ensure_migrated(settings.effective_database_url, settings.data_dir)
         yield
 
     app = FastAPI(
