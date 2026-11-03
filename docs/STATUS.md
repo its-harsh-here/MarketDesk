@@ -32,6 +32,7 @@ _Last updated: 2026-11-03 — core release complete; deployment-ready (not deplo
 | Screenshots | `cd tests/e2e && npm run screenshots` | 27 images, no horizontal overflow at 1440/1024/390 |
 | Docker image | `docker build` (via `mirror.gcr.io` base images + proxy CA secret) | built, 577 MB |
 | Compose | `docker compose up` | refuses to start without credentials; with credentials migrate exits 0, web + worker healthy; login, CSRF write, deep links, JSON 404, backup verified |
+| GitHub Actions CI | run #1 on `main` @ 7f6366a | API, Web, Browser journeys, Docker build: all success (https://github.com/its-harsh-here/MarketDesk/actions/runs/41588142289) |
 | Live Yahoo | `cd apps/api && uv run python ../../scripts/check_yahoo.py` | search, quotes (RELIANCE/TCS/INFY/HDFCBANK/ITC.NS, ^NSEI), 1Y history, fundamentals, actions all OK |
 
 Visual QA was done by inspecting the captured screenshots (Overview, Instrument, Portfolio, transaction dialog,
