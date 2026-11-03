@@ -82,6 +82,9 @@ Token contrast was computed: all text pairs ≥ 4.5:1 in both themes.
   web-only default command, so migrations never ran (and no worker). Fixed by the self-migrating startup (decision 26);
   verified in a Render-like container (root-owned empty disk, PORT=10000) with both the new default command and a
   web-only command: readiness ready, wrong password 401, correct password 200, writes 201.
+- After commit 0411281 was deployed: live `/api/readiness` → ready; wrong-credential login → 401 (was 500);
+  private API without a session → 401; SPA deep links → 200. Owner sign-in itself and the alert worker were not
+  checked from here (no credentials); check Settings → Data status after signing in.
 
 ## Next — deployment (owner chose Render)
 1. Generate the password hash (README → Deploy).
