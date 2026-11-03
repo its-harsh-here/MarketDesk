@@ -8,8 +8,9 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerCommand: python -m marketdesk.entrypoint python -m marketdesk.serve
-    # No `plan` key: Render's default paid instance (0.5 CPU / 512 MB) is enough — web + worker
-    # measured ~315 MB. Persistent disks are not available on the free plan.
+    # Starter = 0.5 CPU / 512 MB, enough for web + worker (measured ~315 MB). Persistent disks are not
+    # available on the free plan.
+    plan: starter
     region: singapore
     healthCheckPath: /api/health
     disk:

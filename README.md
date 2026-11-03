@@ -63,9 +63,15 @@ python3 -m pip install argon2-cffi==25.1.0 && python3 -c "import getpass; from a
 (`python -m marketdesk.serve`) with a 1 GB persistent disk at `/data`. Render disks need a paid instance and attach
 to a single instance, which is why both processes share one container (measured: about 315 MB together).
 
-1. Render dashboard → **New** → **Blueprint** → connect this repository.
-2. Enter `OWNER_USERNAME` and `OWNER_PASSWORD_HASH` when prompted (`SESSION_SECRET` is generated).
-3. Deploy. Render provides HTTPS on `https://<service>.onrender.com`; the health check is `/api/health`.
+1. Render dashboard → **New** → **Blueprint** → connect this repository (branch `main`).
+2. Enter `OWNER_USERNAME` and `OWNER_PASSWORD_HASH` when prompted. Paste the hash exactly as printed, starting with
+   `$argon2id$`, **without** quotes (quotes are only needed in a Compose `.env` file). `SESSION_SECRET` is generated.
+3. Apply. The first build takes a few minutes. Render serves HTTPS at `https://<service>.onrender.com`; the health
+   check is `/api/health`. Sign in, then use **Load NSE starter** or add symbols with Ctrl/Cmd+K.
+4. Check **Settings → Data status**: provider Yahoo, alert worker running. If Yahoo rate-limits Render's IPs, panels
+   show stale/unavailable states with the reason.
+
+`render.yaml` was validated against Render's published blueprint schema (`https://render.com/schema/render.yaml.json`).
 
 With a disk attached Render stops the old instance before starting the new one, so each deploy has a few seconds of
 downtime.

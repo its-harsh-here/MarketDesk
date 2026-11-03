@@ -30,7 +30,8 @@ _Last updated: 2026-11-03 — real-data-only product; deployment-ready for Rende
 - Compose with `.env.example` defaults (yahoo): migrate exit 0, web and worker healthy; `exec` backup as root
   produces uid 10001 files.
 - Memory: web ≈ 171 MB, worker ≈ 130 MB, supervisor ≈ 13 MB.
-- Render blueprint is written from Render's current docs but has **not** been deployed (no account access).
+- Render blueprint validated against Render's published JSON schema (0 errors); plan `starter`, region `singapore`.
+  It has **not** been deployed: this session has no Render account access.
 
 ## Checks run (2026-11-03, this environment)
 | Check | Command | Result |
@@ -74,6 +75,13 @@ Token contrast was computed: all text pairs ≥ 4.5:1 in both themes.
 - Not deployed anywhere yet: no hosting account was available to this session.
 - Yahoo may rate-limit some cloud IP ranges; the app then shows stale/unavailable states.
 - No licence chosen for the project's own code.
+
+## Next — deployment (owner chose Render)
+1. Generate the password hash (README → Deploy).
+2. Render dashboard → New → Blueprint → this repository, branch `main`; enter `OWNER_USERNAME` and
+   `OWNER_PASSWORD_HASH` (no quotes); apply.
+3. After the first deploy: open `/api/health`, sign in, load the NSE starter, and check Settings → Data status
+   (provider Yahoo, worker running). Record the URL here.
 
 ## Next (optional work, after core)
 - Normalized 2–3 stock comparison chart.
