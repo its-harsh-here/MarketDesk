@@ -77,7 +77,8 @@ Token contrast was computed: all text pairs ≥ 4.5:1 in both themes.
 - No licence chosen for the project's own code.
 
 ## Deployment
-- Live URL: https://marketdesk-9vmi.onrender.com/ (deployed by the owner on Render).
+- Live URL: https://marketdesk-rhag.onrender.com/ (Render Free, recreated by the owner in Neon's region; the earlier
+  `marketdesk-9vmi` service no longer exists). Upgrade-phase status: `docs/UPGRADE_STATUS.md`.
 - 2026-11-03 diagnosis: `/api/health` 200 but `/api/readiness` 503 and login 500 — the service ran the image's old
   web-only default command, so migrations never ran (and no worker). Fixed by the self-migrating startup (decision 26);
   verified in a Render-like container (root-owned empty disk, PORT=10000) with both the new default command and a
@@ -147,7 +148,8 @@ Live after deploy (same client, signed in, 3 rounds, medians; Server-Timing from
 **Remaining cause, measured:** one database round trip from the Render service to Neon takes **~175 ms** (Settings →
 Data status now shows it). Neon is in AWS ap-southeast-1 (Singapore); a same-region round trip is a few milliseconds,
 so the Render service is in another region (175 ms is typical of US-West). Every remaining statement costs 175 ms.
-Owner action (free, no data migration): create the Render web service in **Singapore** (Blueprint from `render.yaml`
+Resolved (3 Nov 2026): the owner recreated the service as `marketdesk-rhag`; measured round trip 1.3 ms.
+Original advice — owner action (free, no data migration): create the Render web service in **Singapore** (Blueprint from `render.yaml`
 selects it), copy the same environment variables (including `SESSION_SECRET` to stay signed in), then delete the old
 service. The URL changes unless a custom domain is used. Singapore is also the nearest Render region to India.
 
