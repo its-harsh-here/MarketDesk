@@ -30,7 +30,7 @@ export function Panel({ title, titleId, meta, actions, children, className, body
         <header className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 border-b border-line-subtle px-[var(--panel-pad)] py-2">
           <div className={cn("flex min-w-0 items-baseline", wrapHeader ? "flex-[1_1_16rem] flex-wrap gap-x-3 gap-y-0.5" : "flex-1 gap-3")}>
             {title && (
-              <h2 id={titleId} className="max-w-full truncate text-[13px] font-semibold tracking-wide text-fg">
+              <h2 id={titleId} className="max-w-full shrink-0 truncate text-[13px] font-semibold tracking-wide text-fg">
                 {title}
               </h2>
             )}

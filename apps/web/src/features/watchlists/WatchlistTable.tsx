@@ -107,7 +107,9 @@ export function WatchlistTable({
       header: "Instrument",
       sortable: true,
       render: (r) => <InstrumentBadge symbol={r.symbol} name={r.name} exchange={compact ? null : r.exchange} />,
-      className: compact ? "max-w-[150px]" : "max-w-[260px]",
+      // Compact (Overview side panel): the instrument column takes whatever width is left and truncates, so the
+      // price, change and star columns always stay inside the panel.
+      className: compact ? "w-full max-w-0" : "max-w-[260px]",
     },
     {
       key: "last_price",

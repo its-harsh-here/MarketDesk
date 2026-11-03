@@ -91,8 +91,18 @@ and test the migration on a copy (a Neon branch, or `pg_restore --no-owner --dbn
   clipping or overlap, and no page overflow.
   Files: `apps/web/src/components/ui/Panel.tsx`, `apps/web/src/features/market/ChartPanel.tsx`,
   `apps/web/src/features/market/PriceChart.tsx`, `apps/web/src/features/overview/OverviewPage.tsx`.
+- **Fix found while verifying on the live site: the Overview watchlist panel clipped content.** The live check at
+  1280 px (the owner's "Harsh Stocks" list) showed the panel title cut to "Watchl…" and the star buttons partly
+  outside the panel; the compact table was 29 px wider than the panel. Fix: the compact instrument column is fluid
+  (`w-full max-w-0`, truncates), panel titles keep priority over the meta text, and between 1280 and 1399 px the
+  Overview uses a 7/5 chart/watchlist split, so full symbols fit (8/4 from 1400 px, i.e. the 1440 layout is
+  unchanged). Measured: no table or page overflow at 1280, 1366, 1400, 1440, 1600, 1024, or 390 px. Screenshots
+  inspected. Files: `apps/web/src/features/watchlists/WatchlistTable.tsx`, `apps/web/src/components/ui/Panel.tsx`,
+  `apps/web/src/features/overview/OverviewPage.tsx`.
 - Docs: `CLAUDE.md` (Grok optional, India + US, USD accounts in scope, streaming when entitled, fixed config
   names), `docs/UPGRADE_RULES.md`, this file, and `docs/STATUS.md` (new live URL).
+- Checks after both fixes: Vitest 21 passed, Playwright journeys 10/10, tsc/ESLint clean; CI on `main` for commit
+  357048e green.
 - Data migrations: none. New environment variables: none. Unverified integrations: none added.
 
 ## Known limitations carried forward

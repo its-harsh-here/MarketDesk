@@ -253,7 +253,7 @@ export function OverviewPage() {
         {chartSymbol ? (
           <ChartPanel
             key={chartSymbol}
-            className="lg:col-span-12 xl:col-span-8"
+            className="lg:col-span-12 xl:col-span-7 min-[87.5rem]:col-span-8"
             symbol={chartSymbol}
             currency={chartSnap?.instrument.currency ?? "INR"}
             height={340}
@@ -293,7 +293,7 @@ export function OverviewPage() {
             }
           />
         ) : (
-          <Panel title="Chart" className="lg:col-span-12 xl:col-span-8">
+          <Panel title="Chart" className="lg:col-span-12 xl:col-span-7 min-[87.5rem]:col-span-8">
             {listsLoading ? <Skeleton className="h-[340px] w-full" /> : <EmptyState title="Choose an instrument">Add symbols to a watchlist to chart them here.</EmptyState>}
           </Panel>
         )}
@@ -301,7 +301,7 @@ export function OverviewPage() {
         <Panel
           title="Watchlist"
           titleId="wl-title"
-          className="lg:col-span-12 xl:col-span-4"
+          className="lg:col-span-12 xl:col-span-5 min-[87.5rem]:col-span-4"
           refreshing={snaps.isFetching && !snaps.isLoading}
           bodyClassName="p-0"
           meta={wl ? `${wl.items.length} symbols` : undefined}
@@ -371,9 +371,9 @@ export function OverviewPage() {
           )}
         </Panel>
 
-        <BriefingPanel className="lg:col-span-6 xl:col-span-5" />
+        <BriefingPanel className="lg:col-span-6 xl:col-span-4 min-[87.5rem]:col-span-5" />
         <PortfolioSnapshot className="lg:col-span-6 xl:col-span-3" />
-        <JournalActivity className="lg:col-span-12 xl:col-span-4" />
+        <JournalActivity className="lg:col-span-12 xl:col-span-5 min-[87.5rem]:col-span-4" />
       </div>
     </>
   );
