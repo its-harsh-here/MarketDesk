@@ -105,6 +105,13 @@ Live journeys passing: sign-in, overview, watchlist create/add (click and quick-
 candles, index page, command palette, alert create/delete, journal create/delete, transaction dialog validation
 (not submitted — real ledger), settings/data status, phone layouts (no overflow), reload keeps session.
 
+## Free hosting (PostgreSQL) — in review
+- Branch `claude/gifted-babbage-cg6smx`, pull request to `main` (owner reviews and merges every change from now on).
+- Verified: full pytest suite on PostgreSQL 17 (84 passed, SQLite-only backup test skipped) and on SQLite (85 passed);
+  `alembic check` clean on Postgres; production image with no disk + external Postgres: data, ledger and sign-in
+  survived destroying and recreating the container; storage check reports external Postgres as persistent.
+- Owner actions after merging: create a free Neon project, set `DATABASE_URL` on Render, switch the instance to Free.
+
 ## Next — deployment (owner chose Render)
 1. Generate the password hash (README → Deploy).
 2. Render dashboard → New → Blueprint → this repository, branch `main`; enter `OWNER_USERNAME` and

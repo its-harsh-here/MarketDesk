@@ -37,9 +37,9 @@ rather than wrong numbers.
 
 ## Deploy
 
-The host must run a long-lived web process **and** the alert worker, with a **persistent disk** for SQLite. Static
-hosts cannot run the backend, and sleeping or free tiers cannot evaluate alerts continuously. Every route below needs
-three secrets:
+The host must run the web process **and** the alert worker, and the data must live somewhere persistent: either a
+disk/volume for SQLite at `/data`, or an external PostgreSQL database via `DATABASE_URL`. Static hosts cannot run the
+backend, and sleeping free tiers cannot evaluate alerts continuously. Every route below needs three secrets:
 
 - `OWNER_USERNAME` — your login name.
 - `OWNER_PASSWORD_HASH` — an argon2 hash, created with the command below; you type the password, it is never stored.
@@ -57,24 +57,25 @@ or with plain Python 3 (prompts for the password without echoing it):
 python3 -m pip install argon2-cffi==25.1.0 && python3 -c "import getpass; from argon2 import PasswordHasher; print(PasswordHasher().hash(getpass.getpass('Owner password: ')))"
 ```
 
-### Option A — Render (deploys from this GitHub repository)
+### Option A — Render Free + Neon Postgres (no cost)
 
-`render.yaml` defines one Docker web service in Singapore that runs web + worker together
-(`python -m marketdesk.serve`) with a 1 GB persistent disk at `/data`. Render disks need a paid instance and attach
-to a single instance, which is why both processes share one container (measured: about 315 MB together).
+Render's Free plan has no persistent disk: its filesystem is wiped on every restart, redeploy and spin-down. So the
+data lives in a free external PostgreSQL database instead (Neon's free plan needs no credit card). Sign-ins are signed
+cookies and survive restarts on their own.
 
-1. Render dashboard → **New** → **Blueprint** → connect this repository (branch `main`).
-2. Enter `OWNER_USERNAME` and `OWNER_PASSWORD_HASH` when prompted. Paste the hash exactly as printed, starting with
-   `$argon2id$`, **without** quotes (quotes are only needed in a Compose `.env` file). `SESSION_SECRET` is generated.
-3. Apply. The first build takes a few minutes. Render serves HTTPS at `https://<service>.onrender.com`; the health
-   check is `/api/health`. Sign in, then use **Load NSE starter** or add symbols with Ctrl/Cmd+K.
-4. Check **Settings → Data status**: provider Yahoo, alert worker running. If Yahoo rate-limits Render's IPs, panels
-   show stale/unavailable states with the reason.
+1. **Database:** sign up at [neon.tech](https://neon.tech) → create a project (region: *Asia Pacific (Singapore)* is
+   closest to Render Singapore) → copy the connection string (`postgresql://…?sslmode=require`).
+2. **App:** Render dashboard → **New** → **Blueprint** → this repository, branch `main` (`render.yaml` selects the
+   Free plan, Singapore). Enter `OWNER_USERNAME`, `OWNER_PASSWORD_HASH` (exactly as printed, no quotes) and
+   `DATABASE_URL` (the Neon string). `SESSION_SECRET` is generated. For an existing service instead: Settings →
+   Instance type **Free**, Environment → add `DATABASE_URL`, and remove any custom start command.
+3. Open `https://<service>.onrender.com`, sign in, and check **Settings → Data status → Storage**: it should say
+   *external PostgreSQL database*. The Overview shows a warning if data is not persistent.
 
-`render.yaml` was validated against Render's published blueprint schema (`https://render.com/schema/render.yaml.json`).
-
-With a disk attached Render stops the old instance before starting the new one, so each deploy has a few seconds of
-downtime.
+Free-tier trade-offs (Render docs, Nov 2026): the service sleeps after 15 minutes without visits and takes about a
+minute to wake; **price alerts are only evaluated while it is awake**; 750 free instance hours per month. Neon's free
+compute also suspends when idle and wakes on the next query. Render's own free Postgres is deleted after 30 days, so
+it is not suitable.
 
 ### Option B — Any Linux server with Docker Compose
 
@@ -104,8 +105,10 @@ If Docker Hub rate-limits pulls, set `PYTHON_IMAGE=mirror.gcr.io/library/python:
 - The image's entrypoint makes `/data` writable (platform disks are mounted root-owned) and drops to the unprivileged
   `marketdesk` user; no MarketDesk process runs as root. CLI commands run through `docker compose exec` also switch
   to that user automatically.
-- Default command: web only (Compose). `python -m marketdesk.serve`: validate settings, migrate, then supervise web +
-  worker in one container (Render, Fly.io, a single VM). It listens on `$PORT`.
+- Default command: `python -m marketdesk.serve` — validate settings, migrate, then supervise web + worker in one
+  container (Render, Fly.io, a single VM), listening on `$PORT`. Compose runs migrate, web and worker separately.
+- Storage: SQLite at `DATA_DIR` (needs a persistent mount) or PostgreSQL via `DATABASE_URL` (`postgres://` URLs are
+  accepted as given). Both are covered by the test suite and CI.
 - Production refuses to start if credentials or the session secret are missing, or if `DATA_PROVIDER=fixture`.
 
 ### Operations
@@ -119,7 +122,8 @@ If Docker Hub rate-limits pulls, set `PYTHON_IMAGE=mirror.gcr.io/library/python:
 | Worker health | `python -m marketdesk.cli worker-health` |
 
 Backups use SQLite's backup API, so they are consistent while the app runs. Never copy a live `.db` file without its
-`-wal` file. A restore brings back watchlists, transactions, alerts, journal notes and settings.
+`-wal` file. A restore brings back watchlists, transactions, alerts, journal notes and settings. With PostgreSQL, use
+your provider's backups (Neon keeps point-in-time history) or `pg_dump`; the CSV exports work with either.
 
 ## Local development
 
@@ -169,6 +173,7 @@ Automated tests use the synthetic harness so they are deterministic and never de
 | Suite | Command |
 | --- | --- |
 | API (pytest) and lint | `cd apps/api && uv run pytest && uv run ruff check marketdesk tests` |
+| API on PostgreSQL | `TEST_DATABASE_URL=postgresql://USER:PW@HOST/DB uv run pytest` (resets that database's schema) |
 | Web types, lint, unit, build | `cd apps/web && npx tsc -b --noEmit && npx eslint . && npx vitest run && npm run build` |
 | Browser journeys (real API + worker) | after building the web app: `cd tests/e2e && npm ci && npx playwright test` |
 | Visual QA captures (not committed) | `cd tests/e2e && npm run screenshots` → `tests/e2e/test-results/screenshots` |

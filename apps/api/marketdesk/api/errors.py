@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 log = logging.getLogger("marketdesk.api")
@@ -76,6 +76,22 @@ def install_error_handlers(app: FastAPI) -> None:
             ),
             status_code=503,
         )
+
+    @app.exception_handler(ProgrammingError)
+    async def _db_schema(_: Request, exc: ProgrammingError):
+        # PostgreSQL reports a missing table/column as ProgrammingError (SQLSTATE 42P01 / 42703).
+        code = getattr(exc.orig, "sqlstate", None) or getattr(exc.orig, "pgcode", None)
+        if code in ("42P01", "42703"):
+            log.error("database schema error: %s", code)
+            return JSONResponse(
+                error_body(
+                    "database_unavailable",
+                    "The database is not initialised. Restarting the service applies pending migrations.",
+                ),
+                status_code=503,
+            )
+        log.exception("database programming error")
+        return JSONResponse(error_body("internal_error", "Unexpected server error."), status_code=500)
 
     @app.exception_handler(Exception)
     async def _unhandled(_: Request, exc: Exception):  # pragma: no cover - safety net

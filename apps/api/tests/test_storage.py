@@ -43,3 +43,26 @@ def test_status_reports_storage_and_database_age(api):
     assert set(storage) >= {"path", "persistent", "warning", "message", "database_created_at"}
     assert storage["database_created_at"] is not None
     assert storage["warning"] is False  # development never warns
+
+
+def test_hosted_postgres_urls_use_the_bundled_driver():
+    from marketdesk.config import normalize_database_url
+
+    neon = "postgres://u:p@ep-x.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
+    assert (
+        normalize_database_url(neon)
+        == "postgresql+psycopg://u:p@ep-x.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
+    )
+    assert normalize_database_url(" postgresql://u:p@h/db ") == "postgresql+psycopg://u:p@h/db"
+    assert normalize_database_url("sqlite:////data/marketdesk.db") == "sqlite:////data/marketdesk.db"
+
+
+def test_external_postgres_counts_as_persistent_without_leaking_credentials(tmp_path):
+    from marketdesk.api.routes_system import storage_status
+
+    from .conftest import make_settings
+
+    s = make_settings(tmp_path, marketdesk_env="production", database_url="postgres://user:secret@db.example.com/app")
+    st = storage_status(s)
+    assert st["persistent"] is True and st["warning"] is False
+    assert "secret" not in st["path"] and "secret" not in st["message"] and "db.example.com" in st["path"]

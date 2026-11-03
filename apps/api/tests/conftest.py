@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,28 @@ OWNER_PW = "correct horse battery staple"
 OWNER_HASH = hash_password(OWNER_PW)
 
 
+# Set TEST_DATABASE_URL (e.g. postgresql://postgres:pw@localhost:5432/marketdesk_test) to run the whole
+# suite against PostgreSQL instead of per-test SQLite files. Each settings object gets a clean schema.
+PG_URL = os.environ.get("TEST_DATABASE_URL")
+
+
+def _reset_postgres(url: str) -> None:
+    from sqlalchemy import create_engine, text
+
+    from marketdesk.config import normalize_database_url
+    from marketdesk.db import get_engine
+
+    try:
+        get_engine().dispose()  # release pooled connections from the previous test
+    except Exception:
+        pass
+    engine = create_engine(normalize_database_url(url))
+    with engine.begin() as conn:
+        conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
+    engine.dispose()
+
+
 def make_settings(tmp_path: Path, **overrides) -> Settings:
     base = dict(
         marketdesk_env="test",
@@ -25,6 +48,9 @@ def make_settings(tmp_path: Path, **overrides) -> Settings:
         session_secret="x" * 40,
         static_dir=tmp_path / "no-static",
     )
+    if PG_URL and "database_url" not in overrides:
+        base["database_url"] = PG_URL
+        _reset_postgres(PG_URL)
     base.update(overrides)
     return Settings(**base)
 
