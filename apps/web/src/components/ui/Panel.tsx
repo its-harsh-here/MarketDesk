@@ -1,0 +1,46 @@
+import type { ReactNode } from "react";
+import { cn } from "@/lib/cn";
+
+interface PanelProps {
+  title?: ReactNode;
+  titleId?: string;
+  meta?: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  as?: "section" | "div" | "aside";
+  refreshing?: boolean;
+}
+
+/** A bordered surface with an optional header row. Panels label themselves for screen readers. */
+export function Panel({ title, titleId, meta, actions, children, className, bodyClassName, as = "section", refreshing }: PanelProps) {
+  const Tag = as;
+  return (
+    <Tag
+      aria-labelledby={title && titleId ? titleId : undefined}
+      className={cn("relative flex min-w-0 flex-col rounded-[var(--radius-panel)] border border-line-subtle bg-panel", className)}
+    >
+      {(title || actions || meta) && (
+        <header className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 border-b border-line-subtle px-[var(--panel-pad)] py-2">
+          <div className="flex min-w-0 flex-1 items-baseline gap-3">
+            {title && (
+              <h2 id={titleId} className="truncate text-[13px] font-semibold tracking-wide text-fg">
+                {title}
+              </h2>
+            )}
+            {meta && <div className="min-w-0 truncate text-xs text-fg-3">{meta}</div>}
+          </div>
+          {refreshing && (
+            <span className="flex items-center gap-1.5 text-xs text-fg-3" role="status">
+              <span className="size-1.5 rounded-full bg-info" style={{ animation: "md-pulse 1.2s ease-in-out infinite" }} />
+              Refreshing
+            </span>
+          )}
+          {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
+        </header>
+      )}
+      <div className={cn("min-w-0 flex-1", bodyClassName ?? "p-[var(--panel-pad)]")}>{children}</div>
+    </Tag>
+  );
+}

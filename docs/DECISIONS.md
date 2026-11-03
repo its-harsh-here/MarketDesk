@@ -4,7 +4,7 @@ Consequential choices, newest last. Routine choices live in code comments.
 
 1. **Dependency majors.** Newer majors exist on npm (Vite 8, TypeScript 7, React Router 8, Vitest 5). I pinned the latest
    releases of majors whose APIs could be verified against installed type definitions: Vite 7.3, TypeScript 5.9,
-   React Router 7.18, Vitest 4.1, Zod 4, @hookform/resolvers 5. Python uses current stable releases (FastAPI 0.162,
+   React Router 7.18, Vitest 3.2 (Vitest 4.1's peer set triggers an npm 10 arborist crash, `Cannot read properties of null (reading 'edgesOut')`), Zod 4, @hookform/resolvers 5. Python uses current stable releases (FastAPI 0.162,
    SQLAlchemy 2.1, Pydantic 2.14, yfinance 1.7, pandas 3.1). `@playwright/test` is pinned to 1.63.0 to match the
    pre-installed Chromium.
 2. **Exact decimals in SQLite.** SQLite turns NUMERIC into REAL, so money and quantities use a `DecimalText`
@@ -45,3 +45,6 @@ Consequential choices, newest last. Routine choices live in code comments.
 16. **Briefing volume comparison** is not implemented: Yahoo does not reliably state whether the latest daily bar is
     complete, and the specification forbids unlabeled comparisons of incomplete sessions.
 17. **Journal text** is stored and rendered as plain text (no Markdown), which removes an XSS surface.
+18. **Lucide 1.x icon names.** `Trash2` and `Filter` do not exist in lucide-react 1.66; `Trash` and `Funnel` are used.
+19. **Overview layout.** At ≥1280px the chart takes 8 columns and the watchlist 4 (compact columns, freshness dot next
+    to the price); below that the panels stack and the watchlist shows its full columns.
