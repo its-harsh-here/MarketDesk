@@ -1,0 +1,843 @@
+{
+  "dataset": {
+    "name": "MarketDesk synthetic sample dataset",
+    "disclaimer": "All companies, symbols, prices and fundamentals in this dataset are fictitious and generated deterministically. They do not represent any real security.",
+    "base_date": "2026-06-30",
+    "replay_sessions": [
+      "2026-07-01",
+      "2026-07-02",
+      "2026-07-03",
+      "2026-07-06",
+      "2026-07-07"
+    ],
+    "first_date": "2021-07-01",
+    "calendar": "Synthetic: weekdays except 26 Jan, 15 Aug and 2 Oct. Not a real exchange calendar.",
+    "close_time_local": "15:30",
+    "adjustment": "Split-adjusted synthetic series; dividends are not adjusted.",
+    "seed": 20260630,
+    "generator": "scripts/generate_fixtures.py",
+    "generated_at": "2026-06-30T00:00:00Z"
+  },
+  "benchmarks": [
+    "SX:SX50",
+    "SX:SXFIN"
+  ],
+  "starter_watchlist": [
+    "SX:AURORA",
+    "SX:BANYAN",
+    "SX:COBALT",
+    "SX:DELTAFIN",
+    "SX:ELARA",
+    "SX:FERRUM",
+    "SX:GLASSWING",
+    "SX:HELIX",
+    "SX:IRONLEAF",
+    "SX:KESTREL",
+    "SX:LUMEN",
+    "SX:MERIDIAN"
+  ],
+  "instruments": [
+    {
+      "symbol": "SX:AURORA",
+      "name": "Aurora Grid Power Ltd",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "EQUITY",
+      "sector": "Utilities",
+      "industry": "Power Generation",
+      "shares_outstanding": 1900000000,
+      "eps_ttm": 14.2,
+      "book_value_per_share": 96.0,
+      "fiscal": {
+        "last_fiscal_year_end": "2026-03-31",
+        "most_recent_quarter": "2026-03-31"
+      },
+      "coverage_notes": [],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": [
+        {
+          "date": "2022-06-13",
+          "kind": "DIVIDEND",
+          "value": "4.00",
+          "description": "Dividend of INR 4.00 per share (synthetic)"
+        },
+        {
+          "date": "2023-06-12",
+          "kind": "DIVIDEND",
+          "value": "4.00",
+          "description": "Dividend of INR 4.00 per share (synthetic)"
+        },
+        {
+          "date": "2024-06-12",
+          "kind": "DIVIDEND",
+          "value": "4.00",
+          "description": "Dividend of INR 4.00 per share (synthetic)"
+        },
+        {
+          "date": "2025-06-12",
+          "kind": "DIVIDEND",
+          "value": "4.00",
+          "description": "Dividend of INR 4.00 per share (synthetic)"
+        },
+        {
+          "date": "2026-06-12",
+          "kind": "DIVIDEND",
+          "value": "4.00",
+          "description": "Dividend of INR 4.00 per share (synthetic)"
+        }
+      ]
+    },
+    {
+      "symbol": "SX:BANYAN",
+      "name": "Banyan Retail Holdings Ltd",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "EQUITY",
+      "sector": "Consumer Cyclical",
+      "industry": "Department Stores",
+      "shares_outstanding": 410000000,
+      "eps_ttm": 41.5,
+      "book_value_per_share": 260.0,
+      "fiscal": {
+        "last_fiscal_year_end": "2026-03-31",
+        "most_recent_quarter": "2026-03-31"
+      },
+      "coverage_notes": [],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": [
+        {
+          "date": "2022-06-13",
+          "kind": "DIVIDEND",
+          "value": "9.00",
+          "description": "Dividend of INR 9.00 per share (synthetic)"
+        },
+        {
+          "date": "2023-06-12",
+          "kind": "DIVIDEND",
+          "value": "9.00",
+          "description": "Dividend of INR 9.00 per share (synthetic)"
+        },
+        {
+          "date": "2024-06-12",
+          "kind": "DIVIDEND",
+          "value": "9.00",
+          "description": "Dividend of INR 9.00 per share (synthetic)"
+        },
+        {
+          "date": "2025-06-12",
+          "kind": "DIVIDEND",
+          "value": "9.00",
+          "description": "Dividend of INR 9.00 per share (synthetic)"
+        },
+        {
+          "date": "2026-06-12",
+          "kind": "DIVIDEND",
+          "value": "9.00",
+          "description": "Dividend of INR 9.00 per share (synthetic)"
+        }
+      ]
+    },
+    {
+      "symbol": "SX:COBALT",
+      "name": "Cobalt Infrastructure Ltd",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "EQUITY",
+      "sector": "Industrials",
+      "industry": "Engineering & Construction",
+      "shares_outstanding": 820000000,
+      "eps_ttm": 38.0,
+      "book_value_per_share": 310.0,
+      "fiscal": {
+        "last_fiscal_year_end": "2026-03-31",
+        "most_recent_quarter": "2026-03-31"
+      },
+      "coverage_notes": [],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": [
+        {
+          "date": "2022-06-13",
+          "kind": "DIVIDEND",
+          "value": "7.50",
+          "description": "Dividend of INR 7.50 per share (synthetic)"
+        },
+        {
+          "date": "2023-06-12",
+          "kind": "DIVIDEND",
+          "value": "7.50",
+          "description": "Dividend of INR 7.50 per share (synthetic)"
+        },
+        {
+          "date": "2024-06-12",
+          "kind": "DIVIDEND",
+          "value": "7.50",
+          "description": "Dividend of INR 7.50 per share (synthetic)"
+        },
+        {
+          "date": "2025-06-12",
+          "kind": "DIVIDEND",
+          "value": "7.50",
+          "description": "Dividend of INR 7.50 per share (synthetic)"
+        },
+        {
+          "date": "2026-06-12",
+          "kind": "DIVIDEND",
+          "value": "7.50",
+          "description": "Dividend of INR 7.50 per share (synthetic)"
+        }
+      ]
+    },
+    {
+      "symbol": "SX:DELTAFIN",
+      "name": "Deltaline Finance Ltd",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "EQUITY",
+      "sector": "Financial Services",
+      "industry": "Credit Services",
+      "shares_outstanding": 1240000000,
+      "eps_ttm": 33.0,
+      "book_value_per_share": 205.0,
+      "fiscal": {
+        "last_fiscal_year_end": "2026-03-31",
+        "most_recent_quarter": "2026-03-31"
+      },
+      "coverage_notes": [],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": [
+        {
+          "date": "2022-06-13",
+          "kind": "DIVIDEND",
+          "value": "5.00",
+          "description": "Dividend of INR 5.00 per share (synthetic)"
+        },
+        {
+          "date": "2023-06-12",
+          "kind": "DIVIDEND",
+          "value": "5.00",
+          "description": "Dividend of INR 5.00 per share (synthetic)"
+        },
+        {
+          "date": "2024-06-12",
+          "kind": "DIVIDEND",
+          "value": "5.00",
+          "description": "Dividend of INR 5.00 per share (synthetic)"
+        },
+        {
+          "date": "2025-06-12",
+          "kind": "DIVIDEND",
+          "value": "5.00",
+          "description": "Dividend of INR 5.00 per share (synthetic)"
+        },
+        {
+          "date": "2026-06-12",
+          "kind": "DIVIDEND",
+          "value": "5.00",
+          "description": "Dividend of INR 5.00 per share (synthetic)"
+        }
+      ]
+    },
+    {
+      "symbol": "SX:ELARA",
+      "name": "Elara Pharmaceuticals Ltd",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "EQUITY",
+      "sector": "Healthcare",
+      "industry": "Drug Manufacturers",
+      "shares_outstanding": 330000000,
+      "eps_ttm": 62.0,
+      "book_value_per_share": 540.0,
+      "fiscal": {
+        "last_fiscal_year_end": "2026-03-31",
+        "most_recent_quarter": "2026-03-31"
+      },
+      "coverage_notes": [],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": [
+        {
+          "date": "2022-06-13",
+          "kind": "DIVIDEND",
+          "value": "12.00",
+          "description": "Dividend of INR 12.00 per share (synthetic)"
+        },
+        {
+          "date": "2023-06-12",
+          "kind": "DIVIDEND",
+          "value": "12.00",
+          "description": "Dividend of INR 12.00 per share (synthetic)"
+        },
+        {
+          "date": "2024-03-15",
+          "kind": "SPLIT",
+          "value": "2",
+          "description": "2-for-1 stock split (synthetic); price series is split-adjusted"
+        },
+        {
+          "date": "2024-06-12",
+          "kind": "DIVIDEND",
+          "value": "12.00",
+          "description": "Dividend of INR 12.00 per share (synthetic)"
+        },
+        {
+          "date": "2025-06-12",
+          "kind": "DIVIDEND",
+          "value": "12.00",
+          "description": "Dividend of INR 12.00 per share (synthetic)"
+        },
+        {
+          "date": "2026-06-12",
+          "kind": "DIVIDEND",
+          "value": "12.00",
+          "description": "Dividend of INR 12.00 per share (synthetic)"
+        }
+      ]
+    },
+    {
+      "symbol": "SX:FERRUM",
+      "name": "Ferrum Steelworks Ltd",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "EQUITY",
+      "sector": "Basic Materials",
+      "industry": "Steel",
+      "shares_outstanding": 5200000000,
+      "eps_ttm": 9.1,
+      "book_value_per_share": 88.0,
+      "fiscal": {
+        "last_fiscal_year_end": "2026-03-31",
+        "most_recent_quarter": "2026-03-31"
+      },
+      "coverage_notes": [],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": [
+        {
+          "date": "2022-06-13",
+          "kind": "DIVIDEND",
+          "value": "2.50",
+          "description": "Dividend of INR 2.50 per share (synthetic)"
+        },
+        {
+          "date": "2023-06-12",
+          "kind": "DIVIDEND",
+          "value": "2.50",
+          "description": "Dividend of INR 2.50 per share (synthetic)"
+        },
+        {
+          "date": "2024-06-12",
+          "kind": "DIVIDEND",
+          "value": "2.50",
+          "description": "Dividend of INR 2.50 per share (synthetic)"
+        },
+        {
+          "date": "2025-06-12",
+          "kind": "DIVIDEND",
+          "value": "2.50",
+          "description": "Dividend of INR 2.50 per share (synthetic)"
+        },
+        {
+          "date": "2026-06-12",
+          "kind": "DIVIDEND",
+          "value": "2.50",
+          "description": "Dividend of INR 2.50 per share (synthetic)"
+        }
+      ]
+    },
+    {
+      "symbol": "SX:GLASSWING",
+      "name": "Glasswing Software Ltd",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "EQUITY",
+      "sector": "Technology",
+      "industry": "Information Technology Services",
+      "shares_outstanding": 290000000,
+      "eps_ttm": 92.0,
+      "book_value_per_share": 410.0,
+      "fiscal": {
+        "last_fiscal_year_end": "2026-03-31",
+        "most_recent_quarter": "2026-03-31"
+      },
+      "coverage_notes": [],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": [
+        {
+          "date": "2022-06-13",
+          "kind": "DIVIDEND",
+          "value": "24.00",
+          "description": "Dividend of INR 24.00 per share (synthetic)"
+        },
+        {
+          "date": "2023-06-12",
+          "kind": "DIVIDEND",
+          "value": "24.00",
+          "description": "Dividend of INR 24.00 per share (synthetic)"
+        },
+        {
+          "date": "2024-06-12",
+          "kind": "DIVIDEND",
+          "value": "24.00",
+          "description": "Dividend of INR 24.00 per share (synthetic)"
+        },
+        {
+          "date": "2025-06-12",
+          "kind": "DIVIDEND",
+          "value": "24.00",
+          "description": "Dividend of INR 24.00 per share (synthetic)"
+        },
+        {
+          "date": "2026-06-12",
+          "kind": "DIVIDEND",
+          "value": "24.00",
+          "description": "Dividend of INR 24.00 per share (synthetic)"
+        }
+      ]
+    },
+    {
+      "symbol": "SX:HALCYON",
+      "name": "Halcyon Robotics Inc.",
+      "exchange": "SAMPLEX-US",
+      "currency": "USD",
+      "timezone": "America/New_York",
+      "kind": "EQUITY",
+      "sector": "Technology",
+      "industry": "Robotics",
+      "shares_outstanding": 410000000,
+      "eps_ttm": 1.12,
+      "book_value_per_share": 9.4,
+      "fiscal": {
+        "last_fiscal_year_end": "2025-12-31",
+        "most_recent_quarter": "2026-03-31"
+      },
+      "coverage_notes": [],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": [],
+      "close_time": {
+        "hour": 16,
+        "minute": 0
+      }
+    },
+    {
+      "symbol": "SX:HELIX",
+      "name": "Helix Biologics Ltd",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "EQUITY",
+      "sector": "Healthcare",
+      "industry": "Biotechnology",
+      "shares_outstanding": 610000000,
+      "eps_ttm": 6.5,
+      "book_value_per_share": 120.0,
+      "fiscal": null,
+      "coverage_notes": [
+        "Financial statement dates are not reported for this sample company."
+      ],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": []
+    },
+    {
+      "symbol": "SX:IRONLEAF",
+      "name": "Ironleaf Tea Estates Ltd",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "EQUITY",
+      "sector": "Consumer Defensive",
+      "industry": "Packaged Foods",
+      "shares_outstanding": 720000000,
+      "eps_ttm": 15.8,
+      "book_value_per_share": 132.0,
+      "fiscal": {
+        "last_fiscal_year_end": "2026-03-31",
+        "most_recent_quarter": "2026-03-31"
+      },
+      "coverage_notes": [],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": [
+        {
+          "date": "2022-08-12",
+          "kind": "DIVIDEND",
+          "value": "6.00",
+          "description": "Dividend of INR 6.00 per share (synthetic)"
+        },
+        {
+          "date": "2023-08-14",
+          "kind": "DIVIDEND",
+          "value": "6.00",
+          "description": "Dividend of INR 6.00 per share (synthetic)"
+        },
+        {
+          "date": "2024-08-12",
+          "kind": "DIVIDEND",
+          "value": "6.00",
+          "description": "Dividend of INR 6.00 per share (synthetic)"
+        },
+        {
+          "date": "2025-08-12",
+          "kind": "DIVIDEND",
+          "value": "6.00",
+          "description": "Dividend of INR 6.00 per share (synthetic)"
+        }
+      ]
+    },
+    {
+      "symbol": "SX:KESTREL",
+      "name": "Kestrel Logistics Ltd",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "EQUITY",
+      "sector": "Industrials",
+      "industry": "Integrated Freight & Logistics",
+      "shares_outstanding": 450000000,
+      "eps_ttm": 27.0,
+      "book_value_per_share": 240.0,
+      "fiscal": {
+        "last_fiscal_year_end": "2026-03-31",
+        "most_recent_quarter": "2026-03-31"
+      },
+      "coverage_notes": [],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": [
+        {
+          "date": "2022-08-12",
+          "kind": "DIVIDEND",
+          "value": "3.00",
+          "description": "Dividend of INR 3.00 per share (synthetic)"
+        },
+        {
+          "date": "2023-08-14",
+          "kind": "DIVIDEND",
+          "value": "3.00",
+          "description": "Dividend of INR 3.00 per share (synthetic)"
+        },
+        {
+          "date": "2024-08-12",
+          "kind": "DIVIDEND",
+          "value": "3.00",
+          "description": "Dividend of INR 3.00 per share (synthetic)"
+        },
+        {
+          "date": "2025-08-12",
+          "kind": "DIVIDEND",
+          "value": "3.00",
+          "description": "Dividend of INR 3.00 per share (synthetic)"
+        }
+      ]
+    },
+    {
+      "symbol": "SX:LUMEN",
+      "name": "Lumenfield Cement Ltd",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "EQUITY",
+      "sector": "Basic Materials",
+      "industry": "Building Materials",
+      "shares_outstanding": 95000000,
+      "eps_ttm": 160.0,
+      "book_value_per_share": 1820.0,
+      "fiscal": {
+        "last_fiscal_year_end": "2026-03-31",
+        "most_recent_quarter": "2026-03-31"
+      },
+      "coverage_notes": [],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": [
+        {
+          "date": "2022-08-12",
+          "kind": "DIVIDEND",
+          "value": "35.00",
+          "description": "Dividend of INR 35.00 per share (synthetic)"
+        },
+        {
+          "date": "2023-08-14",
+          "kind": "DIVIDEND",
+          "value": "35.00",
+          "description": "Dividend of INR 35.00 per share (synthetic)"
+        },
+        {
+          "date": "2024-08-12",
+          "kind": "DIVIDEND",
+          "value": "35.00",
+          "description": "Dividend of INR 35.00 per share (synthetic)"
+        },
+        {
+          "date": "2025-08-12",
+          "kind": "DIVIDEND",
+          "value": "35.00",
+          "description": "Dividend of INR 35.00 per share (synthetic)"
+        }
+      ]
+    },
+    {
+      "symbol": "SX:MERIDIAN",
+      "name": "Meridian Auto Components Ltd",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "EQUITY",
+      "sector": "Consumer Cyclical",
+      "industry": "Auto Parts",
+      "shares_outstanding": 380000000,
+      "eps_ttm": 36.0,
+      "book_value_per_share": 300.0,
+      "fiscal": {
+        "last_fiscal_year_end": "2026-03-31",
+        "most_recent_quarter": "2026-03-31"
+      },
+      "coverage_notes": [],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": [
+        {
+          "date": "2022-08-12",
+          "kind": "DIVIDEND",
+          "value": "8.00",
+          "description": "Dividend of INR 8.00 per share (synthetic)"
+        },
+        {
+          "date": "2023-08-14",
+          "kind": "DIVIDEND",
+          "value": "8.00",
+          "description": "Dividend of INR 8.00 per share (synthetic)"
+        },
+        {
+          "date": "2024-08-12",
+          "kind": "DIVIDEND",
+          "value": "8.00",
+          "description": "Dividend of INR 8.00 per share (synthetic)"
+        },
+        {
+          "date": "2025-08-12",
+          "kind": "DIVIDEND",
+          "value": "8.00",
+          "description": "Dividend of INR 8.00 per share (synthetic)"
+        }
+      ]
+    },
+    {
+      "symbol": "SX:NIMBUS",
+      "name": "Nimbus Cloud Services Ltd",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "EQUITY",
+      "sector": "Technology",
+      "industry": "Software\u2014Infrastructure",
+      "shares_outstanding": 520000000,
+      "eps_ttm": -4.2,
+      "book_value_per_share": null,
+      "fiscal": {
+        "last_fiscal_year_end": "2026-03-31",
+        "most_recent_quarter": "2026-03-31"
+      },
+      "coverage_notes": [
+        "Price-to-book is not reported for this sample company."
+      ],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": []
+    },
+    {
+      "symbol": "SX:ORCHID",
+      "name": "Orchid Hospitality Ltd",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "EQUITY",
+      "sector": "Consumer Cyclical",
+      "industry": "Lodging",
+      "shares_outstanding": 680000000,
+      "eps_ttm": 11.0,
+      "book_value_per_share": 150.0,
+      "fiscal": {
+        "last_fiscal_year_end": "2026-03-31",
+        "most_recent_quarter": "2026-03-31"
+      },
+      "coverage_notes": [],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": [
+        {
+          "date": "2022-08-12",
+          "kind": "DIVIDEND",
+          "value": "1.50",
+          "description": "Dividend of INR 1.50 per share (synthetic)"
+        },
+        {
+          "date": "2023-08-14",
+          "kind": "DIVIDEND",
+          "value": "1.50",
+          "description": "Dividend of INR 1.50 per share (synthetic)"
+        },
+        {
+          "date": "2024-08-12",
+          "kind": "DIVIDEND",
+          "value": "1.50",
+          "description": "Dividend of INR 1.50 per share (synthetic)"
+        },
+        {
+          "date": "2025-08-12",
+          "kind": "DIVIDEND",
+          "value": "1.50",
+          "description": "Dividend of INR 1.50 per share (synthetic)"
+        }
+      ]
+    },
+    {
+      "symbol": "SX:PEREGRINE",
+      "name": "Peregrine Bank Ltd",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "EQUITY",
+      "sector": "Financial Services",
+      "industry": "Banks\u2014Regional",
+      "shares_outstanding": 2100000000,
+      "eps_ttm": 88.0,
+      "book_value_per_share": 640.0,
+      "fiscal": {
+        "last_fiscal_year_end": "2026-03-31",
+        "most_recent_quarter": "2026-03-31"
+      },
+      "coverage_notes": [],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": [
+        {
+          "date": "2022-08-12",
+          "kind": "DIVIDEND",
+          "value": "16.00",
+          "description": "Dividend of INR 16.00 per share (synthetic)"
+        },
+        {
+          "date": "2023-08-14",
+          "kind": "DIVIDEND",
+          "value": "16.00",
+          "description": "Dividend of INR 16.00 per share (synthetic)"
+        },
+        {
+          "date": "2024-08-12",
+          "kind": "DIVIDEND",
+          "value": "16.00",
+          "description": "Dividend of INR 16.00 per share (synthetic)"
+        },
+        {
+          "date": "2025-08-12",
+          "kind": "DIVIDEND",
+          "value": "16.00",
+          "description": "Dividend of INR 16.00 per share (synthetic)"
+        }
+      ]
+    },
+    {
+      "symbol": "SX:QUILL",
+      "name": "Quillon Paper & Packaging Ltd",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "EQUITY",
+      "sector": "Consumer Cyclical",
+      "industry": "Packaging & Containers",
+      "shares_outstanding": 260000000,
+      "eps_ttm": 7.0,
+      "book_value_per_share": 140.0,
+      "fiscal": {
+        "last_fiscal_year_end": "2026-03-31",
+        "most_recent_quarter": "2026-03-31"
+      },
+      "coverage_notes": [],
+      "quote_status": "missing",
+      "quote_note": "Trading suspended after 2026-06-19 in this sample scenario; no current quotation exists.",
+      "corporate_actions": [
+        {
+          "date": "2022-08-12",
+          "kind": "DIVIDEND",
+          "value": "2.00",
+          "description": "Dividend of INR 2.00 per share (synthetic)"
+        },
+        {
+          "date": "2023-08-14",
+          "kind": "DIVIDEND",
+          "value": "2.00",
+          "description": "Dividend of INR 2.00 per share (synthetic)"
+        },
+        {
+          "date": "2024-08-12",
+          "kind": "DIVIDEND",
+          "value": "2.00",
+          "description": "Dividend of INR 2.00 per share (synthetic)"
+        },
+        {
+          "date": "2025-08-12",
+          "kind": "DIVIDEND",
+          "value": "2.00",
+          "description": "Dividend of INR 2.00 per share (synthetic)"
+        }
+      ]
+    },
+    {
+      "symbol": "SX:SX50",
+      "name": "SampleX Composite Index",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "INDEX",
+      "sector": null,
+      "industry": null,
+      "shares_outstanding": null,
+      "eps_ttm": null,
+      "book_value_per_share": null,
+      "fiscal": null,
+      "coverage_notes": [
+        "Fundamentals are not applicable to an index.",
+        "Index volume is not reported."
+      ],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": []
+    },
+    {
+      "symbol": "SX:SXFIN",
+      "name": "SampleX Financials Index",
+      "exchange": "SAMPLEX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "INDEX",
+      "sector": null,
+      "industry": null,
+      "shares_outstanding": null,
+      "eps_ttm": null,
+      "book_value_per_share": null,
+      "fiscal": null,
+      "coverage_notes": [
+        "Fundamentals are not applicable to an index.",
+        "Index volume is not reported."
+      ],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": []
+    }
+  ]
+}

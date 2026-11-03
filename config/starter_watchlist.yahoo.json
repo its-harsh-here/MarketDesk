@@ -1,0 +1,19 @@
+{
+  "description": "Real Yahoo Finance symbols used only in DATA_PROVIDER=yahoo mode. Prices are always fetched live from the provider; nothing here is a quotation. Coverage was checked with yfinance 1.7 on 2026-11-03 for RELIANCE.NS and ITC.NS; re-validate before relying on the rest.",
+  "symbols": [
+    "RELIANCE.NS",
+    "TCS.NS",
+    "INFY.NS",
+    "HDFCBANK.NS",
+    "ICICIBANK.NS",
+    "ITC.NS",
+    "SBIN.NS",
+    "BHARTIARTL.NS",
+    "LT.NS",
+    "HINDUNILVR.NS",
+    "^NSEI",
+    "^BSESN",
+    "^NSEBANK"
+  ],
+  "benchmarks": ["^NSEI", "^BSESN", "^NSEBANK"]
+}
