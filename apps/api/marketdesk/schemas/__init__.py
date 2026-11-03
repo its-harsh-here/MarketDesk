@@ -431,6 +431,7 @@ class StorageOut(Model):
     persistent: bool
     warning: bool
     message: str
+    database_created_at: datetime | None = None
 
 
 class StatusOut(Model):

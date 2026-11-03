@@ -98,8 +98,9 @@ Found and fixed (commit 08710c6, deployed):
   suggests RELIANCE.NS with a one-click fix.
 - Sign-ins lost on restart — signed 90-day sliding session cookies; verified live (cookie Max-Age 90 days, reload
   stays signed in).
-- Storage: `/data` is a mounted persistent disk (new status check). The deploy at 12:06 UTC started on an empty
-  disk, so data from before the disk was attached was not carried over.
+- Sign-in survived a live redeploy (12:06 → 12:09 UTC) with the signed cookie. A marker watchlist did **not**
+  survive: the service has no persistent disk. The earlier "persistent" reading was an anonymous Docker volume
+  created by the image's `VOLUME` line; fixed (decision 32). **Owner action: attach a Render disk at `/data`.**
 Live journeys passing: sign-in, overview, watchlist create/add (click and quick-Enter)/delete, instrument ranges and
 candles, index page, command palette, alert create/delete, journal create/delete, transaction dialog validation
 (not submitted — real ledger), settings/data status, phone layouts (no overflow), reload keeps session.

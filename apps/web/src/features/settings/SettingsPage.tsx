@@ -116,6 +116,11 @@ export function SettingsPage() {
                   <span className="num">{status.storage.path}</span>
                 )}
               </Row>
+              {status.storage.database_created_at && (
+                <Row label="Database created">
+                  <span title={formatInstant(status.storage.database_created_at, tz)}>{formatRelative(status.storage.database_created_at)}</span>
+                </Row>
+              )}
               <Row label="Alert worker">{status.worker.running ? `Running · last cycle ${formatRelative(status.worker.last_cycle_at)}` : status.worker.message}</Row>
               <Row label="Server mode">{status.environment} · {status.auth_mode === "dev_bypass" ? "development auth bypass" : "owner login"}</Row>
             </dl>

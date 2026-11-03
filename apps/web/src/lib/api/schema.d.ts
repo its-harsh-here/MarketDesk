@@ -1375,6 +1375,8 @@ export interface components {
             warning: boolean;
             /** Message */
             message: string;
+            /** Database Created At */
+            database_created_at?: string | null;
         };
         /** TransactionIn */
         TransactionIn: {

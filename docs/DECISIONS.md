@@ -94,3 +94,8 @@ Consequential choices, newest last. Routine choices live in code comments.
 31. **Symbol picker.** Results are selectable only once they match the current text; Enter during a search picks the
     top result when it arrives. Bare names that fail (e.g. `RELIANCE`) get a server suggestion (`RELIANCE.NS`) with a
     one-click fix in the Add symbol dialog.
+32. **No `VOLUME` in the image; mountinfo-based persistence check.** Live testing showed data vanishing across Render
+    restarts while the storage check reported "persistent": Docker satisfied the image's `VOLUME ["/data"]` with an
+    anonymous volume, which is a mount point but is discarded with the container. The instruction is removed, and
+    the check reads `/proc/self/mountinfo`, treating anonymous volumes (64-hex names) and tmpfs as not persistent.
+    `/api/status` also reports when the database was first created, so a reset is visible in Settings.

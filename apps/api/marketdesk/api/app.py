@@ -41,6 +41,19 @@ SECURITY_HEADERS = {
 }
 
 
+def _stamp_database_created() -> None:
+    """Remember when this database was first used, so a reset (lost storage) is visible in Settings."""
+    from datetime import UTC, datetime
+
+    from marketdesk.db import db_session
+    from marketdesk.models import AppSetting
+
+    with db_session() as db:
+        if db.get(AppSetting, "database_created_at") is None:
+            db.add(AppSetting(key="database_created_at", value=datetime.now(UTC).isoformat()))
+            db.commit()
+
+
 def _static_dir(settings: Settings) -> Path | None:
     candidate = settings.static_dir or (REPO_ROOT / "apps" / "web" / "dist")
     return candidate if (candidate / "index.html").exists() else None
@@ -57,6 +70,7 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
         from marketdesk.db.migrations import ensure_migrated
 
         ensure_migrated(settings.effective_database_url, settings.data_dir)
+        _stamp_database_created()
         yield
 
     app = FastAPI(

@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import json
-import os
 from datetime import UTC, datetime
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import text
@@ -15,7 +13,7 @@ from marketdesk.api.errors import AppError
 from marketdesk.api.routes_market import benchmark_symbols
 from marketdesk.config import Settings
 from marketdesk.db import get_db
-from marketdesk.models import Watchlist, WorkerStatus
+from marketdesk.models import AppSetting, Watchlist, WorkerStatus
 from marketdesk.providers.fixture import FixtureState
 from marketdesk.schemas import (
     BriefingOut,
@@ -33,6 +31,7 @@ from marketdesk.services.briefing import build_briefing
 from marketdesk.services.clock import today_local
 from marketdesk.services.market import MarketDataService
 from marketdesk.services.prefs import get_prefs, read_fixture_state, update_prefs, write_fixture_state
+from marketdesk.services.storage import is_persistent
 
 router = APIRouter(prefix="/api", tags=["system"])
 
@@ -63,27 +62,29 @@ ATTRIBUTION = [
 ]
 
 
-def storage_status(settings: Settings) -> dict:
-    """Is the database on a mounted (persistent) disk? Containers lose unmounted files on restart."""
+def storage_status(settings: Settings, db: Session | None = None) -> dict:
+    """Is the database on persistent storage? Container hosts discard unmounted files on restart."""
     path = settings.data_dir.resolve()
-    probe = path
-    while not probe.exists() and probe != probe.parent:
-        probe = probe.parent
-    mounted = any(os.path.ismount(p) for p in (probe, *probe.parents) if p != Path("/"))
-    if mounted:
-        message = f"Database and sign-in data are stored on a mounted disk at {path}."
+    persistent, reason = is_persistent(path)
+    created = None
+    if db is not None:
+        row = db.get(AppSetting, "database_created_at")
+        created = row.value if row is not None else None
+    if persistent:
+        message = f"Database and sign-in data are stored on a {reason}."
     elif settings.is_production:
         message = (
-            f"{path} is not on a mounted disk. On container hosts this data (watchlists, transactions, journal, "
-            "alerts) is lost on every restart or redeploy. Attach a persistent disk mounted at this path."
+            f"{path}: {reason}. Watchlists, transactions, alerts and journal notes are lost on every restart or "
+            "redeploy. Attach a persistent disk mounted at this path."
         )
     else:
         message = f"Database stored at {path} (local directory)."
     return {
         "path": str(path),
-        "persistent": mounted,
-        "warning": bool(settings.is_production and not mounted),
+        "persistent": persistent,
+        "warning": bool(settings.is_production and not persistent),
         "message": message,
+        "database_created_at": created,
     }
 
 
@@ -168,7 +169,7 @@ def status(
         ),
         "provider_health": market.health(),
         "worker": worker_status(db, settings),
-        "storage": storage_status(settings),
+        "storage": storage_status(settings, db),
         "benchmarks": benchmark_symbols(settings, market),
         "attribution": ATTRIBUTION,
     }

@@ -47,7 +47,8 @@ COPY fixtures /app/fixtures
 COPY config /app/config
 COPY --from=web /src/apps/web/dist /app/web
 WORKDIR /app/api
-VOLUME ["/data"]
+# No VOLUME instruction: an anonymous volume would look like a disk but vanish with the container.
+# Mount real persistent storage at /data (Compose named volume, Render disk, Fly volume).
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
   CMD ["python", "-c", "import os,urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:%s/api/health' % os.environ.get('PORT', '8000'), timeout=3).status == 200 else 1)"]
