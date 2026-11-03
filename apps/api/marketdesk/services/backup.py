@@ -4,7 +4,7 @@ Works the same on SQLite and PostgreSQL (Render Free has no shell and no disk, s
 from Settings or runs the CLI against a database URL):
 
     marketdesk export-data FILE.json          # consistent snapshot of the configured database
-    marketdesk import-data FILE.json --yes    # into an EMPTY database (migrated to the same schema revision)
+    marketdesk import-data FILE.json --yes    # into an EMPTY database; an older backup is migrated forward
 
 The export is read inside one transaction (a consistent snapshot) and contains every user table: settings,
 instruments, watchlists, ledger transactions and import batches, alerts with their observations and events, and the
@@ -22,7 +22,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import Date, DateTime, Engine, Integer, func, insert, select, text
+from sqlalchemy import Date, DateTime, Engine, Integer, func, insert, inspect, select, text
 
 from marketdesk.db.types import DecimalText, UTCDateTime
 from marketdesk.models import Base
@@ -117,15 +117,23 @@ def validate_backup(data: Any, schema_revision: str | None) -> None:
     for name, payload in tables.items():
         if name not in known:
             raise BackupError(f"The backup contains an unknown table {name!r}.")
-        expected = [c.name for c in known[name].columns]
-        if payload.get("columns") != expected:
+        expected = {c.name for c in known[name].columns}
+        # A backup from an earlier schema revision has a subset of today's columns.
+        if not set(payload.get("columns") or []) <= expected:
             raise BackupError(f"Columns of {name!r} do not match this schema version.")
+
+
+def _present_tables(engine: Engine) -> set[str]:
+    return set(inspect(engine).get_table_names())
 
 
 def existing_rows(engine: Engine) -> dict[str, int]:
     counts = {}
+    present = _present_tables(engine)
     with engine.connect() as conn:
         for table in backup_tables():
+            if table.name not in present:
+                continue
             stmt = select(func.count()).select_from(table)
             if table.name == "app_settings":
                 stmt = stmt.where(table.c.key.not_in(EXCLUDED_SETTINGS))
@@ -143,8 +151,11 @@ def import_data(engine: Engine, data: dict, schema_revision: str | None) -> dict
         listed = ", ".join(f"{k} ({v})" for k, v in sorted(occupied.items()))
         raise BackupError(f"The target database already contains data ({listed}); restore only into an empty database.")
     inserted: dict[str, int] = {}
+    present = _present_tables(engine)
     with engine.begin() as conn:
         for table in backup_tables():
+            if table.name not in present:
+                continue
             payload = data["tables"].get(table.name, {"columns": [], "rows": []})
             decoders = [_decoder(table.c[name]) for name in payload["columns"]]
             records = [
@@ -156,6 +167,8 @@ def import_data(engine: Engine, data: dict, schema_revision: str | None) -> dict
             inserted[table.name] = len(records)
         if engine.dialect.name == "postgresql":
             for table in backup_tables():
+                if table.name not in present:
+                    continue
                 pk = list(table.primary_key.columns)
                 if len(pk) == 1 and isinstance(pk[0].type, Integer):
                     col = pk[0].name

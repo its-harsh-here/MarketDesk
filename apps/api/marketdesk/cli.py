@@ -141,8 +141,7 @@ def cmd_export_data(args: argparse.Namespace) -> None:
 def cmd_import_data(args: argparse.Namespace) -> None:
     """Restore a JSON backup into an EMPTY database (it is migrated to the current schema first)."""
     from marketdesk.db import init_engine
-    from marketdesk.db.migrations import current_revision, upgrade
-    from marketdesk.services.backup import BackupError, import_data
+    from marketdesk.services.backup import BackupError
 
     settings = get_settings()
     data = json.loads(Path(args.path).read_text())
@@ -150,13 +149,37 @@ def cmd_import_data(args: argparse.Namespace) -> None:
         answer = input("Restore into the configured database (it must be empty)? [y/N] ")
         if answer.strip().lower() != "y":
             raise SystemExit("aborted")
-    upgrade(settings.effective_database_url)
+    url = settings.effective_database_url
     engine = init_engine(settings)
     try:
-        counts = import_data(engine, data, current_revision(settings.effective_database_url))
+        counts = restore_with_migrations(url, engine, data)
     except BackupError as exc:
         raise SystemExit(f"restore refused: {exc}") from exc
     print(f"restore complete: {sum(counts.values())} rows in {sum(1 for v in counts.values() if v)} tables")
+
+
+def restore_with_migrations(url: str, engine, data: dict) -> dict:
+    """Restore into an empty database: build the backup's schema revision, load the rows, then migrate to head.
+
+    Older backups therefore go through the same data migrations as a live database would.
+    """
+    from marketdesk.db.migrations import current_revision, downgrade, upgrade
+    from marketdesk.services.backup import BackupError, existing_rows, import_data
+
+    target = data.get("schema_revision") if isinstance(data, dict) else None
+    if not target:
+        raise BackupError("The backup does not state its schema revision.")
+    current = current_revision(url)
+    if current is not None and existing_rows(engine):
+        raise BackupError("The target database already contains data; restore only into an empty database.")
+    if current != target:
+        try:
+            upgrade(url, target)
+        except Exception:
+            downgrade(url, target)  # an empty database migrated past the backup's revision
+    counts = import_data(engine, data, current_revision(url))
+    upgrade(url, "head")
+    return counts
 
 
 def cmd_worker_health(_: argparse.Namespace) -> None:

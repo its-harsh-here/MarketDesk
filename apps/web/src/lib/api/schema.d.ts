@@ -314,6 +314,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/market/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sessions
+         * @description Exchange session states for the supported markets (published calendars, not a live exchange feed).
+         */
+        get: operations["sessions_api_market_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/market/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Compare */
+        get: operations["compare_api_market_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/market/fundamentals": {
         parameters: {
             query?: never;
@@ -870,6 +907,47 @@ export interface components {
             /** Data Status */
             data_status?: ("sample" | "available" | "cached" | "stale" | "missing" | "unsupported" | "unavailable") | null;
         };
+        /** CompareInstrumentOut */
+        CompareInstrumentOut: {
+            /** Symbol */
+            symbol: string;
+            /** Name */
+            name?: string | null;
+            /** Currency */
+            currency?: string | null;
+            /** Exchange */
+            exchange?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Adjustment */
+            adjustment?: string | null;
+            /** Bars */
+            bars: number;
+            /** Excluded Dates */
+            excluded_dates?: number | null;
+            meta: components["schemas"]["DataMetaOut"];
+        };
+        /** CompareOut */
+        CompareOut: {
+            /** Range */
+            range: string;
+            /** Method */
+            method: string;
+            /** Base Date */
+            base_date?: string | null;
+            /** Dates */
+            dates: string[];
+            /** Series */
+            series: {
+                [key: string]: string[];
+            };
+            /** Instruments */
+            instruments: components["schemas"]["CompareInstrumentOut"][];
+            /** Complete */
+            complete: boolean;
+            /** Currencies Differ */
+            currencies_differ: boolean;
+        };
         /** CorporateActionOut */
         CorporateActionOut: {
             /**
@@ -1096,6 +1174,17 @@ export interface components {
             timezone?: string | null;
             /** Kind */
             kind?: string | null;
+            /** Exchange Code */
+            exchange_code?: string | null;
+            /** Mic */
+            mic?: string | null;
+            /** Country */
+            country?: string | null;
+            /**
+             * Identity Verified
+             * @default false
+             */
+            identity_verified: boolean;
         };
         /** JournalIn */
         JournalIn: {
@@ -1182,6 +1271,37 @@ export interface components {
             username: string;
             /** Password */
             password: string;
+        };
+        /** MarketSessionOut */
+        MarketSessionOut: {
+            /** Market */
+            market: string;
+            /** Name */
+            name: string;
+            /** Timezone */
+            timezone: string;
+            /** Calendar */
+            calendar?: string | null;
+            /** Source */
+            source: string;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "open" | "closed" | "unknown";
+            /** Reason */
+            reason: string;
+            /** Opens At */
+            opens_at?: string | null;
+            /** Closes At */
+            closes_at?: string | null;
+            /** Next Open */
+            next_open?: string | null;
         };
         /** MembershipOut */
         MembershipOut: {
@@ -1968,6 +2088,7 @@ export interface operations {
             query: {
                 q: string;
                 limit?: number;
+                region?: "all" | "IN" | "US";
             };
             header?: never;
             path?: never;
@@ -2065,6 +2186,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HistoryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sessions_api_market_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketSessionOut"][];
+                };
+            };
+        };
+    };
+    compare_api_market_compare_get: {
+        parameters: {
+            query: {
+                symbols: string;
+                range?: "1M" | "3M" | "6M" | "1Y" | "5Y";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompareOut"];
                 };
             };
             /** @description Validation Error */

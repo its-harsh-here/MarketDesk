@@ -10,13 +10,13 @@ import { Field, Input } from "@/components/ui/Form";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
 import type { SortState } from "@/components/ui/DataTable";
-import { errorMessage, type ApiError, type Watchlist } from "@/lib/api/client";
+import { errorMessage, type ApiError, type Snapshot, type Watchlist } from "@/lib/api/client";
 import { cn } from "@/lib/cn";
 import { useSnapshots } from "@/features/market/api";
 import { usePatchPrefs, usePrefs, useSession, useStatus } from "@/features/settings/api";
 import { SymbolPicker } from "@/features/search/SymbolPicker";
 import { useWatchlistMutations, useWatchlists } from "./api";
-import { WatchlistTable } from "./WatchlistTable";
+import { WatchlistTable, buildRows } from "./WatchlistTable";
 
 export function NewWatchlistDialog() {
   const { state, close } = useDialogs();
@@ -214,6 +214,7 @@ export function WatchlistsPage() {
   const { open } = useDialogs();
   const m = useWatchlistMutations();
   const toast = useToast();
+  const [region, setRegion] = useStoredRegion();
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [reordering, setReordering] = useState(false);
@@ -337,12 +338,16 @@ export function WatchlistsPage() {
           ) : snaps.isError && !snaps.data ? (
             <ErrorState message={errorMessage(snaps.error)} onRetry={() => snaps.refetch()} />
           ) : (
-            <WatchlistTable
-              watchlist={wl}
-              snapshots={snaps.data}
-              sort={sort}
-              onSortChange={(s) => !readOnly && m.sort.mutate({ id: wl.id, sort_key: s.key, sort_dir: s.dir }, { onError: (e) => toast("error", errorMessage(e)) })}
-            />
+            <>
+              <RegionFilter wl={wl} snaps={snaps.data} value={region} onChange={setRegion} />
+              <WatchlistTable
+                watchlist={wl}
+                snapshots={snaps.data}
+                sort={sort}
+                region={region}
+                onSortChange={(s) => !readOnly && m.sort.mutate({ id: wl.id, sort_key: s.key, sort_dir: s.dir }, { onError: (e) => toast("error", errorMessage(e)) })}
+              />
+            </>
           )}
           <p className="border-t border-line-subtle px-[var(--panel-pad)] py-2 text-xs text-fg-3">
             Change and change % compare the last observed price with the previous session close from the same price series. Click a row for details; the star removes a symbol from this list.
@@ -364,6 +369,57 @@ export function WatchlistsPage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+type RegionValue = "all" | "IN" | "US" | "other";
+
+/** Per-viewer convenience: the last market filter, kept in this browser only. */
+function useStoredRegion(): [RegionValue, (r: RegionValue) => void] {
+  const [region, setRegionState] = useState<RegionValue>(() => {
+    try {
+      const v = window.localStorage.getItem("md.watchlistRegion");
+      return v === "IN" || v === "US" || v === "other" ? v : "all";
+    } catch {
+      return "all";
+    }
+  });
+  const setRegion = (r: RegionValue) => {
+    setRegionState(r);
+    try {
+      window.localStorage.setItem("md.watchlistRegion", r);
+    } catch {
+      /* storage unavailable: keep the choice for this page view only */
+    }
+  };
+  return [region, setRegion];
+}
+
+/** Market filter shown only when the list mixes markets; counts make empty choices obvious. */
+function RegionFilter({ wl, snaps, value, onChange }: { wl: Watchlist; snaps: Snapshot[] | undefined; value: RegionValue; onChange: (r: RegionValue) => void }) {
+  const rows = buildRows(wl, snaps);
+  const count = (r: RegionValue) => rows.filter((x) => (r === "all" ? true : r === "other" ? x.country !== "IN" && x.country !== "US" : x.country === r)).length;
+  const present = (["IN", "US", "other"] as RegionValue[]).filter((r) => count(r) > 0);
+  if (present.length < 2 && value === "all") return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 border-b border-line-subtle px-[var(--panel-pad)] py-2 text-xs" role="group" aria-label="Filter by market">
+      {(["all", "IN", "US", "other"] as RegionValue[])
+        .filter((r) => r === "all" || present.includes(r) || r === value)
+        .map((r) => (
+          <button
+            key={r}
+            type="button"
+            aria-pressed={value === r}
+            onClick={() => onChange(r)}
+            className={cn(
+              "rounded-[var(--radius-control)] border px-2 py-1 max-md:min-h-9",
+              value === r ? "border-accent/60 bg-accent-soft text-fg" : "border-line text-fg-3 hover:text-fg-2",
+            )}
+          >
+            {r === "all" ? "All" : r === "IN" ? "India" : r === "US" ? "US" : "Other/unknown"} <span className="num text-fg-3">{count(r)}</span>
+          </button>
+        ))}
     </div>
   );
 }

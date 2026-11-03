@@ -15,11 +15,14 @@ from marketdesk.db import get_db
 from marketdesk.models import Instrument
 from marketdesk.schemas import (
     ActionsOut,
+    CompareOut,
     FundamentalsOut,
     HistoryOut,
+    MarketSessionOut,
     SearchResultOut,
     SnapshotOut,
 )
+from marketdesk.services.compare import MAX_COMPARE, compare_payload
 from marketdesk.services.instruments import validate_symbol
 from marketdesk.services.market import MarketDataService
 from marketdesk.services.market_views import (
@@ -28,6 +31,7 @@ from marketdesk.services.market_views import (
     fundamentals_payload,
     history_payload,
 )
+from marketdesk.services.sessions import market_sessions
 
 router = APIRouter(prefix="/api/market", tags=["market"], dependencies=[Depends(require_reader)])
 
@@ -44,11 +48,14 @@ def benchmark_symbols(settings: Settings, market: MarketDataService) -> list[str
 async def search(
     q: str = Query(min_length=1, max_length=64),
     limit: int = Query(default=10, ge=1, le=20),
+    region: Literal["all", "IN", "US"] = Query(default="all"),
     db: Session = Depends(get_db),
     market: MarketDataService = Depends(market_dep),
 ):
-    result = await market.search(q, limit)
-    refs = result.value or []
+    # The provider's result set is cached per query; the region filter is applied afterwards, so asking for more
+    # results upstream keeps a filtered list from coming back nearly empty.
+    result = await market.search(q, 20 if region != "all" else limit)
+    refs = [r for r in (result.value or []) if region == "all" or r.country == region][:limit]
     known = (
         {
             i.symbol: i
@@ -63,11 +70,12 @@ async def search(
     )
     out = []
     for r in refs:
-        d = r.to_dict()
+        d = {**r.to_dict(), "identity_verified": False}
         inst = known.get(r.symbol)
         if inst is not None:
-            for k in ("currency", "timezone", "exchange", "name", "kind"):
+            for k in ("currency", "timezone", "exchange", "name", "kind", "exchange_code", "mic", "country"):
                 d[k] = d.get(k) or getattr(inst, k)
+            d["identity_verified"] = inst.identity_verified_at is not None
         out.append(d)
     return {"results": out, "meta": result.meta.to_dict()}
 
@@ -104,6 +112,24 @@ async def history(
     market: MarketDataService = Depends(market_dep),
 ):
     return await history_payload(market, validate_symbol(market, symbol), range)
+
+
+@router.get("/sessions", response_model=list[MarketSessionOut])
+def sessions():
+    """Exchange session states for the supported markets (published calendars, not a live exchange feed)."""
+    return market_sessions()
+
+
+@router.get("/compare", response_model=CompareOut)
+async def compare(
+    symbols: str = Query(min_length=1, max_length=120),
+    range: Literal["1M", "3M", "6M", "1Y", "5Y"] = Query(default="1Y"),  # noqa: A002
+    market: MarketDataService = Depends(market_dep),
+):
+    syms = list(dict.fromkeys(validate_symbol(market, s) for s in symbols.split(",") if s.strip()))
+    if not 2 <= len(syms) <= MAX_COMPARE:
+        raise AppError(422, "validation_error", f"Compare between 2 and {MAX_COMPARE} different instruments.")
+    return await compare_payload(market, syms, range)
 
 
 @router.get("/fundamentals", response_model=FundamentalsOut)

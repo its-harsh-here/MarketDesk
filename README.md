@@ -195,6 +195,17 @@ Open http://localhost:5173. `DEV_AUTH_BYPASS` skips login and is refused unless 
 default outside Docker). **Load NSE starter** adds the real NSE symbols listed in
 `config/starter_watchlist.yahoo.json`; prices are fetched live.
 
+## Markets
+
+India (NSE, BSE) and US (NYSE, Nasdaq, NYSE Arca, Cboe BZX) listings can be searched (with an All/India/US filter),
+charted, compared (up to three, rebased to 100 on common trading dates, own-currency price returns without
+dividends) and kept in mixed watchlists. Each listing keeps its own currency and exchange; INFY.NS and the INFY ADR
+are different instruments. Market session states (open, closed with the reason, or unknown) come from the
+`exchange_calendars` package's published calendars, so holidays, early closes and US daylight-saving changes are
+respected; dates beyond the calendar's data (India: after 2026-12-31) and special sessions such as Muhurat trading are
+shown as unknown. Session states describe the exchange schedule only; quotes keep their own market time and freshness.
+The portfolio remains INR-only until USD accounts arrive (roadmap M08).
+
 ## Accounting rules
 
 The INR ledger supports DEPOSIT, WITHDRAWAL, BUY, SELL, DIVIDEND and explicitly confirmed SPLIT, long-only.
@@ -245,7 +256,7 @@ docs         PLAN, STATUS, DECISIONS, screenshots
 ## Runtime versions
 
 Python 3.13 · FastAPI 0.162.0 · Uvicorn 0.54.0 · SQLAlchemy 2.1.6 · Alembic 1.20.1 · Pydantic 2.14.2 · yfinance 1.7.0 ·
-pandas 3.1.0 · argon2-cffi 25.1.0 · Node 22 · React 19.3.1 · Vite 7.3.7 · TypeScript 5.9.3 · Tailwind CSS 4.3.4 ·
+pandas 3.1.0 · argon2-cffi 25.1.0 · exchange-calendars 4.13.2 · Node 22 · React 19.3.1 · Vite 7.3.7 · TypeScript 5.9.3 · Tailwind CSS 4.3.4 ·
 TanStack Query 5.105.3 · React Router 7.18.5 · React Hook Form 7.91.0 · Zod 4.6.7 · Lightweight Charts 5.2.1 ·
 Vitest 3.2.7 · Playwright 1.63.0. Exact pins are in `apps/api/uv.lock` and the `package-lock.json` files.
 
@@ -254,12 +265,14 @@ Vitest 3.2.7 · Playwright 1.63.0. Exact pins are in `apps/api/uv.lock` and the 
 - Charts: [TradingView Lightweight Charts™](https://www.tradingview.com/lightweight-charts/) (Apache-2.0), Copyright ©
   TradingView, Inc. Each chart shows the TradingView attribution logo; Settings → About repeats it.
 - Market data: Yahoo Finance via [yfinance](https://github.com/ranaroussi/yfinance) (Apache-2.0, unofficial).
+- Exchange calendars: [exchange_calendars](https://github.com/gerrymanoim/exchange_calendars) (Apache-2.0).
 - Fonts: Inter and JetBrains Mono (SIL OFL 1.1) bundled through Fontsource. Icons: Lucide (ISC).
 
 No licence has been chosen for MarketDesk's own code; add one before distributing it.
 
 ## Known limitations
 
-See `docs/STATUS.md`. In short: alerts are sampled, not tick-by-tick; market open/closed status is not shown;
+See `docs/STATUS.md` and `docs/UPGRADE_STATUS.md`. In short: alerts are sampled, not tick-by-tick; session states come
+from published calendars (unknown beyond their data);
 portfolio is INR-only and long-only; no XIRR/TWR or historical equity chart; Yahoo coverage and field availability
 vary (fields are shown as missing rather than guessed), and Yahoo may rate-limit cloud hosts.

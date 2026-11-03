@@ -57,11 +57,11 @@ test("search → open chart → change range → add to watchlist → persists a
   await expect(page.getByRole("heading", { name: "SX:GLASSWING" })).toBeVisible();
 
   const chart = page.getByRole("region", { name: "Price history" }).or(page.locator("section", { hasText: "Price history" }).first());
-  await expect(page.getByRole("radio", { name: "1Y" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("radiogroup", { name: "Chart range" }).getByRole("radio", { name: "1Y" })).toHaveAttribute("aria-checked", "true");
   const historyResponse = page.waitForResponse((r) => r.url().includes("/api/market/history") && r.url().includes("range=3M"));
-  await page.getByRole("radio", { name: "3M" }).click();
+  await page.getByRole("radiogroup", { name: "Chart range" }).getByRole("radio", { name: "3M" }).click();
   expect((await historyResponse).status()).toBe(200);
-  await expect(page.getByRole("radio", { name: "3M" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("radiogroup", { name: "Chart range" }).getByRole("radio", { name: "3M" })).toHaveAttribute("aria-checked", "true");
   await expect(chart.locator("canvas").first()).toBeVisible();
   // accessible table alternative for the chart
   await page.getByRole("button", { name: "Show data table" }).click();
@@ -274,4 +274,21 @@ test("instrument header: a long symbol never overlaps the price at any width", a
     if (r.overlap || r.pageOverflow) problems.push(`${w}px${r.overlap ? " overlap" : ""}${r.pageOverflow ? " page-overflow" : ""}`);
   }
   expect(problems).toEqual([]);
+});
+
+test("compare: two instruments rebased to 100 with method, table alternative and limits", async ({ page }) => {
+  await page.goto("/instrument/SX%3AAURORA");
+  const cmp = page.getByRole("region", { name: "Compare" });
+  await expect(cmp.getByText(/Add one or two instruments/)).toBeVisible();
+  await cmp.getByRole("combobox").fill("BANYAN");
+  await page.getByRole("option", { name: /SX:BANYAN/ }).first().click();
+  await expect(cmp.getByText(/Base 100 on/)).toBeVisible();
+  await expect(cmp.getByText(/dividends are not included/)).toBeVisible();
+  await expect(cmp.getByRole("combobox")).toHaveValue(""); // picker clears after adding
+  await cmp.getByRole("button", { name: "Show comparison table" }).click();
+  const table = cmp.getByRole("table", { name: /Comparison values rebased to 100/ });
+  await expect(table.getByRole("columnheader", { name: "SX:BANYAN" })).toBeVisible();
+  await expect(table.getByRole("cell", { name: "100.00" }).first()).toBeVisible(); // the base date row
+  await cmp.getByRole("button", { name: "Remove SX:BANYAN from the comparison" }).click();
+  await expect(cmp.getByText(/Add one or two instruments/)).toBeVisible();
 });

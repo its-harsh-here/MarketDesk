@@ -46,9 +46,36 @@ class Instrument(Base):
     exchange: Mapped[str | None] = mapped_column(String(32))
     currency: Mapped[str | None] = mapped_column(String(8))
     timezone: Mapped[str | None] = mapped_column(String(64))
-    kind: Mapped[str | None] = mapped_column(String(16))  # EQUITY, INDEX, ETF, ...
+    kind: Mapped[str | None] = mapped_column(String(16))  # EQUITY, INDEX, ETF, FUND, ...
+    # Canonical listing identity (migration 0002). Filled from provider metadata; NULL means not yet known.
+    exchange_code: Mapped[str | None] = mapped_column(String(16))  # provider's venue code, e.g. Yahoo "NSI"
+    mic: Mapped[str | None] = mapped_column(String(8))  # ISO 10383, e.g. XNSE, XNAS
+    country: Mapped[str | None] = mapped_column(String(2), index=True)  # ISO 3166-1 alpha-2
+    identity_source: Mapped[str | None] = mapped_column(String(64))
+    identity_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class InstrumentIdentifier(Base):
+    """Provider/registry identifiers for one listing (yahoo symbol now; e.g. SEC CIK or a broker symbol later).
+
+    A value is not assumed to be globally unique across schemes: a CIK, for instance, covers every share class of an
+    issuer, so lookups go by (scheme, value) and may return several listings.
+    """
+
+    __tablename__ = "instrument_identifiers"
+    __table_args__ = (
+        UniqueConstraint("instrument_id", "scheme", name="uq_identifier_instrument_scheme"),
+        Index("ix_identifier_scheme_value", "scheme", "value"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    instrument_id: Mapped[int] = mapped_column(ForeignKey("instruments.id", ondelete="CASCADE"), nullable=False)
+    scheme: Mapped[str] = mapped_column(String(16), nullable=False)
+    value: Mapped[str] = mapped_column(String(64), nullable=False)
+    source: Mapped[str | None] = mapped_column(String(64))
+    verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
 
 class Watchlist(Base):

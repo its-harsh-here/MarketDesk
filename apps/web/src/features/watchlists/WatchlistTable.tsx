@@ -19,6 +19,7 @@ export interface Row {
   snap?: Snapshot;
   name: string | null;
   exchange: string | null;
+  country: string | null;
 }
 
 export function buildRows(wl: Watchlist, snaps: Snapshot[] | undefined): Row[] {
@@ -31,6 +32,7 @@ export function buildRows(wl: Watchlist, snaps: Snapshot[] | undefined): Row[] {
       snap,
       name: snap?.instrument.name ?? it.instrument.name ?? null,
       exchange: snap?.instrument.exchange ?? it.instrument.exchange ?? null,
+      country: snap?.instrument.country ?? it.instrument.country ?? null,
     };
   });
 }
@@ -89,6 +91,7 @@ export function WatchlistTable({
   onSortChange,
   compact,
   caption,
+  region = "all",
 }: {
   watchlist: Watchlist;
   snapshots: Snapshot[] | undefined;
@@ -96,9 +99,15 @@ export function WatchlistTable({
   onSortChange?: (s: SortState) => void;
   compact?: boolean;
   caption?: string;
+  /** Show only listings in this market ("other" = unknown or other countries). */
+  region?: "all" | "IN" | "US" | "other";
 }) {
   const navigate = useNavigate();
-  const rows = useMemo(() => sortRows(buildRows(watchlist, snapshots), sort), [watchlist, snapshots, sort]);
+  const rows = useMemo(() => {
+    const all = buildRows(watchlist, snapshots);
+    const inRegion = region === "all" ? all : all.filter((r) => (region === "other" ? r.country !== "IN" && r.country !== "US" : r.country === region));
+    return sortRows(inRegion, sort);
+  }, [watchlist, snapshots, sort, region]);
   const ccy = (r: Row) => r.snap?.instrument.currency ?? null;
 
   const columns: Column<Row>[] = [

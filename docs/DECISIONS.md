@@ -135,4 +135,13 @@ Consequential choices, newest last. Routine choices live in code comments.
     worker validates only what it uses. Backups: a database-agnostic logical JSON export/import (consistent snapshot,
     checksum, schema revision, restore only into an empty database in one transaction, sequence reset on
     PostgreSQL), because Render Free has no shell or disk and `pg_dump` would have to match the server version.
+36. **M01 listing identity and calendars.** An instrument is a listing (venue + symbol), not a company: INFY.NS and the
+    INFY ADR stay separate rows with their own currency, calendar and, later, facts. Venue identity (MIC, country)
+    comes from the provider's exchange code via a reviewed mapping, is marked verified only from quote metadata, and
+    unknown venues stay unknown. Provider/registry identifiers live in `instrument_identifiers` (unique per
+    instrument and scheme, looked up by scheme+value because e.g. a CIK spans share classes). Session states use
+    `exchange_calendars` (XNYS for NYSE/Nasdaq/Arca, XBOM for NSE/BSE) with "unknown" for dates outside its data and
+    for special sessions it does not model. Comparisons align on dates where every instrument traded and are labelled
+    as own-currency price returns without dividends. Backups restore across schema revisions by building the backup's
+    revision first and migrating forward.
 

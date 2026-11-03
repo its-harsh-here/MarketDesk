@@ -35,6 +35,7 @@ from marketdesk.services.briefing import build_briefing
 from marketdesk.services.clock import today_local
 from marketdesk.services.market import MarketDataService
 from marketdesk.services.prefs import get_prefs, read_fixture_state, update_prefs, write_fixture_state
+from marketdesk.services.sessions import market_sessions
 from marketdesk.services.storage import is_persistent
 
 log = logging.getLogger("marketdesk.auth")
@@ -230,7 +231,7 @@ def status(
         "market_status": (
             "Sample dataset — no live trading session"
             if sample
-            else "Market status unavailable (no verified exchange calendar)"
+            else " · ".join(f"{m['name']}: {m['state']} ({m['reason'].rstrip('.')})" for m in market_sessions())
         ),
         "provider_health": market.health(),
         "worker": worker_status(db, settings),

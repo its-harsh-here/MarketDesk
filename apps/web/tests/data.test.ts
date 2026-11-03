@@ -47,7 +47,7 @@ function row(symbol: string, pct: string | null, position: number): Row {
     sparkline: [],
     meta: { source: "fixture", status: pct === null ? "missing" : "sample" },
   } as unknown as Snapshot;
-  return { symbol, position, snap, name: symbol, exchange: null };
+  return { symbol, position, snap, name: symbol, exchange: null, country: null };
 }
 
 describe("watchlist sorting", () => {

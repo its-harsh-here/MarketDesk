@@ -21,7 +21,9 @@ import {
   toNumber,
 } from "@/lib/format";
 import { ChartPanel } from "@/features/market/ChartPanel";
-import { useActions, useFundamentals, useSnapshots } from "@/features/market/api";
+import { useActions, useFundamentals, useSessions, useSnapshots } from "@/features/market/api";
+import { ComparePanel } from "@/features/market/ComparePanel";
+import { REGION_LABEL, sessionFor, sessionText } from "@/lib/markets";
 import { usePrefs, useSession } from "@/features/settings/api";
 import { StarToggle } from "@/features/watchlists/StarToggle";
 import { useAlerts } from "@/features/alerts/api";
@@ -81,8 +83,10 @@ export function InstrumentPage() {
   const alerts = useAlerts();
   const notes = useJournal({ symbol });
   const s = snap.data?.[0];
+  const sessions = useSessions();
   const tz = prefs?.display_timezone ?? "Asia/Kolkata";
   const inst = s?.instrument;
+  const marketSession = sessionFor(sessions.data, inst?.country);
   const ccy = inst?.currency ?? fund.data?.currency ?? null;
   const readOnly = Boolean(session?.read_only);
   const holdable = inst && inst.currency === "INR" && (inst.kind ?? "").toUpperCase() !== "INDEX";
@@ -115,11 +119,24 @@ export function InstrumentPage() {
             <div className="flex flex-wrap items-center gap-2">
               <h1 id="inst-title" className="num text-xl font-semibold text-fg">{symbol}</h1>
               {inst?.exchange && <Pill>{inst.exchange}</Pill>}
+              {inst?.country && <Pill>{REGION_LABEL[inst.country] ?? inst.country}</Pill>}
               {ccy && <Pill>{ccy}</Pill>}
               {inst?.kind && <Pill>{inst.kind}</Pill>}
               {s && <FreshnessBadge meta={s.meta} />}
             </div>
             <div className="mt-1 line-clamp-2 text-[13px] break-words text-fg-2">{snap.isLoading ? <Skeleton className="h-4 w-56" /> : inst?.name ?? "Name not reported"}</div>
+            {!snap.isLoading && (
+              <div className="mt-1 text-xs text-fg-3">
+                {marketSession ? (
+                  <span title={`Exchange schedule from the ${marketSession.source} calendar; not a live exchange feed.`}>
+                    {REGION_LABEL[marketSession.market] ?? marketSession.market} session: {sessionText(marketSession)}
+                  </span>
+                ) : (
+                  <span>Market status unavailable for this listing.</span>
+                )}
+                {inst?.mic && <span className="num"> · {inst.mic}</span>}
+              </div>
+            )}
           </div>
           <div>
             {snap.isLoading ? (
@@ -257,6 +274,7 @@ export function InstrumentPage() {
           </ul>
         )}
       </Panel>
+      <ComparePanel symbol={symbol} className="lg:col-span-12" />
     </div>
   );
 }

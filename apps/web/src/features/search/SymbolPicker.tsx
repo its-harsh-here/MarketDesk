@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Search } from "lucide-react";
-import { useSymbolSearch } from "@/features/market/api";
+import { useSymbolSearch, type Region } from "@/features/market/api";
+import { listingLabel } from "@/lib/markets";
 import { useDebounced } from "@/lib/hooks";
 import { cn } from "@/lib/cn";
 import type { Instrument } from "@/lib/api/client";
@@ -33,9 +34,10 @@ export function SymbolPicker({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [pendingEnter, setPendingEnter] = useState(false);
+  const [region, setRegion] = useState<Region>("all");
   const listId = useId();
   const debounced = useDebounced(text, 200);
-  const search = useSymbolSearch(open ? debounced : "");
+  const search = useSymbolSearch(open ? debounced : "", region);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => setText(value), [value]);
@@ -76,6 +78,29 @@ export function SymbolPicker({
 
   return (
     <div className="relative">
+      <div className="mb-1.5 flex items-center gap-1 text-xs" role="group" aria-label="Search market">
+        {(["all", "IN", "US"] as Region[]).map((r) => (
+          <button
+            key={r}
+            type="button"
+            aria-pressed={region === r}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              setRegion(r);
+              setActive(0);
+              if (text) setOpen(true);
+              inputRef.current?.focus();
+            }}
+            className={cn(
+              "rounded-[var(--radius-control)] border px-2 py-0.5 max-md:py-1.5",
+              region === r ? "border-accent/60 bg-accent-soft text-fg" : "border-line text-fg-3 hover:text-fg-2",
+            )}
+          >
+            {r === "all" ? "All markets" : r === "IN" ? "India" : "US"}
+          </button>
+        ))}
+      </div>
+      <div className="relative">
       <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-3" />
       <input
         ref={inputRef}
@@ -124,6 +149,7 @@ export function SymbolPicker({
           invalid && "border-neg",
         )}
       />
+      </div>
       {open && (options.length > 0 || searching) && (
         <ul id={listId} role="listbox" className="scrollbar-thin absolute top-full right-0 left-0 z-30 mt-1 max-h-64 overflow-y-auto rounded-[var(--radius-control)] border border-line bg-elevated py-1 shadow-[var(--shadow-pop)]">
           {searching && (
@@ -147,9 +173,7 @@ export function SymbolPicker({
               >
                 <span className="num w-28 shrink-0 truncate font-semibold text-fg">{o.symbol}</span>
                 <span className="min-w-0 flex-1 truncate text-fg-2">{o.label}</span>
-                {o.inst && (
-                  <span className="shrink-0 text-xs text-fg-3">{[o.inst.exchange, o.inst.currency].filter(Boolean).join(" · ") || "—"}</span>
-                )}
+                {o.inst && <span className="shrink-0 text-xs text-fg-3">{listingLabel(o.inst) || "—"}</span>}
               </li>
             ))}
         </ul>

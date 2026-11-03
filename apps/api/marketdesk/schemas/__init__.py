@@ -45,6 +45,10 @@ class InstrumentOut(Model):
     currency: str | None = None
     timezone: str | None = None
     kind: str | None = None
+    exchange_code: str | None = None
+    mic: str | None = None
+    country: str | None = None
+    identity_verified: bool = False
 
 
 class QuoteOut(Model):
@@ -94,6 +98,43 @@ class HistoryOut(Model):
     bars: list[BarOut] = []
     meta: DataMetaOut
     supported_ranges: list[str]
+
+
+class MarketSessionOut(Model):
+    market: str
+    name: str
+    timezone: str
+    calendar: str | None = None
+    source: str
+    as_of: datetime
+    state: Literal["open", "closed", "unknown"]
+    reason: str
+    opens_at: datetime | None = None
+    closes_at: datetime | None = None
+    next_open: datetime | None = None
+
+
+class CompareInstrumentOut(Model):
+    symbol: str
+    name: str | None = None
+    currency: str | None = None
+    exchange: str | None = None
+    country: str | None = None
+    adjustment: str | None = None
+    bars: int
+    excluded_dates: int | None = None
+    meta: DataMetaOut
+
+
+class CompareOut(Model):
+    range: str
+    method: str
+    base_date: date | None = None
+    dates: list[date]
+    series: dict[str, list[Dec]]
+    instruments: list[CompareInstrumentOut]
+    complete: bool
+    currencies_differ: bool
 
 
 class FundamentalsValues(Model):

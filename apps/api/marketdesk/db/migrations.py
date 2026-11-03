@@ -33,8 +33,12 @@ def head_revision() -> str | None:
     return ScriptDirectory.from_config(alembic_config()).get_current_head()
 
 
-def upgrade(database_url: str) -> None:
-    command.upgrade(alembic_config(database_url), "head")
+def upgrade(database_url: str, revision: str = "head") -> None:
+    command.upgrade(alembic_config(database_url), revision)
+
+
+def downgrade(database_url: str, revision: str) -> None:
+    command.downgrade(alembic_config(database_url), revision)
 
 
 def current_revision(database_url: str) -> str | None:

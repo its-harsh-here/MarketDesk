@@ -29,6 +29,7 @@ from marketdesk.providers.base import (
     QuoteSnapshot,
     validate_bars,
 )
+from marketdesk.providers.venues import security_type, venue_for
 
 log = logging.getLogger("marketdesk.providers.yahoo")
 
@@ -124,13 +125,19 @@ def normalize_bars(df: Any, places: int, is_index: bool) -> list[DailyBar]:
 
 
 def instrument_from_meta(symbol: str, meta: dict) -> InstrumentRef:
+    code = meta.get("exchangeName")
+    venue = venue_for(code, symbol)
+    kind = security_type(meta.get("instrumentType"))
     return InstrumentRef(
         symbol=symbol,
         name=meta.get("longName") or meta.get("shortName"),
-        exchange=meta.get("fullExchangeName") or meta.get("exchangeName"),
+        exchange=meta.get("fullExchangeName") or code,
         currency=meta.get("currency"),
         timezone=meta.get("exchangeTimezoneName"),
-        kind=(meta.get("instrumentType") or None),
+        kind=kind,
+        exchange_code=code,
+        mic=venue.mic if venue and kind != "INDEX" else None,  # an index has no listing venue
+        country=venue.country if venue else None,
     )
 
 
@@ -232,7 +239,7 @@ class YahooProvider:
         _ = self._yf
 
     def cache_namespace(self) -> str:
-        return "y2"  # bump when the shape or wording of cached provider payloads changes
+        return "y3"  # bump when the shape or wording of cached provider payloads changes
 
     def validate_symbol(self, symbol: str) -> str:
         s = (symbol or "").strip().upper()
@@ -312,14 +319,19 @@ class YahooProvider:
             qtype = (item.get("quoteType") or "").upper()
             if not sym or qtype not in _SEARCH_TYPES:
                 continue
+            code = item.get("exchange")
+            venue = venue_for(code, str(sym))
             out.append(
                 InstrumentRef(
                     symbol=str(sym).upper(),
                     name=item.get("longname") or item.get("shortname"),
-                    exchange=item.get("exchDisp") or item.get("exchange"),
+                    exchange=item.get("exchDisp") or (venue.name if venue else code),
                     currency=None,  # Yahoo search does not report currency; resolved from the quote
-                    timezone=None,
-                    kind=qtype,
+                    timezone=venue.timezone if venue else None,
+                    kind=security_type(qtype),
+                    exchange_code=code,
+                    mic=venue.mic if venue and qtype != "INDEX" else None,
+                    country=venue.country if venue else None,
                 )
             )
         return out[:limit]

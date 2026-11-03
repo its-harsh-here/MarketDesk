@@ -197,8 +197,77 @@ Data migrations: none (no schema change). New environment variables: none (optio
 - **Owner actions (optional):** none are required. Recommended: download a backup from Settings → Export and backup
   and keep it privately.
 
+## Phase 2 — M01 India + US markets (3 Nov 2026)
+**What changed.**
+- **Canonical listing identity:**
+  - `InstrumentRef` and the `instruments` table now carry the provider venue code, the ISO 10383 MIC and the
+    country. Identity is marked verified only from quote/chart metadata, which carries the trading currency.
+  - A new `instrument_identifiers` table holds provider/registry mappings: the Yahoo symbol now, room for SEC CIK and
+    broker symbols later.
+  - Venue codes map to identity in `providers/venues.py`, from Yahoo's own exchange codes and never from ticker
+    text. Unknown venues stay unknown, and an index has a country but no MIC.
+  - An ADR and its home listing (INFY vs INFY.NS) are separate instruments with their own currency, calendar and
+    facts.
+- **Search:**
+  - `GET /api/market/search?region=all|IN|US`. Results carry exchange, MIC, country, type and whether the identity
+    is verified.
+  - The symbol picker has an All/India/US filter, and the picker and command palette show "NSE · IN · INR" style
+    labels.
+- **Watchlists:** an All/India/US/Other filter with counts, shown when a list mixes markets and remembered in this
+  browser only. Existing lists and items are untouched.
+- **Session states:**
+  - `GET /api/market/sessions` returns open, closed (weekend, holiday, before open, after close; with next open) or
+    unknown. It uses the published `exchange_calendars` 4.13.2 calendars: XNYS for NYSE/Nasdaq/Arca, XBOM for
+    NSE/BSE, which share holidays.
+  - DST comes from the calendar's timezone. Early closes are modelled.
+  - Special sessions (2026-02-01 Budget, 2026-11-08 Muhurat) and dates outside the calendar's data (India: after
+    2026-12-31) are "unknown", never guessed.
+  - Shown in the market strip, the Instrument header and Settings.
+- **Comparison:**
+  - `GET /api/market/compare` takes 2–3 symbols. It keeps only dates on which every instrument has a close, rebases
+    to 100 at the first common date, and reports how many dates each series lost.
+  - Values are price returns in each instrument's own currency (Yahoo split-adjusted, dividends not included). Mixed
+    currencies are flagged.
+  - The Compare panel on Instrument Detail has a chart, a table alternative, add/remove controls and the
+    plain-language method.
+- **INR portfolio restriction:** kept explicit. A US listing shows "Trades in USD; the v1 portfolio is INR-only…"
+  until M08.
+- **Migration 0002:**
+  - Additive: new nullable columns and a new table.
+  - Backfill: a Yahoo identifier for every stored symbol; country/MIC only when the stored suffix or exchange name
+    maps to exactly one venue, marked unverified.
+- **Backups across the schema change:** restore builds the backup's schema revision in the empty target, loads the
+  rows, then migrates to head, so pre-M01 backups restore into the new schema (`restore_with_migrations`).
+
+**Holiday data check.** nseindia.com and bseindia.com could not be reached from this environment (HTTP 503), so the
+India list was checked against broker-published lists:
+- The library's 16 dates for 2026 match lists that include the 15 Jan Maharashtra municipal-election closure.
+- Other lists show 15 and omit that date.
+- The library list stops at 2026-12-31, after which India states are "unknown".
+
+**Data migration evidence.**
+- **Synthetic populated databases (SQLite and PostgreSQL 17):** every pre-existing column and every watchlist item
+  are byte-identical after migrating.
+- **A local populated copy:** 13 watchlist items survived. Identities were derived (unverified) and then verified
+  from quotes.
+- **Production rehearsal:** the production backup (92 rows, revision 0001) was restored into a scratch PostgreSQL
+  database and migrated to 0002. Its owner-data fingerprint (watchlists and symbols, ledger totals, alerts, journal,
+  settings) is identical to production's. The copy is deleted after the deploy check.
+
+**Checks.**
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 17 | 126 passed, 2 skipped / 127 passed, 1 skipped |
+| `alembic check` (SQLite and PostgreSQL) and downgrade/upgrade 0002 on PostgreSQL | clean |
+| ruff, tsc, ESLint | clean |
+| Vitest | 28 passed |
+| Playwright journeys (fixture harness) | 12 passed (new: compare; search→chart journey scoped to the price chart's range control) |
+| Real-data browser journey (local server, Yahoo) | palette lists INFY (NYSE · US), INFY.NS (NSE · IN · INR), INFY.BO, INFY.BA; US filter shows only INFY; added INFY to a list → present after reload; watchlist filter All 11 / India 10 / US 1; INFY header "US session: Open · closes 16:00 GMT-5 · XNYS"; INFY vs INFY.NS vs SPY rebased with excluded-date counts and the currency warning; no page overflow at 1440/1024/390; screenshots inspected |
+
+New dependency: `exchange-calendars==4.13.2` (pandas-based; Apache-2.0). No new environment variables.
+
 ## Known limitations carried forward
-- Market open/closed status is always "unavailable" (no verified exchange calendar).
+- Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
 - Yahoo (yfinance) is unofficial; it refuses `quoteSummary` from Render, so some fundamentals are derived and labeled.
 - Portfolio is INR-only; there are no returns metrics (XIRR/TWR) by design.

@@ -37,6 +37,10 @@ class InstrumentRef:
     currency: str | None
     timezone: str | None
     kind: str | None  # EQUITY | INDEX | ETF | MUTUALFUND | ...
+    # Canonical listing identity, derived from the provider's own exchange code (never from the ticker text alone).
+    exchange_code: str | None = None  # provider's raw venue code, e.g. Yahoo "NSI", "NMS", "NYQ"
+    mic: str | None = None  # ISO 10383 market identifier of the listing venue, e.g. XNSE, XNAS
+    country: str | None = None  # ISO 3166-1 alpha-2 of the venue, e.g. IN, US
 
     def to_dict(self) -> dict:
         return asdict(self)

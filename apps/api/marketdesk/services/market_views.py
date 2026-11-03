@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from marketdesk.models import Instrument
 from marketdesk.providers.base import HISTORY_RANGES, QuoteSnapshot
-from marketdesk.services.instruments import instrument_dict
+from marketdesk.services.instruments import apply_ref, instrument_dict
 from marketdesk.services.market import MarketDataService, Result
 
 SPARKLINE_POINTS = 66
@@ -58,13 +58,8 @@ async def build_snapshots(db: Session, market: MarketDataService, symbols: list[
     changed = False
     for sym, r in results.items():
         inst = insts.get(sym)
-        if inst is not None and r.value is not None:
-            ref = r.value.instrument
-            for attr in ("name", "exchange", "currency", "timezone", "kind"):
-                v = getattr(ref, attr)
-                if v and getattr(inst, attr) != v:
-                    setattr(inst, attr, v)
-                    changed = True
+        if inst is not None and r.value is not None and apply_ref(inst, r.value.instrument, market.source):
+            changed = True
     if changed:
         db.commit()
     return [snapshot_dict(sym, results[sym], insts.get(sym)) for sym in symbols if sym in results]

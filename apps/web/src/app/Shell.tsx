@@ -22,7 +22,8 @@ import { useDialogs } from "./dialogs";
 import { MOD } from "@/features/search/ShortcutsDialog";
 import { useAlertEvents, useAlertMutations } from "@/features/alerts/api";
 import { applyTheme, usePatchPrefs, usePrefs, useSession, useStatus } from "@/features/settings/api";
-import { useBenchmarks } from "@/features/market/api";
+import { useBenchmarks, useSessions } from "@/features/market/api";
+import { REGION_LABEL, sessionText } from "@/lib/markets";
 import { ChangeText } from "@/components/ui/Change";
 import { FreshnessBadge, Pill } from "@/components/ui/Badges";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -286,6 +287,7 @@ export function MarketStrip() {
     <div className="scrollbar-thin relative flex items-stretch gap-0 overflow-x-auto border-b border-line-subtle bg-sidebar/60 px-4 md:px-6" aria-label="Market benchmarks" role="region">
       {isLoading && <div className="flex h-11 items-center gap-6">{[0, 1, 2].map((i) => <span key={i} className="skeleton h-4 w-40" />)}</div>}
       {isError && <div className="flex h-11 items-center text-xs text-fg-3">Benchmarks unavailable.</div>}
+      <SessionPills />
       {data?.map((s) => (
         <Link
           key={s.symbol}
@@ -297,6 +299,29 @@ export function MarketStrip() {
           {s.quote ? <ChangeText percent={s.quote.change_percent} className="text-xs" /> : <span className="text-xs text-fg-3">{s.meta.message ?? "No quote"}</span>}
           <FreshnessBadge meta={s.meta} compact />
         </Link>
+      ))}
+    </div>
+  );
+}
+
+/** Exchange schedule state per market, from published calendars (not a live exchange feed). */
+function SessionPills() {
+  const { data } = useSessions();
+  if (!data?.length) return null;
+  return (
+    <div className="flex h-11 shrink-0 items-center gap-3 border-r border-line-subtle pr-5 text-xs" aria-label="Market sessions">
+      {data.map((m) => (
+        <span key={m.market} className="flex items-center gap-1.5 whitespace-nowrap" title={`${m.name}: ${sessionText(m)}. Source: ${m.source} calendar.`}>
+          <span
+            aria-hidden
+            className={cn("size-1.5 rounded-full", m.state === "open" ? "bg-pos" : m.state === "closed" ? "bg-fg-3" : "bg-warn")}
+          />
+          <span className="text-fg-2">{REGION_LABEL[m.market] ?? m.market}</span>
+          <span className={cn(m.state === "open" ? "text-pos" : m.state === "closed" ? "text-fg-3" : "text-warn")}>
+            {m.state === "open" ? "open" : m.state === "closed" ? "closed" : "status unknown"}
+          </span>
+          <span className="sr-only">: {sessionText(m)}</span>
+        </span>
       ))}
     </div>
   );

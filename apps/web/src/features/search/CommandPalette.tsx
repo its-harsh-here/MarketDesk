@@ -1,3 +1,4 @@
+import { listingLabel } from "@/lib/markets";
 import * as RD from "@radix-ui/react-dialog";
 import {
   Bell,
@@ -86,7 +87,7 @@ export function CommandPalette() {
           id: `i-${r.symbol}`,
           group: "Instruments" as const,
           label: r.symbol,
-          hint: [r.name, r.exchange, r.currency].filter(Boolean).join(" · "),
+          hint: [r.name, listingLabel(r)].filter(Boolean).join(" · "),
           run: go(`/instrument/${encodeURIComponent(r.symbol)}`),
         }))
       : [];

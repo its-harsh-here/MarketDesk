@@ -33,4 +33,5 @@ earlier as soon as their credentials exist.
 
 ## Progress
 - Phase 1 (M00): ✅ done — verified locally and on the live service (`docs/UPGRADE_STATUS.md`).
-- Phase 2 (M01): next.
+- Phase 2 (M01): ✅ implemented and verified locally, including a migration rehearsal on a copy of production data; live check after deploy in `docs/UPGRADE_STATUS.md`.
+- Phase 3 (M02): next.

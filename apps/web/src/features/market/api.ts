@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { api, type ActionsResponse, type Fundamentals, type HistoryResponse, type Instrument, type DataMeta, type Snapshot } from "@/lib/api/client";
+import { api, type ActionsResponse, type CompareResponse, type Fundamentals, type HistoryResponse, type Instrument, type DataMeta, type MarketSession, type Snapshot } from "@/lib/api/client";
 
 export type Range = "1M" | "3M" | "6M" | "1Y" | "5Y";
 export const RANGES: Range[] = ["1M", "3M", "6M", "1Y", "5Y"];
@@ -59,14 +59,37 @@ export interface SearchResponse {
   meta: DataMeta;
 }
 
+export type Region = "all" | "IN" | "US";
+
 /** Remote symbol search. TanStack Query aborts superseded requests through the signal. */
-export function useSymbolSearch(q: string) {
+export function useSymbolSearch(q: string, region: Region = "all") {
   const query = q.trim();
   return useQuery({
-    queryKey: ["search", query.toLowerCase()],
-    queryFn: ({ signal }) => api.get<SearchResponse>("/api/market/search", { q: query, limit: 8 }, signal),
+    queryKey: ["search", query.toLowerCase(), region],
+    queryFn: ({ signal }) => api.get<SearchResponse>("/api/market/search", { q: query, limit: 8, region }, signal),
     enabled: query.length >= 1,
     staleTime: 10 * 60_000,
     placeholderData: keepPreviousData,
+  });
+}
+
+/** Exchange session states from published calendars (refreshed each minute; not a live exchange feed). */
+export function useSessions() {
+  return useQuery({
+    queryKey: ["sessions"],
+    queryFn: ({ signal }) => api.get<MarketSession[]>("/api/market/sessions", undefined, signal),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+}
+
+export function useCompare(symbols: string[], range: Range) {
+  const key = symbols.join(",");
+  return useQuery({
+    queryKey: ["compare", key, range],
+    queryFn: ({ signal }) => api.get<CompareResponse>("/api/market/compare", { symbols: key, range }, signal),
+    enabled: symbols.length >= 2,
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60_000,
   });
 }
