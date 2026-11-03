@@ -86,6 +86,24 @@ Token contrast was computed: all text pairs ≥ 4.5:1 in both themes.
   private API without a session → 401; SPA deep links → 200. Owner sign-in itself and the alert worker were not
   checked from here (no credentials); check Settings → Data status after signing in.
 
+## Live QA on https://marketdesk-9vmi.onrender.com (2026-11-03, signed in as the owner)
+Found and fixed (commit 08710c6, deployed):
+- Fundamentals failed on every symbol ("Yahoo fundamentals request failed (HTTPError)") — Yahoo refuses its
+  company-summary endpoint from Render's IPs. Now derived from Yahoo's chart, valuation-measures, statements and
+  search endpoints; verified live (RELIANCE.NS: market cap ₹15,76,398 Cr, P/E 21.10×, P/B 1.74×, 52-week range,
+  dividend yield, statement dates, sector/industry).
+- Fundamentals failures shared the quotes circuit breaker (could pause all prices) — separate breakers, transient
+  errors only.
+- Adding "RELIANCE"/"ITC" failed (422): the picker offered raw text before results loaded — fixed; server now
+  suggests RELIANCE.NS with a one-click fix.
+- Sign-ins lost on restart — signed 90-day sliding session cookies; verified live (cookie Max-Age 90 days, reload
+  stays signed in).
+- Storage: `/data` is a mounted persistent disk (new status check). The deploy at 12:06 UTC started on an empty
+  disk, so data from before the disk was attached was not carried over.
+Live journeys passing: sign-in, overview, watchlist create/add (click and quick-Enter)/delete, instrument ranges and
+candles, index page, command palette, alert create/delete, journal create/delete, transaction dialog validation
+(not submitted — real ledger), settings/data status, phone layouts (no overflow), reload keeps session.
+
 ## Next — deployment (owner chose Render)
 1. Generate the password hash (README → Deploy).
 2. Render dashboard → New → Blueprint → this repository, branch `main`; enter `OWNER_USERNAME` and
