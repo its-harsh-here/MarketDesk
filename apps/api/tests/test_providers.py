@@ -272,7 +272,8 @@ def test_fundamentals_are_derived_when_company_summary_is_refused():
     assert (f.fifty_two_week_low, f.fifty_two_week_high) == (Decimal("90.00"), Decimal("130.00"))
     assert f.most_recent_quarter == date(2026, 9, 30) and f.last_fiscal_year_end == date(2026, 3, 31)
     assert (f.sector, f.industry) == ("Energy", "Refining")
-    assert "HTTP 401" in f.notes[0] and any("12 months" in n for n in f.notes)
+    assert "HTTP 401" in f.notes[0] and "may not exist" not in f.notes[0]
+    assert any("12 months" in n for n in f.notes)
     yp.fundamentals("EXAMPLE.NS")
     assert calls["info"] == 1  # the refused endpoint is not retried on every request
 

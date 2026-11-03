@@ -210,7 +210,7 @@ class YahooProvider:
             yf.set_tz_cache_location(str(cache_dir))
 
     def cache_namespace(self) -> str:
-        return "y"
+        return "y2"  # bump when the shape or wording of cached provider payloads changes
 
     def validate_symbol(self, symbol: str) -> str:
         s = (symbol or "").strip().upper()
@@ -372,8 +372,14 @@ class YahooProvider:
         bars = normalize_bars(df, places, is_index)
         if not bars:
             raise ProviderError("missing", "Yahoo returned no price history for this symbol.")
-        reason = primary.message if primary else "Yahoo's company summary was unavailable."
-        notes = [f"{reason} Figures below are derived from Yahoo's other endpoints."]
+        # The symbol clearly exists here (we have its price history), so explain only the summary refusal.
+        code = re.search(r"HTTP (\d{3})", primary.message) if primary else None
+        reason = (
+            f"Yahoo's company summary is not available to this server (HTTP {code.group(1)})."
+            if code
+            else "Yahoo's company summary is not available right now."
+        )
+        notes = [f"{reason} These figures are derived from Yahoo's price history, valuation and statement data."]
         last = _dec(meta.get("regularMarketPrice"), places) or bars[-1].close
         high = _dec(meta.get("fiftyTwoWeekHigh"), places) or max((b.high or b.close) for b in bars)
         low = _dec(meta.get("fiftyTwoWeekLow"), places) or min((b.low or b.close) for b in bars)
