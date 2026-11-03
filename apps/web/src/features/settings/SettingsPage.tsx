@@ -176,11 +176,23 @@ export function SettingsPage() {
         </div>
         <div className="mt-4 space-y-2 text-[13px] leading-5 text-fg-2">
           <p>CSV exports re-import cleanly; spreadsheet formulas in text cells are neutralised with a leading apostrophe.</p>
-          <p>
-            For a full backup (watchlists, transactions, alerts, journal, settings) run on the server:
-          </p>
-          <pre className="num overflow-x-auto rounded-[var(--radius-control)] border border-line-subtle bg-canvas px-3 py-2 text-xs text-fg">marketdesk backup /data/backups/marketdesk-$(date +%F).db</pre>
-          <p className="text-xs text-fg-3">This uses SQLite's online backup API, so it is consistent while the app runs. Restore with <code className="num">marketdesk restore FILE</code> after stopping the web and worker services.</p>
+          {status?.storage.path.startsWith("postgresql") ? (
+            <>
+              <p>
+                Your data (watchlists, transactions, alerts, journal, settings) is in an external PostgreSQL database. Back it up with your database provider's tools — Neon keeps restorable history of recent changes — or with <code className="num">pg_dump</code> using the same <code className="num">DATABASE_URL</code>:
+              </p>
+              <pre className="num overflow-x-auto rounded-[var(--radius-control)] border border-line-subtle bg-canvas px-3 py-2 text-xs text-fg">pg_dump --format=custom --file=marketdesk-$(date +%F).dump "$DATABASE_URL"</pre>
+              <p className="text-xs text-fg-3">Restore into an empty database with <code className="num">pg_restore --no-owner --dbname "$DATABASE_URL" FILE</code>, then point the service at it.</p>
+            </>
+          ) : (
+            <>
+              <p>
+                For a full backup (watchlists, transactions, alerts, journal, settings) run on the server:
+              </p>
+              <pre className="num overflow-x-auto rounded-[var(--radius-control)] border border-line-subtle bg-canvas px-3 py-2 text-xs text-fg">marketdesk backup /data/backups/marketdesk-$(date +%F).db</pre>
+              <p className="text-xs text-fg-3">This uses SQLite's online backup API, so it is consistent while the app runs. Restore with <code className="num">marketdesk restore FILE</code> after stopping the web and worker services.</p>
+            </>
+          )}
         </div>
       </Panel>
 
