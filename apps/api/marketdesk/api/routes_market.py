@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
@@ -33,7 +34,8 @@ router = APIRouter(prefix="/api/market", tags=["market"], dependencies=[Depends(
 def benchmark_symbols(settings: Settings, market: MarketDataService) -> list[str]:
     if market.source == "fixture":
         return list(market.provider.dataset.benchmarks)
-    return ["^NSEI", "^BSESN", "^NSEBANK"]
+    cfg = json.loads((settings.starter_config_dir / "starter_watchlist.yahoo.json").read_text())
+    return list(cfg.get("benchmarks") or ["^NSEI"])
 
 
 @router.get("/search", response_model=SearchResultOut)

@@ -50,6 +50,5 @@ export function useTransactionMutations() {
       mutationFn: (token: string) => api.post<{ imported: number; skipped_duplicates: number }>(`/api/portfolio/import/${encodeURIComponent(token)}/commit`),
       onSuccess: invalidate,
     }),
-    sample: useMutation({ mutationFn: () => api.post<{ created: number }>("/api/workspace/sample-portfolio"), onSuccess: invalidate }),
   };
 }

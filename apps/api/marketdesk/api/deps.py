@@ -16,7 +16,6 @@ from marketdesk.services.auth import (
     Principal,
     dev_bypass_principal,
     lookup_session,
-    public_demo_principal,
 )
 from marketdesk.services.market import MarketDataService
 
@@ -32,8 +31,6 @@ def market_dep(request: Request) -> MarketDataService:
 def current_principal(
     request: Request, db: Session = Depends(get_db), settings: Settings = Depends(settings_dep)
 ) -> Principal | None:
-    if settings.public_demo:
-        return public_demo_principal()
     if settings.dev_auth_bypass and settings.marketdesk_env == "development":
         return dev_bypass_principal(settings)
     row = lookup_session(db, settings, request.cookies.get(COOKIE_NAME))

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import text
@@ -31,7 +30,6 @@ from marketdesk.services import watchlists as wl_svc
 from marketdesk.services.briefing import build_briefing
 from marketdesk.services.clock import today_local
 from marketdesk.services.market import MarketDataService
-from marketdesk.services.portfolio import create_transaction, transaction_count
 from marketdesk.services.prefs import get_prefs, read_fixture_state, update_prefs, write_fixture_state
 
 router = APIRouter(prefix="/api", tags=["system"])
@@ -135,7 +133,7 @@ def status(
         "sample_data": sample,
         "dataset_date": dataset_date,
         "dataset_disclaimer": disclaimer,
-        "read_only": settings.public_demo,
+        "read_only": False,
         "auth_mode": settings.auth_mode,
         "market_status": (
             "Sample dataset — no live trading session"
@@ -236,7 +234,7 @@ async def briefing(db: Session = Depends(get_db), market: MarketDataService = De
     return await build_briefing(db, market, today_local(db))
 
 
-# ----------------------------------------------------------------------------- fixture replay (sample mode only)
+# ----------------------------------------------------------------------------- fixture harness (development/test only)
 def _fixture_out(market: MarketDataService, db: Session) -> dict:
     if market.source != "fixture":
         return {"enabled": False}
@@ -330,42 +328,3 @@ async def starter_watchlist(
             {"failures": failures[:10]},
         )
     return out
-
-
-SAMPLE_TRADES = [
-    ("DEPOSIT", 0, None, None, None, "500000.00"),
-    ("BUY", 2, "SX:AURORA", "400", "158.40", None),
-    ("BUY", 3, "SX:GLASSWING", "25", "2610.00", None),
-    ("BUY", 5, "SX:PEREGRINE", "60", "1488.50", None),
-    ("BUY", 8, "SX:ELARA", "40", "1032.00", None),
-    ("SELL", 20, "SX:AURORA", "100", "171.20", None),
-]
-
-
-@router.post("/workspace/sample-portfolio", dependencies=[Depends(require_writer)], status_code=201)
-async def sample_portfolio(db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)):
-    _require_fixture(market)
-    if transaction_count(db):
-        raise AppError(
-            409,
-            "ledger_not_empty",
-            "The sample portfolio can only be loaded into an empty ledger, so it never mixes with your data.",
-        )
-    base: date = market.provider.dataset.base_date - timedelta(days=60)
-    created = 0
-    for type_, offset, sym, qty, price, amount in SAMPLE_TRADES:
-        payload = {
-            "type": type_,
-            "effective_date": base + timedelta(days=offset),
-            "symbol": sym,
-            "quantity": Decimal(qty) if qty else None,
-            "price": Decimal(price) if price else None,
-            "fees": Decimal("20.00") if type_ in ("BUY", "SELL") else Decimal(0),
-            "amount": Decimal(amount) if amount else None,
-            "notes": "Sample workspace (fictitious)",
-        }
-        t = await create_transaction(db, market, payload)
-        t.source = "sample"
-        db.commit()
-        created += 1
-    return {"created": created}

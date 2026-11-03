@@ -13,8 +13,8 @@ import { useTransactionMutations } from "./api";
 const TEMPLATE = [
   "date,type,symbol,quantity,price,fees,amount,currency,split_from,split_to,notes",
   "2026-01-02,DEPOSIT,,,,,10000,INR,,,Initial funding",
-  "2026-01-03,BUY,SX:AURORA,10,100,10,,INR,,,",
-  "2026-01-05,SELL,SX:AURORA,5,130,5,,INR,,,",
+  "2026-01-03,BUY,RELIANCE.NS,10,1250.50,20,,INR,,,",
+  "2026-01-05,SELL,RELIANCE.NS,5,1290,20,,INR,,,",
 ].join("\n");
 
 export function ImportDialog() {

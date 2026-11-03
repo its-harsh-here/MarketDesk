@@ -406,7 +406,7 @@ class PrefsPatch(Model):
 
 class SessionOut(Model):
     authenticated: bool
-    mode: Literal["owner", "dev_bypass", "public_demo"]
+    mode: Literal["owner", "dev_bypass"]
     username: str | None = None
     csrf_token: str | None = None
     read_only: bool

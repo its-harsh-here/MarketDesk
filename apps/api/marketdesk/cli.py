@@ -12,12 +12,10 @@ marketdesk worker-health              exit 0 if the alert worker heartbeat is re
 from __future__ import annotations
 
 import argparse
-import asyncio
 import getpass
 import sqlite3
 import sys
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
 from pathlib import Path
 
 from marketdesk.config import get_settings
@@ -35,6 +33,20 @@ def cmd_migrate(_: argparse.Namespace) -> None:
 
     upgrade(get_settings().effective_database_url)
     print("migrations applied")
+
+
+def cmd_preflight(_: argparse.Namespace) -> None:
+    from marketdesk.config import ConfigError, validate_settings
+    from marketdesk.db.migrations import upgrade
+
+    settings = get_settings()
+    try:
+        validate_settings(settings)
+    except ConfigError as exc:
+        raise SystemExit(f"configuration error: {exc}") from exc
+    settings.data_dir.mkdir(parents=True, exist_ok=True)
+    upgrade(settings.effective_database_url)
+    print("preflight ok: settings valid, migrations applied")
 
 
 def cmd_hash_password(_: argparse.Namespace) -> None:
@@ -106,73 +118,6 @@ def cmd_restore(args: argparse.Namespace) -> None:
     print("restore complete; start the services again")
 
 
-def cmd_seed_demo(_: argparse.Namespace) -> None:
-    settings = get_settings()
-    if settings.data_provider != "fixture":
-        raise SystemExit("seed-demo only runs in fixture mode; it never creates data against live symbols")
-    asyncio.run(_seed_demo())
-
-
-async def _seed_demo() -> None:
-    from marketdesk.db import db_session, init_engine, session_factory
-    from marketdesk.services import alerts, journal, portfolio, watchlists
-    from marketdesk.services.runtime import build_market_service
-
-    settings = get_settings()
-    init_engine(settings)
-    market = build_market_service(settings, session_factory())
-    with db_session() as db:
-        if watchlists.list_watchlists(db) or portfolio.transaction_count(db):
-            print("database already has data; seed-demo skipped (it never overwrites)")
-            return
-        w = watchlists.create_watchlist(db, settings, "Sample starter")
-        for sym in market.provider.dataset.starter_watchlist:
-            await watchlists.add_symbol(db, settings, market, w.id, sym)
-        base = market.provider.dataset.base_date
-        steps = [
-            ("DEPOSIT", 60, None, None, None, "500000"),
-            ("BUY", 58, "SX:AURORA", "400", "158.40", None),
-            ("BUY", 57, "SX:GLASSWING", "25", "2610.00", None),
-            ("BUY", 55, "SX:PEREGRINE", "60", "1488.50", None),
-            ("SELL", 40, "SX:AURORA", "100", "171.20", None),
-        ]
-        for t, days, sym, qty, price, amount in steps:
-            await portfolio.create_transaction(
-                db,
-                market,
-                {
-                    "type": t,
-                    "effective_date": base - timedelta(days=days),
-                    "symbol": sym,
-                    "quantity": Decimal(qty) if qty else None,
-                    "price": Decimal(price) if price else None,
-                    "fees": Decimal("20") if t in ("BUY", "SELL") else Decimal(0),
-                    "amount": Decimal(amount) if amount else None,
-                    "notes": "Sample workspace (fictitious)",
-                },
-            )
-        await alerts.create_alert(
-            db,
-            market,
-            {"symbol": "SX:AURORA", "direction": "ABOVE", "target_price": Decimal("172.00"), "note": "Sample alert"},
-        )
-        await journal.create_entry(
-            db,
-            market,
-            {
-                "symbol": "SX:GLASSWING",
-                "entry_date": base - timedelta(days=57),
-                "title": "Sample thesis note",
-                "thesis": "Example of a structured note: what you expect and why, in your own words.",
-                "risks": "What could go wrong.",
-                "invalidation": "Conditions that would prove the note wrong.",
-                "tags": ["sample", "software"],
-                "review_date": base + timedelta(days=30),
-            },
-        )
-    print("sample workspace created (fictitious SX: instruments)")
-
-
 def cmd_worker_health(_: argparse.Namespace) -> None:
     from marketdesk.db import db_session, init_engine
     from marketdesk.models import WorkerStatus
@@ -193,9 +138,15 @@ def cmd_worker_health(_: argparse.Namespace) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
+    # `docker compose exec web python -m marketdesk.cli ...` runs as root; act as the app user so
+    # backups and database files on the volume never end up root-owned.
+    from marketdesk.entrypoint import drop_privileges
+
+    drop_privileges()
     parser = argparse.ArgumentParser(prog="marketdesk", description="MarketDesk operations")
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("migrate").set_defaults(fn=cmd_migrate)
+    sub.add_parser("preflight").set_defaults(fn=cmd_preflight)
     sub.add_parser("hash-password").set_defaults(fn=cmd_hash_password)
     sub.add_parser("revoke-sessions").set_defaults(fn=cmd_revoke_sessions)
     b = sub.add_parser("backup")
@@ -205,7 +156,6 @@ def main(argv: list[str] | None = None) -> None:
     r.add_argument("path")
     r.add_argument("--yes", action="store_true")
     r.set_defaults(fn=cmd_restore)
-    sub.add_parser("seed-demo").set_defaults(fn=cmd_seed_demo)
     sub.add_parser("worker-health").set_defaults(fn=cmd_worker_health)
     args = parser.parse_args(argv)
     args.fn(args)

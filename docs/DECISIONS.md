@@ -57,3 +57,15 @@ Consequential choices, newest last. Routine choices live in code comments.
 22. **Security headers.** The API sets CSP (`script-src 'self'` plus the hash of the inline theme bootstrap, computed
     at build time into `dist/csp-hash.txt`), `X-Frame-Options: DENY`, `nosniff` and `Referrer-Policy`; API responses
     are `Cache-Control: no-store`; OpenAPI docs are disabled in production.
+23. **Real data only (owner directive, 2026-11-03).** The product shows only real market data. Yahoo is the default
+    provider; `DATA_PROVIDER=fixture` is kept solely as a deterministic test harness (pytest, Playwright, CI) and the
+    server refuses to start with it in production. Removed: the public read-only demo (it existed to show synthetic
+    data publicly), the sample-portfolio endpoint and button, and `marketdesk seed-demo`. This overrides the
+    fixture-mode showcase described in CLAUDE.md §3. Committed screenshots are real-data captures; synthetic visual-QA
+    captures go to a git-ignored folder. Deleting the harness entirely would make CI depend on Yahoo being reachable.
+24. **Single-container mode.** Render disks and Fly volumes attach to one instance, so `python -m marketdesk.serve`
+    validates settings, migrates (in a short-lived subprocess) and supervises web + worker in one container sharing
+    the SQLite file. Measured RSS: web ≈ 171 MB, worker ≈ 130 MB, supervisor ≈ 13 MB.
+25. **Entrypoint privilege drop.** The image no longer sets `USER`; `python -m marketdesk.entrypoint` chowns
+    `DATA_DIR` (platform disks mount root-owned) and drops to uid 10001 before exec. The CLI does the same when run as
+    root inside the image, so operator commands cannot leave root-owned files on the volume.

@@ -24,7 +24,7 @@ _DUMMY_HASH = _hasher.hash("not-the-password")
 
 @dataclass(frozen=True)
 class Principal:
-    mode: str  # owner | dev_bypass | public_demo
+    mode: str  # owner | dev_bypass
     username: str
     csrf_token: str | None
     read_only: bool
@@ -133,7 +133,3 @@ def revoke_all_sessions(db: Session) -> int:
 
 def dev_bypass_principal(settings: Settings) -> Principal:
     return Principal("dev_bypass", settings.owner_username or "owner", _hmac(settings, "dev-bypass-csrf")[:32], False)
-
-
-def public_demo_principal() -> Principal:
-    return Principal("public_demo", "demo", None, True)

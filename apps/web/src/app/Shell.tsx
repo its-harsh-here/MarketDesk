@@ -97,7 +97,7 @@ function Sidebar() {
         </NavLink>
         {status && (
           <div className="px-3 pt-2 text-[11px] leading-4 text-fg-3 max-xl:hidden">
-            {status.sample_data ? "Fictitious sample data" : "Data: Yahoo Finance via yfinance"}
+            {status.sample_data ? "Synthetic test harness" : "Data: Yahoo Finance via yfinance"}
             <br />v{status.version}
           </div>
         )}
@@ -210,7 +210,7 @@ function UserMenu() {
       <DM.Portal>
         <DM.Content align="end" sideOffset={6} className="anim-pop z-50 w-60 rounded-[var(--radius-control)] border border-line bg-elevated p-1 shadow-[var(--shadow-pop)]">
           <div className="px-2.5 py-2 text-xs text-fg-3">
-            {session?.mode === "public_demo" ? "Public read-only demo" : session?.mode === "dev_bypass" ? "Local development (auth bypass)" : `Signed in as ${session?.username}`}
+            {session?.mode === "dev_bypass" ? "Local development (auth bypass)" : `Signed in as ${session?.username}`}
           </div>
           <DM.Item
             className={item}
@@ -249,7 +249,6 @@ function UserMenu() {
 
 function Topbar() {
   const { open } = useDialogs();
-  const { data: session } = useSession();
   const loc = useLocation();
   const title = NAV.find((n) => (n.end ? loc.pathname === n.to : loc.pathname.startsWith(n.to)))?.label ??
     (loc.pathname.startsWith("/instrument") ? "Instrument" : loc.pathname.startsWith("/settings") ? "Settings" : "");
@@ -272,13 +271,6 @@ function Topbar() {
           <kbd className="num ml-auto shrink-0 rounded border border-line px-1.5 text-[11px] text-fg-3 max-sm:hidden">{MOD} K</kbd>
         </button>
         <div className="flex shrink-0 items-center gap-1 md:gap-2">
-          {session?.read_only && (
-            <Tooltip content="This public showcase uses fictitious sample data. Changes are disabled on the server.">
-              <button type="button" className="inline-flex" aria-label="Read-only demo">
-                <Pill tone="warn">Read-only</Pill>
-              </button>
-            </Tooltip>
-          )}
           <ProviderStatus />
           <NotificationsMenu />
           <span className="max-md:hidden"><UserMenu /></span>

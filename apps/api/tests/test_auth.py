@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import pytest
-from fastapi.testclient import TestClient
 
-from marketdesk.api.app import create_app
 from marketdesk.config import ConfigError, validate_settings
 
-from .conftest import OWNER_PW, Api, make_settings, migrated
+from .conftest import OWNER_PW, make_settings
 
 
 def test_private_api_requires_login(owner_api):
@@ -69,7 +67,7 @@ def test_production_requires_credentials_and_secret(tmp_path):
         validate_settings(make_settings(tmp_path, marketdesk_env="production", owner_password_hash="plaintext"))
     with pytest.raises(ConfigError, match="OWNER_USERNAME"):
         validate_settings(make_settings(tmp_path, marketdesk_env="production", owner_username=None))
-    validate_settings(make_settings(tmp_path, marketdesk_env="production"))
+    validate_settings(make_settings(tmp_path, marketdesk_env="production", data_provider="yahoo"))
 
 
 def test_dev_bypass_rejected_outside_development(tmp_path):
@@ -78,34 +76,22 @@ def test_dev_bypass_rejected_outside_development(tmp_path):
             validate_settings(make_settings(tmp_path, marketdesk_env=env, dev_auth_bypass=True))
 
 
-def test_public_demo_cannot_use_live_provider(tmp_path):
-    with pytest.raises(ConfigError, match="PUBLIC_DEMO"):
-        validate_settings(make_settings(tmp_path, public_demo=True, data_provider="yahoo"))
+def test_production_refuses_synthetic_fixture_data(tmp_path):
+    """Real data only in production: the fixture provider is a test harness."""
+    with pytest.raises(ConfigError, match="DATA_PROVIDER=fixture"):
+        validate_settings(make_settings(tmp_path, marketdesk_env="production", data_provider="fixture"))
+    # development/test may use it for deterministic tests
+    validate_settings(make_settings(tmp_path, marketdesk_env="test", data_provider="fixture"))
 
 
-def test_public_demo_reads_but_rejects_every_write(tmp_path):
-    s = migrated(make_settings(tmp_path, public_demo=True, owner_username=None, owner_password_hash=None))
-    with TestClient(create_app(s)) as client:
-        api = Api(client)
-        sess = api.get("/api/auth/session").json()
-        assert sess["read_only"] is True and sess["mode"] == "public_demo"
-        assert api.get("/api/watchlists").status_code == 200
-        assert api.get("/api/market/snapshots", params={"symbols": "SX:AURORA"}).status_code == 200
-        writes = [
-            ("post", "/api/watchlists", {"json": {"name": "x"}}),
-            (
-                "post",
-                "/api/portfolio/transactions",
-                {"json": {"type": "DEPOSIT", "effective_date": "2026-01-01", "amount": "1"}},
-            ),
-            ("post", "/api/alerts", {"json": {"symbol": "SX:AURORA", "direction": "ABOVE", "target_price": "1"}}),
-            ("post", "/api/journal", {"json": {"symbol": "SX:AURORA", "entry_date": "2026-01-01", "title": "t"}}),
-            ("patch", "/api/settings", {"json": {"theme": "light"}}),
-            ("post", "/api/fixture/advance", {}),
-            ("post", "/api/workspace/starter-watchlist", {}),
-            ("delete", "/api/watchlists/1", {}),
-        ]
-        for method, url, kw in writes:
-            r = getattr(api, method)(url, **kw)
-            assert r.status_code == 403, url
-            assert r.json()["error"]["code"] == "read_only"
+def test_default_provider_is_real_market_data(monkeypatch):
+    from marketdesk.config import Settings
+
+    monkeypatch.delenv("DATA_PROVIDER", raising=False)
+    assert Settings().data_provider == "yahoo"
+
+
+def test_public_demo_mode_no_longer_exists(owner_api):
+    api, _ = owner_api
+    # the removed synthetic showcase endpoints are gone
+    assert api.post("/api/workspace/sample-portfolio").status_code in (401, 404)

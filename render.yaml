@@ -1,0 +1,33 @@
+# Render Blueprint: one Docker web service running web + alert worker (python -m marketdesk.serve)
+# with a persistent disk for SQLite. Render disks attach to a single paid instance only, so web and
+# worker share one container. Create it from the Render dashboard: New → Blueprint → this repository.
+# You will be asked for OWNER_USERNAME and OWNER_PASSWORD_HASH; SESSION_SECRET is generated.
+services:
+  - type: web
+    name: marketdesk
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: python -m marketdesk.entrypoint python -m marketdesk.serve
+    # No `plan` key: Render's default paid instance (0.5 CPU / 512 MB) is enough — web + worker
+    # measured ~315 MB. Persistent disks are not available on the free plan.
+    region: singapore
+    healthCheckPath: /api/health
+    disk:
+      name: marketdesk-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: MARKETDESK_ENV
+        value: production
+      - key: DATA_PROVIDER
+        value: yahoo
+      - key: DATA_DIR
+        value: /data
+      - key: ALERT_POLL_SECONDS
+        value: "300"
+      - key: OWNER_USERNAME
+        sync: false
+      - key: OWNER_PASSWORD_HASH
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true

@@ -154,8 +154,7 @@ async def build_briefing(db: Session, market: MarketDataService, today: date) ->
                 f"{_fmt_price(ev.observed_price, a.instrument.currency)} ({ev.direction.lower()} "
                 f"{_fmt_price(ev.target_price, a.instrument.currency)}).",
                 "detail": (
-                    f"Detected {_fmt_time(ev.triggered_at, tz)}; "
-                    f"market time {_fmt_time(ev.observed_market_time, tz)}."
+                    f"Detected {_fmt_time(ev.triggered_at, tz)}; market time {_fmt_time(ev.observed_market_time, tz)}."
                 ),
             }
         )

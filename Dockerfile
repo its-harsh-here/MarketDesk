@@ -32,6 +32,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH=/opt/venv/bin:$PATH \
     PYTHONPATH=/app/api \
     MARKETDESK_ENV=production \
+    DATA_PROVIDER=yahoo \
     DATA_DIR=/data \
     STATIC_DIR=/app/web \
     FIXTURES_DIR=/app/fixtures \
@@ -46,10 +47,14 @@ COPY fixtures /app/fixtures
 COPY config /app/config
 COPY --from=web /src/apps/web/dist /app/web
 WORKDIR /app/api
-USER marketdesk
 VOLUME ["/data"]
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD ["python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3).status == 200 else 1)"]
+# The entrypoint makes /data writable (platform disks mount root-owned) and drops to the unprivileged
+# `marketdesk` user before running the command. Processes never run as root.
+ENTRYPOINT ["python", "-m", "marketdesk.entrypoint"]
+# Default: web only (Docker Compose runs migrate and worker as separate services).
+# Single-container hosts (Render, Fly.io): use `python -m marketdesk.serve` (migrate + web + worker).
 # One web process keeps the in-process caches and ledger write lock coherent (see docs/DECISIONS.md).
 CMD ["uvicorn", "marketdesk.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]

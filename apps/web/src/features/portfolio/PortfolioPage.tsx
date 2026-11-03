@@ -1,4 +1,4 @@
-import { Briefcase, Download, FileUp, Pencil, Plus, Sparkles } from "lucide-react";
+import { Briefcase, Download, FileUp, Pencil, Plus } from "lucide-react";
 import { useState } from "react";
 import { useDialogs } from "@/app/dialogs";
 import { Panel } from "@/components/ui/Panel";
@@ -10,12 +10,11 @@ import { InstrumentBadge, Pill, statusInfo } from "@/components/ui/Badges";
 import { EmptyState, ErrorState, InlineNotice, Skeleton, SkeletonRows } from "@/components/ui/States";
 import { Select } from "@/components/ui/Form";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { useToast } from "@/components/ui/Toast";
 import { errorMessage, type Holding, type Transaction } from "@/lib/api/client";
 import { DASH, formatInstant, formatMoney, formatNumber, formatPercent, formatQuantity, formatSessionDate, tone } from "@/lib/format";
 import { cn } from "@/lib/cn";
-import { usePrefs, useSession, useStatus } from "@/features/settings/api";
-import { usePortfolioSummary, useTransactionMutations, useTransactions } from "./api";
+import { usePrefs, useSession } from "@/features/settings/api";
+import { usePortfolioSummary, useTransactions } from "./api";
 
 const TYPE_TONE: Record<string, "pos" | "neg" | "info" | "neutral" | "accent"> = {
   DEPOSIT: "info",
@@ -75,14 +74,11 @@ function MarkCell({ h }: { h: Holding }) {
 
 export function PortfolioPage() {
   const summary = usePortfolioSummary();
-  const { data: status } = useStatus();
   const { data: session } = useSession();
   const { open } = useDialogs();
   const [type, setType] = useState("");
   const [symbol, setSymbol] = useState("");
   const txns = useTransactions({ type: type || undefined, symbol: symbol || undefined });
-  const { sample } = useTransactionMutations();
-  const toast = useToast();
   const readOnly = Boolean(session?.read_only);
   const s = summary.data;
 
@@ -174,16 +170,10 @@ export function PortfolioPage() {
             actions={
               <>
                 {actions}
-                {!readOnly && status?.sample_data && (
-                  <Button icon={<Sparkles className="size-4" aria-hidden />} loading={sample.isPending} onClick={() => sample.mutate(undefined, { onError: (e) => toast("error", errorMessage(e)) })}>
-                    Load sample portfolio
-                  </Button>
-                )}
               </>
             }
           >
             Record a deposit first, then your buys and sells. Holdings, cash and P&amp;L are computed from this INR ledger.
-            {status?.sample_data && " The sample portfolio uses fictitious SX: companies and is only offered while your ledger is empty."}
           </EmptyState>
         </Panel>
       </div>

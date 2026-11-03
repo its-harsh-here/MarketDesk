@@ -1,6 +1,6 @@
 /**
- * Captures review screenshots into docs/screenshots (fixture mode, fictitious data).
- * Run: cd tests/e2e && npm run screenshots
+ * Visual QA captures on the deterministic test harness (synthetic data, never committed).
+ * Output: tests/e2e/test-results/screenshots. Run: cd tests/e2e && npm run screenshots
  */
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import path from "node:path";
@@ -8,7 +8,7 @@ import path from "node:path";
 test.skip(!process.env.SCREENSHOTS, "set SCREENSHOTS=1 to capture review screenshots");
 test.describe.configure({ mode: "serial" });
 
-const OUT = path.resolve(import.meta.dirname, "../../docs/screenshots");
+const OUT = path.resolve(import.meta.dirname, "test-results/screenshots");
 const SIZES = [
   { w: 1440, h: 900 },
   { w: 1024, h: 768 },
@@ -19,7 +19,16 @@ async function seed(request: APIRequestContext) {
   const session = await (await request.get("/api/auth/session")).json();
   const headers = { "x-csrf-token": session.csrf_token };
   expect((await request.post("/api/workspace/starter-watchlist", { headers })).status()).toBe(201);
-  expect((await request.post("/api/workspace/sample-portfolio", { headers })).status()).toBe(201);
+  const txns = [
+    { type: "DEPOSIT", effective_date: "2026-05-01", amount: "500000" },
+    { type: "BUY", effective_date: "2026-05-03", symbol: "SX:AURORA", quantity: "400", price: "158.40", fees: "20" },
+    { type: "BUY", effective_date: "2026-05-04", symbol: "SX:GLASSWING", quantity: "25", price: "2610", fees: "20" },
+    { type: "BUY", effective_date: "2026-05-06", symbol: "SX:PEREGRINE", quantity: "60", price: "1488.50", fees: "20" },
+    { type: "SELL", effective_date: "2026-05-21", symbol: "SX:AURORA", quantity: "100", price: "171.20", fees: "20" },
+  ];
+  for (const t of txns) {
+    expect((await request.post("/api/portfolio/transactions", { headers, data: t })).status()).toBe(201);
+  }
   await request.post("/api/alerts", { headers, data: { symbol: "SX:AURORA", direction: "ABOVE", target_price: "172" } });
   await request.post("/api/alerts", { headers, data: { symbol: "SX:PEREGRINE", direction: "BELOW", target_price: "1050" } });
   await request.post("/api/journal", {

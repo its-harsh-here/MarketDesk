@@ -226,23 +226,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/workspace/sample-portfolio": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Sample Portfolio */
-        post: operations["sample_portfolio_api_workspace_sample_portfolio_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/market/search": {
         parameters: {
             query?: never;
@@ -1318,7 +1301,7 @@ export interface components {
              * Mode
              * @enum {string}
              */
-            mode: "owner" | "dev_bypass" | "public_demo";
+            mode: "owner" | "dev_bypass";
             /** Username */
             username?: string | null;
             /** Csrf Token */
@@ -1910,26 +1893,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WatchlistOut"];
-                };
-            };
-        };
-    };
-    sample_portfolio_api_workspace_sample_portfolio_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
                 };
             };
         };

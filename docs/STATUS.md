@@ -1,8 +1,13 @@
 # Status
 
-_Last updated: 2026-11-03 — core release complete; deployment-ready (not deployed)._
+_Last updated: 2026-11-03 — real-data-only product; deployment-ready for Render or Docker Compose (not yet deployed)._
 
 ## Done
+- **Real data only** (owner directive): Yahoo is the default; the synthetic fixture provider is a test harness that
+  production refuses; public demo, sample portfolio and `seed-demo` removed; README screenshots are real-data
+  captures (3 Nov 2026).
+- **Deploy targets**: `render.yaml` blueprint (single container `python -m marketdesk.serve`, 1 GB disk, Singapore)
+  and Docker Compose for any server. Entrypoint fixes disk ownership and drops to uid 10001.
 - **Backend** (`apps/api`): FastAPI app factory, settings with production safety checks, SQLite WAL + busy timeout,
   Alembic migration `0001` (`alembic check` clean), models for settings, instruments, watchlists, ledger, imports,
   alerts/events, observations, journal, sessions, login attempts, persisted cache, worker status.
@@ -18,10 +23,19 @@ _Last updated: 2026-11-03 — core release complete; deployment-ready (not deplo
 - **Delivery**: multi-stage `Dockerfile`, `compose.yaml` (migrate → web + worker, volume, health checks),
   `.env.example`, CI workflow, README, screenshots in `docs/screenshots`.
 
+## Real-data/deploy checks (2026-11-03)
+- Single container (`docker run … python -m marketdesk.serve`, PORT=10000, root-owned bind mount at /data): ready,
+  migrations applied, all processes uid 10001, data files uid 10001, worker running, live ^NSEI/^BSESN/^NSEBANK quotes.
+- `DATA_PROVIDER=fixture` with `MARKETDESK_ENV=production`: refuses to start with an explicit message.
+- Compose with `.env.example` defaults (yahoo): migrate exit 0, web and worker healthy; `exec` backup as root
+  produces uid 10001 files.
+- Memory: web ≈ 171 MB, worker ≈ 130 MB, supervisor ≈ 13 MB.
+- Render blueprint is written from Render's current docs but has **not** been deployed (no account access).
+
 ## Checks run (2026-11-03, this environment)
 | Check | Command | Result |
 | --- | --- | --- |
-| API tests | `cd apps/api && uv run pytest` | 64 passed |
+| API tests | `cd apps/api && uv run pytest` | 65 passed |
 | API lint/format | `uv run ruff check marketdesk tests && uv run ruff format --check marketdesk tests` | clean |
 | Migration drift | `alembic upgrade head && alembic check` (scratch DB) | no new operations |
 | Web types/lint | `cd apps/web && npx tsc -b --noEmit && npx eslint .` | clean |
@@ -57,7 +71,8 @@ Token contrast was computed: all text pairs ≥ 4.5:1 in both themes.
 - Run a single web process: the ledger write lock and in-memory caches are per process.
 - Briefing has no volume comparison (session completeness cannot be verified from Yahoo data).
 - Docker Hub rate-limited pulls here (HTTP 429); README documents the mirror override.
-- Not deployed anywhere: no hosting account was available or used.
+- Not deployed anywhere yet: no hosting account was available to this session.
+- Yahoo may rate-limit some cloud IP ranges; the app then shows stale/unavailable states.
 - No licence chosen for the project's own code.
 
 ## Next (optional work, after core)

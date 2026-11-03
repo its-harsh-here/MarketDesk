@@ -26,7 +26,8 @@ class Settings(BaseSettings):
 
     # Runtime mode
     marketdesk_env: Literal["development", "test", "production"] = "development"
-    data_provider: Literal["fixture", "yahoo"] = "fixture"
+    # yahoo = real market data. fixture = deterministic synthetic test harness (development/test only).
+    data_provider: Literal["fixture", "yahoo"] = "yahoo"
 
     # Storage
     data_dir: Path = Field(default=REPO_ROOT / "data")
@@ -42,7 +43,6 @@ class Settings(BaseSettings):
     session_ttl_hours: int = 24 * 14
     cookie_secure: bool | None = None  # defaults to True in production
     dev_auth_bypass: bool = False
-    public_demo: bool = False
     allowed_origins: str = ""  # comma-separated extra origins allowed for CSRF Origin checks / CORS
     login_max_failures: int = 5
     login_window_minutes: int = 15
@@ -94,9 +94,7 @@ class Settings(BaseSettings):
         return [o.strip().rstrip("/") for o in self.allowed_origins.split(",") if o.strip()]
 
     @property
-    def auth_mode(self) -> Literal["public_demo", "dev_bypass", "owner"]:
-        if self.public_demo:
-            return "public_demo"
+    def auth_mode(self) -> Literal["dev_bypass", "owner"]:
         if self.dev_auth_bypass:
             return "dev_bypass"
         return "owner"
@@ -107,20 +105,17 @@ def validate_settings(settings: Settings) -> None:
     problems: list[str] = []
     if settings.dev_auth_bypass and settings.marketdesk_env != "development":
         problems.append("DEV_AUTH_BYPASS is only allowed when MARKETDESK_ENV=development.")
-    if settings.public_demo and settings.data_provider != "fixture":
+    if settings.data_provider == "fixture" and settings.marketdesk_env == "production":
         problems.append(
-            "PUBLIC_DEMO requires DATA_PROVIDER=fixture; MarketDesk does not redistribute a live Yahoo feed."
+            "DATA_PROVIDER=fixture is a synthetic test harness and is refused in production; use DATA_PROVIDER=yahoo."
         )
-    if settings.public_demo and settings.dev_auth_bypass:
-        problems.append("PUBLIC_DEMO and DEV_AUTH_BYPASS cannot be combined.")
     if settings.is_production:
         if not settings.session_secret or len(settings.session_secret) < 32:
             problems.append("SESSION_SECRET (at least 32 characters) is required in production.")
-        if not settings.public_demo:
-            if not settings.owner_username:
-                problems.append("OWNER_USERNAME is required in production.")
-            if not settings.owner_password_hash or not settings.owner_password_hash.startswith("$argon2"):
-                problems.append("OWNER_PASSWORD_HASH (argon2 hash) is required in production.")
+        if not settings.owner_username:
+            problems.append("OWNER_USERNAME is required in production.")
+        if not settings.owner_password_hash or not settings.owner_password_hash.startswith("$argon2"):
+            problems.append("OWNER_PASSWORD_HASH (argon2 hash) is required in production.")
     elif settings.auth_mode == "owner":
         if not (settings.owner_username and settings.owner_password_hash):
             problems.append(

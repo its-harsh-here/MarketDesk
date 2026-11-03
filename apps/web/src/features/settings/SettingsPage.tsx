@@ -108,7 +108,7 @@ export function SettingsPage() {
               <Row label="Last successful fetch">{health.last_success_at ? `${formatRelative(health.last_success_at)}` : "None in this server process yet"}</Row>
               {health.last_error && <Row label="Last error"><span className="text-warn">{health.last_error.message}</span></Row>}
               <Row label="Alert worker">{status.worker.running ? `Running · last cycle ${formatRelative(status.worker.last_cycle_at)}` : status.worker.message}</Row>
-              <Row label="Server mode">{status.environment} · {status.auth_mode === "dev_bypass" ? "development auth bypass" : status.auth_mode === "public_demo" ? "public read-only demo" : "owner login"}</Row>
+              <Row label="Server mode">{status.environment} · {status.auth_mode === "dev_bypass" ? "development auth bypass" : "owner login"}</Row>
             </dl>
             <p className="mt-3 text-xs leading-4 text-fg-3">
               Server cache defaults: quotes 5 min, history 1 h, fundamentals and search 24 h. A cached or recent fetch does not prove a fresh market quotation; always check the market time. When the provider fails, the last successful result is shown and marked stale.

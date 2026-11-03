@@ -166,6 +166,6 @@ def test_prefs_validation(api):
     assert r.json()["theme"] == "light" and r.json()["chart_symbol"] == "SX:ELARA"
 
 
-def test_sample_portfolio_only_into_empty_ledger(api):
-    assert api.post("/api/workspace/sample-portfolio").status_code == 201
-    assert api.post("/api/workspace/sample-portfolio").status_code == 409
+def test_sample_portfolio_endpoint_removed(api):
+    r = api.post("/api/workspace/sample-portfolio")
+    assert r.status_code == 404 and r.json()["error"]["code"] == "not_found"
