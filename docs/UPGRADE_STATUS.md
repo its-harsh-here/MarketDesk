@@ -266,6 +266,21 @@ India list was checked against broker-published lists:
 
 New dependency: `exchange-calendars==4.13.2` (pandas-based; Apache-2.0). No new environment variables.
 
+**Live verification after deploying 301d223 (3 Nov 2026).**
+- The schema migrated to `0002` and is up to date.
+- The owner-data fingerprint is identical before and after the production migration: 2 watchlists with the same
+  symbols, 2 alerts, ledger totals and settings.
+- Sessions: India "closed (before the open)" with next open 03:45 UTC (09:15 IST); US "open" with close 21:00 UTC
+  (16:00 New York, after the DST change).
+- Search: `region=US` returns only INFY (NYSE); `region=IN` returns the NSE/BSE listings.
+- Compare: INFY vs INFY.NS gives 239 common dates (13 and 8 excluded) and flags the different currencies.
+- The owner's three listings (SMR, DOX, IFCI.NS) are now verified from quote metadata.
+- The live instrument page at 1440 and 390 px has no overflow; screenshots inspected.
+- The temporary copy of production data used for the rehearsal has been deleted.
+
+**Known visual issue (pre-existing, not M01):** the price axis can label the area reserved for volume bars with
+negative prices (e.g. "−4.00"). Fix candidate: move volume to its own chart pane (Lightweight Charts 5 panes).
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
