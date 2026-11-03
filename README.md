@@ -76,6 +76,35 @@ cookies and survive restarts on their own.
    round trips. Both regions are fixed when created: create the Render service in **Singapore** to match a Neon
    project in *AWS Asia Pacific (Singapore)* (or the other way round).
 
+#### Render reference (names the code actually reads)
+| Variable | Required | Notes |
+| --- | --- | --- |
+| `OWNER_USERNAME` | yes | Your sign-in name. Surrounding spaces/newlines are ignored. |
+| `OWNER_PASSWORD_HASH` | yes | Output of `marketdesk hash-password`, pasted **without quotes**. Startup refuses a quoted, `$$`-escaped, cut-off or non-argon2 value and says which. |
+| `SESSION_SECRET` | yes | ≥ 32 random characters (the Blueprint generates it). Changing it signs every browser out. |
+| `DATABASE_URL` | yes on Render Free | The Neon connection string (`postgres://` or `postgresql://`, keep `?sslmode=require`). |
+| `MARKETDESK_ENV` | set by the Blueprint | `production` (secure cookies, startup checks, no API docs). |
+| `DATA_PROVIDER` | no | Defaults to `yahoo`. |
+| `ALERT_POLL_SECONDS`, `WORKER_START_DELAY_SECONDS`, `WORKER_NICE` | no | Worker sampling interval (300 s) and start-up pacing. |
+
+- **Start command:** none — the image's default `python -m marketdesk.serve` runs the web server and, 45 s after it
+  answers, the alert worker in the same container. Leave Render's *Start Command* empty.
+- **Migrations:** applied automatically when the web server (and the worker) start, serialised by a lock; no separate
+  step. Manual equivalent: `python -m marketdesk.cli migrate`. **Settings → Data status → Database schema** shows the
+  current and expected revision.
+- **Health checks:** `/api/health` (process up) and `/api/readiness` (database reachable and migrated). Neither
+  reveals configuration.
+- **A separate worker service** (Compose `worker`, or a second host process) needs only the database settings
+  (`DATABASE_URL` or `DATA_DIR`), `DATA_PROVIDER`, provider tuning and `ALERT_POLL_SECONDS`. It does not need
+  `OWNER_*` or `SESSION_SECRET`; its start-up check skips them.
+- **Diagnosing sign-in:** every response carries an `X-Request-ID`. A server failure shows *"The server could not
+  complete sign-in … Reference: …"*; search Render's logs for that reference (`request_id=…`) to find the matching
+  line with the exception type. Wrong credentials show *Incorrect username or password* (HTTP 401) and are logged as
+  `sign-in failed: invalid credentials` without the username or password; five failures from one client lock it for
+  15 minutes (HTTP 429). A page saying the server is *starting or temporarily unavailable* comes from Render while the
+  instance wakes or redeploys.
+- **Backups:** **Settings → Export and backup → Full backup (JSON)** downloads a consistent snapshot (see Operations).
+
 Free-tier trade-offs (Render docs, Nov 2026): the service sleeps after 15 minutes without visits and takes about a
 minute to wake; **price alerts are only evaluated while it is awake**; 750 free instance hours per month. Neon's free
 compute also suspends when idle and wakes on the next query. Render's own free Postgres is deleted after 30 days, so
@@ -129,6 +158,17 @@ If Docker Hub rate-limits pulls, set `PYTHON_IMAGE=mirror.gcr.io/library/python:
 | Rotate the owner password | generate a new hash, update the secret, restart |
 | Sign out every session | rotate `SESSION_SECRET`, or `python -m marketdesk.cli revoke-sessions` |
 | Worker health | `python -m marketdesk.cli worker-health` |
+
+**Database-agnostic backups (SQLite or PostgreSQL, works on Render Free without a shell):**
+- Download: **Settings → Export and backup → Full backup (JSON)**, or `python -m marketdesk.cli export-data FILE.json`.
+  It is one consistent snapshot of settings, instruments, watchlists, ledger transactions and import batches, alerts
+  with their observations and events, and the journal (caches, login attempts and worker heartbeats are left out).
+  The file is private; it carries a SHA-256 checksum and the schema revision.
+- Restore into an **empty** database (for example a new Neon branch/database or a fresh SQLite file), from any
+  machine with the repository: `cd apps/api && DATABASE_URL='postgresql://…new-db…' uv run marketdesk import-data FILE.json --yes`.
+  It migrates the target first, refuses a database that already holds data, a modified file, or a different schema
+  revision, and inserts everything in one transaction. Then point `DATABASE_URL` on Render at the restored database.
+  Verified by `tests/test_m00.py` (SQLite → SQLite and SQLite → PostgreSQL round trips with identical checksums).
 
 Backups use SQLite's backup API, so they are consistent while the app runs. Never copy a live `.db` file without its
 `-wal` file. A restore brings back watchlists, transactions, alerts, journal notes and settings. With PostgreSQL, use

@@ -123,3 +123,16 @@ Consequential choices, newest last. Routine choices live in code comments.
     (e) The browser polls alert events at the worker's sampling interval (10–60 s) instead of every 10 s and reuses
     results younger than 15 s across pages. `/api/status` reports the database round-trip time so a region mismatch
     is visible in Settings; `Server-Timing` headers expose per-request timings.
+35. **M00 diagnostics and backups (owner report: "Unexpected server error" at sign-in).** The message only comes from
+    the API's catch-all 500 handler; a production-like reproduction (production mode, HTTPS-terminating proxy with
+    forwarded headers, SQLite and PostgreSQL, synthetic credentials) produced no 500 for any input, and the live
+    service accepted the owner's credentials on 3 Nov 2026, so the original exception is only recorded in Render's
+    logs from that time. Changes: every response carries `X-Request-ID` (a well-formed upstream ID is reused), error
+    bodies repeat it, failures and sign-in outcomes are logged with it (never credentials, bodies or cookies); the
+    sign-in screen separates wrong credentials, rate limiting, unavailable host/database, network failure and server
+    errors (with the reference); pasted whitespace around `OWNER_USERNAME`/`OWNER_PASSWORD_HASH` is ignored and a
+    quoted, `$$`-escaped, cut-off, non-argon2 or memory-heavy hash is refused at start-up with a specific message; the
+    worker validates only what it uses. Backups: a database-agnostic logical JSON export/import (consistent snapshot,
+    checksum, schema revision, restore only into an empty database in one transaction, sequence reset on
+    PostgreSQL), because Render Free has no shell or disk and `pg_dump` would have to match the server version.
+

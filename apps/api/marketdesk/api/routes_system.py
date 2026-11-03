@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from datetime import UTC, datetime
 
@@ -35,6 +36,8 @@ from marketdesk.services.clock import today_local
 from marketdesk.services.market import MarketDataService
 from marketdesk.services.prefs import get_prefs, read_fixture_state, update_prefs, write_fixture_state
 from marketdesk.services.storage import is_persistent
+
+log = logging.getLogger("marketdesk.auth")
 
 router = APIRouter(prefix="/api", tags=["system"])
 
@@ -120,6 +123,18 @@ def storage_status(settings: Settings, db: Session | None = None) -> dict:
     }
 
 
+def schema_status(db: Session) -> dict:
+    """Database migration state (revision identifiers only)."""
+    from marketdesk.db.migrations import head_revision
+
+    try:
+        current = db.execute(text("SELECT version_num FROM alembic_version")).scalar()
+    except Exception:
+        current = None
+    head = head_revision()
+    return {"current": current, "head": head, "up_to_date": current is not None and current == head}
+
+
 def worker_status(db: Session, settings: Settings) -> dict:
     row = db.get(WorkerStatus, "alerts")
     if row is None or row.last_cycle_at is None:
@@ -150,6 +165,24 @@ def worker_status(db: Session, settings: Settings) -> dict:
         "last_summary": row.last_summary,
         "message": message,
     }
+
+
+@router.get("/backup/export", dependencies=[Depends(require_reader)])
+def backup_export(db: Session = Depends(get_db), settings: Settings = Depends(settings_dep)):
+    """Owner-only download of a consistent logical backup (private data: never cached)."""
+    from marketdesk.db import get_engine
+    from marketdesk.services.backup import export_data
+
+    data = export_data(get_engine(), schema_status(db)["current"])
+    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M")
+    return Response(
+        content=json.dumps(data, ensure_ascii=False),
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="marketdesk-backup-{stamp}.json"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @router.get("/health")
@@ -202,6 +235,7 @@ def status(
         "provider_health": market.health(),
         "worker": worker_status(db, settings),
         "storage": storage_status(settings, db),
+        "schema": schema_status(db),
         "benchmarks": benchmark_symbols(settings, market),
         "attribution": ATTRIBUTION,
     }
@@ -249,19 +283,25 @@ def login(
 ):
     if settings.auth_mode != "owner":
         raise AppError(400, "login_not_required", "Login is not used in this mode.")
+    rid = getattr(request.state, "request_id", None)
     key = auth.client_key(settings, request.client.host if request.client else None)
     retry = auth.login_blocked(db, settings, key)
     if retry:
+        log.info("sign-in refused: rate limited request_id=%s", rid)
         raise AppError(
             429,
             "rate_limited",
-            "Too many failed sign-in attempts. Try again later.",
+            f"Too many failed sign-in attempts. Try again in {max(1, retry // 60)} minutes.",
+            {"retry_after_seconds": retry},
             headers={"Retry-After": str(retry)},
         )
-    if not auth.verify_credentials(settings, body.username, body.password):
+    # Mobile keyboards often append a space to the username; a password is used exactly as typed.
+    if not auth.verify_credentials(settings, body.username.strip(), body.password):
         auth.record_attempt(db, key, False)
+        log.info("sign-in failed: invalid credentials request_id=%s", rid)
         raise AppError(401, "invalid_credentials", "Incorrect username or password.")
     auth.record_attempt(db, key, True)
+    log.info("sign-in succeeded request_id=%s", rid)
     token, claims = auth.issue_session(settings, settings.owner_username or body.username)
     _set_session_cookie(response, settings, token)
     return {

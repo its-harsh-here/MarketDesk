@@ -114,6 +114,71 @@ and test the migration on a copy (a Neon branch, or `pg_restore --no-owner --dbn
   357048e green.
 - Data migrations: none. New environment variables: none. Unverified integrations: none added.
 
+## Phase 1 — M00 Operational foundation (3 Nov 2026)
+**Diagnosis of "Unexpected server error" at sign-in.**
+- **Where the message comes from:** it is produced only by the API's catch-all 500 handlers (`apps/api/marketdesk/api/errors.py`). The frontend
+  shows it verbatim; it never generates it. Non-JSON proxy errors show "Request failed (502)" and network failures
+  "Cannot reach…". So the reported message was a real unhandled server exception.
+- **Path traced:** `LoginPage` → `api.post` (`lib/api/client.ts`) → `POST /api/auth/login` → login rate-limit query
+  (`login_attempts`) → argon2 verification → attempt record (DB write) → signed cookie → security/timing middleware
+  → error handlers.
+- **Production-like reproduction:**
+  - **Setup:** production mode, synthetic owner credentials, isolated SQLite and PostgreSQL databases, served over
+    HTTPS through a TLS-terminating proxy that adds `X-Forwarded-Proto/For` like Render's. The production Docker
+    image was also run with its default command.
+  - **Results:** no input produced a 500. Wrong password or username gives 401; malformed, non-JSON and
+    lone-surrogate bodies give 422; correct credentials give 200. The cookie is HttpOnly, Secure, SameSite=Lax,
+    Path=/ and 90 days. Missing CSRF or a foreign Origin gives 403. Logout revokes the session (the old cookie then
+    gets 401), and the 6th failure gets 429.
+  - **Hash variants:** fourteen malformed variants (quoted, `$$`-escaped, cut off, bcrypt, extreme memory, trailing
+    whitespace) raise no exception.
+- **What remains unknowable:** the exception behind the owner's earlier report is recorded only in Render's logs
+  from that time, which this session cannot read, and request IDs did not exist then. The same service accepted the
+  owner's credentials in checks on 3 Nov 2026.
+  - **Documented 500-class candidate (fixed earlier):** missing migrations on the first deploy (DECISIONS #26).
+  - **Silent misconfiguration found now:** a hash pasted with a trailing newline or space made the correct password
+    fail as "incorrect".
+- **Confirmed and fixed now:**
+  - Pasted whitespace around `OWNER_USERNAME` and `OWNER_PASSWORD_HASH` is ignored.
+  - Quoted, `$$`-escaped, cut-off, non-argon2 or memory-heavy hashes are refused at start-up with a specific
+    message.
+  - A trailing space in the typed username is ignored.
+
+**Changes.**
+- **Request IDs:** an `X-Request-ID` header goes on every response (a well-formed upstream ID is reused), error
+  bodies carry `request_id`, and 500s show it as a reference.
+- **Server logs:** sanitized log lines for failures and sign-in outcomes, never containing credentials, bodies or
+  cookies.
+- **Sign-in screen:** wrong credentials appear under the password field. Rate limits (with the wait time), an
+  unavailable host or database, network failure and server errors (with the reference) appear as a separate notice
+  with Try again. Typed input is kept.
+- **Worker:** startup validation is role-specific, so a separate worker needs no owner credentials or session
+  secret.
+- **Status:** `/api/status` adds the database schema state. Settings shows schema, version and per-endpoint provider
+  health. `/api/health` and `/api/readiness` already existed.
+- **Backups:** database-agnostic logical backup/restore — `GET /api/backup/export` (owner only, no-store), a
+  Settings "Full backup (JSON)" link, and `marketdesk export-data` / `import-data`. It works on Render Free without a
+  shell.
+- **Docs:** README Render reference (exact variable names, start command, automatic migrations, worker needs, how to
+  read sign-in errors, backup/restore), `.env.example`, DECISIONS #35, and `docs/UPGRADE_PLAN.md` (phased roadmap).
+- **Files:**
+  - Backend: `apps/api/marketdesk/{api/app.py,api/errors.py,api/routes_system.py,config/__init__.py,cli.py,db/migrations.py,schemas/__init__.py,services/backup.py,worker/__main__.py}`
+  - Frontend: `apps/web/src/{lib/api/client.ts,features/auth/LoginPage.tsx,features/auth/loginErrors.ts,app/App.tsx,features/settings/SettingsPage.tsx}`
+  - Tests: `apps/api/tests/test_m00.py`, `apps/web/tests/loginErrors.test.ts`
+
+**Checks.**
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 17 | 107 passed, 1 skipped / 107 passed, 1 skipped (each skips the other database's backup test) |
+| ruff, tsc, ESLint | clean |
+| Vitest | 25 passed |
+| Playwright journeys (fixture harness) | 11 passed |
+| Production-like HTTPS proxy probe (SQLite and PostgreSQL) | all outcomes as listed above, no 500 |
+| Browser sign-in at 1440×900 and 390×844 over HTTPS | wrong password → field error with inputs kept; 500 (intercepted response) → notice with reference, no password error; network failure (intercepted) → notice + Try again; Try again with the right password → signed in; reload keeps the session; logout → sign-in page and API 401. Screenshots inspected |
+| Production Docker image (PostgreSQL, synthetic credentials) | quoted hash refused at start-up with the specific message; hash with trailing newline accepted; sign-in 401/200 with request IDs in logs; schema up to date; write 201; backup export 200 |
+
+Data migrations: none (no schema change). New environment variables: none (optional `WORKER_*` already existed).
+
 ## Known limitations carried forward
 - Market open/closed status is always "unavailable" (no verified exchange calendar).
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.

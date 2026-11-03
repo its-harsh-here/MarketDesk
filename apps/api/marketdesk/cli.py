@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import json
 import sqlite3
 import sys
 from datetime import UTC, datetime, timedelta
@@ -119,6 +120,45 @@ def cmd_restore(args: argparse.Namespace) -> None:
     print("restore complete; start the services again")
 
 
+def cmd_export_data(args: argparse.Namespace) -> None:
+    """Consistent logical backup (SQLite or PostgreSQL) to a JSON file."""
+    from marketdesk.db import init_engine
+    from marketdesk.db.migrations import current_revision
+    from marketdesk.services.backup import export_data
+
+    settings = get_settings()
+    out = Path(args.path)
+    if out.exists():
+        raise SystemExit(f"{out} already exists; choose a new file name")
+    engine = init_engine(settings)
+    data = export_data(engine, current_revision(settings.effective_database_url))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(data, ensure_ascii=False))
+    total = sum(data["counts"].values())
+    print(f"backup written to {out}: {total} rows, checksum {data['checksum'][:12]}")
+
+
+def cmd_import_data(args: argparse.Namespace) -> None:
+    """Restore a JSON backup into an EMPTY database (it is migrated to the current schema first)."""
+    from marketdesk.db import init_engine
+    from marketdesk.db.migrations import current_revision, upgrade
+    from marketdesk.services.backup import BackupError, import_data
+
+    settings = get_settings()
+    data = json.loads(Path(args.path).read_text())
+    if not args.yes:
+        answer = input("Restore into the configured database (it must be empty)? [y/N] ")
+        if answer.strip().lower() != "y":
+            raise SystemExit("aborted")
+    upgrade(settings.effective_database_url)
+    engine = init_engine(settings)
+    try:
+        counts = import_data(engine, data, current_revision(settings.effective_database_url))
+    except BackupError as exc:
+        raise SystemExit(f"restore refused: {exc}") from exc
+    print(f"restore complete: {sum(counts.values())} rows in {sum(1 for v in counts.values() if v)} tables")
+
+
 def cmd_worker_health(_: argparse.Namespace) -> None:
     from marketdesk.db import db_session, init_engine
     from marketdesk.models import WorkerStatus
@@ -157,6 +197,13 @@ def main(argv: list[str] | None = None) -> None:
     r.add_argument("path")
     r.add_argument("--yes", action="store_true")
     r.set_defaults(fn=cmd_restore)
+    e = sub.add_parser("export-data", help="logical JSON backup (SQLite or PostgreSQL)")
+    e.add_argument("path")
+    e.set_defaults(fn=cmd_export_data)
+    i = sub.add_parser("import-data", help="restore a JSON backup into an empty database")
+    i.add_argument("path")
+    i.add_argument("--yes", action="store_true")
+    i.set_defaults(fn=cmd_import_data)
     sub.add_parser("worker-health").set_defaults(fn=cmd_worker_health)
     args = parser.parse_args(argv)
     args.fn(args)

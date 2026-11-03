@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/api/backup/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Backup Export
+         * @description Owner-only download of a consistent logical backup (private data: never cached).
+         */
+        get: operations["backup_export_api_backup_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -1287,6 +1307,15 @@ export interface components {
             /** Symbols */
             symbols: string[];
         };
+        /** SchemaOut */
+        SchemaOut: {
+            /** Current */
+            current?: string | null;
+            /** Head */
+            head?: string | null;
+            /** Up To Date */
+            up_to_date: boolean;
+        };
         /** SearchResultOut */
         SearchResultOut: {
             /** Results */
@@ -1358,6 +1387,7 @@ export interface components {
             };
             worker: components["schemas"]["WorkerStatusOut"];
             storage: components["schemas"]["StorageOut"];
+            schema: components["schemas"]["SchemaOut"];
             /** Benchmarks */
             benchmarks: string[];
             /** Attribution */
@@ -1598,6 +1628,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    backup_export_api_backup_export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     health_api_health_get: {
         parameters: {
             query?: never;

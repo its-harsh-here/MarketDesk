@@ -1,12 +1,10 @@
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Link, Outlet, RouterProvider, createBrowserRouter } from "react-router";
 import { ToastProvider } from "@/components/ui/Toast";
 import { TooltipProvider } from "@/components/ui/Tooltip";
-import { Button } from "@/components/ui/Button";
-import { Field, Input } from "@/components/ui/Form";
 import { ErrorState } from "@/components/ui/States";
-import { ApiError, api, errorMessage, setCsrfToken, setUnauthorizedHandler, type Session } from "@/lib/api/client";
+import { ApiError, errorMessage, setCsrfToken, setUnauthorizedHandler } from "@/lib/api/client";
 import { applyDensity, applyTheme, usePrefs, useSession } from "@/features/settings/api";
 import { OverviewPage } from "@/features/overview/OverviewPage";
 import { WatchlistsPage, AddSymbolDialog, NewWatchlistDialog } from "@/features/watchlists/WatchlistsPage";
@@ -19,6 +17,7 @@ import { AlertDialog } from "@/features/alerts/AlertDialog";
 import { JournalPage } from "@/features/journal/JournalPage";
 import { JournalDialog } from "@/features/journal/JournalDialog";
 import { SettingsPage } from "@/features/settings/SettingsPage";
+import { LoginPage } from "@/features/auth/LoginPage";
 import { CommandPalette } from "@/features/search/CommandPalette";
 import { ShortcutsDialog } from "@/features/search/ShortcutsDialog";
 import { DialogProvider } from "./dialogs";
@@ -43,61 +42,6 @@ function ThemeSync() {
     applyDensity(prefs.density);
   }, [prefs]);
   return null;
-}
-
-function LoginPage() {
-  const qc = useQueryClient();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  return (
-    <main className="flex min-h-dvh items-center justify-center p-4">
-      <form
-        className="w-full max-w-sm rounded-[var(--radius-panel)] border border-line-subtle bg-panel p-6"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setBusy(true);
-          setError(null);
-          try {
-            const s = await api.post<Session>("/api/auth/login", { username, password });
-            setCsrfToken(s.csrf_token);
-            qc.setQueryData(["session"], s);
-            qc.invalidateQueries();
-          } catch (err) {
-            setError(errorMessage(err));
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        <div className="mb-5 flex items-center gap-2.5">
-          <svg viewBox="0 0 32 32" className="size-8" aria-hidden>
-            <rect width="32" height="32" rx="7" fill="var(--elevated)" stroke="var(--border)" />
-            <path d="M7 21.5 12.5 15l4 3.5L25 9.5" fill="none" stroke="var(--accent)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <div>
-            <h1 className="text-base font-semibold">MarketDesk</h1>
-            <p className="text-xs text-fg-3">Private workspace · owner sign-in</p>
-          </div>
-        </div>
-        <div className="space-y-4">
-          <Field label="Username" required>
-            {({ id }) => <Input id={id} autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />}
-          </Field>
-          <Field label="Password" required error={error ?? undefined}>
-            {({ id, describedBy, invalid }) => (
-              <Input id={id} type="password" autoComplete="current-password" value={password} aria-describedby={describedBy} aria-invalid={invalid} onChange={(e) => setPassword(e.target.value)} />
-            )}
-          </Field>
-          <Button type="submit" variant="primary" className="w-full" loading={busy}>
-            Sign in
-          </Button>
-        </div>
-        <p className="mt-4 text-xs leading-4 text-fg-3">There is no public sign-up. The owner account is configured on the server.</p>
-      </form>
-    </main>
-  );
 }
 
 function AuthGate({ children }: { children: ReactNode }) {

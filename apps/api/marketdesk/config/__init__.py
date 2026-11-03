@@ -6,12 +6,14 @@ frontend. ``validate_settings`` enforces production safety rules at startup.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -93,6 +95,13 @@ class Settings(BaseSettings):
             return self.is_production
         return self.cookie_secure
 
+    @field_validator("owner_username", "owner_password_hash", mode="before")
+    @classmethod
+    def _strip_pasted_whitespace(cls, value):
+        # Hosting dashboards make it easy to paste a trailing newline or space. A username or argon2 hash never
+        # legitimately contains surrounding whitespace, and keeping it would reject the correct password.
+        return value.strip() if isinstance(value, str) else value
+
     @property
     def extra_origins(self) -> list[str]:
         return [o.strip().rstrip("/") for o in self.allowed_origins.split(",") if o.strip()]
@@ -113,8 +122,49 @@ def normalize_database_url(url: str) -> str:
     return url
 
 
-def validate_settings(settings: Settings) -> None:
-    """Fail fast on unsafe combinations. Called on API and worker startup."""
+MAX_HASH_MEMORY_KIB = 256 * 1024  # an argon2 hash needing more memory than this cannot be verified on small hosts
+
+
+def password_hash_problem(value: str | None) -> str | None:
+    """Explain what is wrong with OWNER_PASSWORD_HASH, or None if it is a usable argon2 hash."""
+    if not value:
+        return "OWNER_PASSWORD_HASH is empty."
+    if value[0] in "'\"" or value[-1] in "'\"":
+        return (
+            "OWNER_PASSWORD_HASH is wrapped in quotes. Remove them: quotes are only needed inside a .env file for "
+            "Docker Compose, not in a hosting dashboard."
+        )
+    if "$$" in value:
+        return "OWNER_PASSWORD_HASH contains '$$'; paste the hash exactly as `marketdesk hash-password` prints it."
+    if not value.startswith("$argon2"):
+        return "OWNER_PASSWORD_HASH must be an argon2 hash (it starts with $argon2id$); generate it with hash-password."
+    from argon2 import extract_parameters
+    from argon2.exceptions import InvalidHashError
+
+    parts = value.split("$")  # ["", "argon2id", "v=19", "m=..,t=..,p=..", salt, digest]
+    try:
+        params = extract_parameters(value)
+        complete = len(parts) == 6 and len(parts[4]) >= 11 and len(parts[5]) >= 22
+        for chunk in parts[4:6] if complete else ():
+            # Unpadded base64; a length that leaves one dangling character means the text was cut off.
+            base64.b64decode(chunk + "=" * (-len(chunk) % 4), validate=True)
+    except (InvalidHashError, ValueError, binascii.Error):
+        complete = False
+    if not complete:
+        return "OWNER_PASSWORD_HASH is not a complete argon2 hash (it may have been cut off when pasting)."
+    if params.memory_cost > MAX_HASH_MEMORY_KIB:
+        return (
+            f"OWNER_PASSWORD_HASH uses {params.memory_cost // 1024} MiB of memory per check, more than this server "
+            "can reliably spare; generate a new hash with `marketdesk hash-password`."
+        )
+    return None
+
+
+def validate_settings(settings: Settings, role: Literal["web", "worker"] = "web") -> None:
+    """Fail fast on unsafe combinations. Called on API (role "web") and worker (role "worker") startup.
+
+    The worker never authenticates browser requests, so it does not need the owner credentials or SESSION_SECRET.
+    """
     problems: list[str] = []
     if settings.dev_auth_bypass and settings.marketdesk_env != "development":
         problems.append("DEV_AUTH_BYPASS is only allowed when MARKETDESK_ENV=development.")
@@ -122,19 +172,24 @@ def validate_settings(settings: Settings) -> None:
         problems.append(
             "DATA_PROVIDER=fixture is a synthetic test harness and is refused in production; use DATA_PROVIDER=yahoo."
         )
-    if settings.is_production:
+    if role == "worker":
+        pass
+    elif settings.is_production:
         if not settings.session_secret or len(settings.session_secret) < 32:
             problems.append("SESSION_SECRET (at least 32 characters) is required in production.")
         if not settings.owner_username:
             problems.append("OWNER_USERNAME is required in production.")
-        if not settings.owner_password_hash or not settings.owner_password_hash.startswith("$argon2"):
-            problems.append("OWNER_PASSWORD_HASH (argon2 hash) is required in production.")
+        hash_problem = password_hash_problem(settings.owner_password_hash)
+        if hash_problem:
+            problems.append(hash_problem)
     elif settings.auth_mode == "owner":
         if not (settings.owner_username and settings.owner_password_hash):
             problems.append(
                 "Owner login is not configured. Set OWNER_USERNAME and OWNER_PASSWORD_HASH, "
                 "or set DEV_AUTH_BYPASS=true for local development only."
             )
+        elif password_hash_problem(settings.owner_password_hash):
+            problems.append(password_hash_problem(settings.owner_password_hash) or "")
     if problems:
         raise ConfigError(" ".join(problems))
 

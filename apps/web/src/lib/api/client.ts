@@ -34,11 +34,14 @@ export class ApiError extends Error {
   status: number;
   code: string;
   details: unknown;
-  constructor(status: number, code: string, message: string, details?: unknown) {
+  /** Server-side request ID (X-Request-ID / error.request_id) to quote when reporting a failure. */
+  requestId: string | null;
+  constructor(status: number, code: string, message: string, details?: unknown, requestId?: string | null) {
     super(message);
     this.status = status;
     this.code = code;
     this.details = details;
+    this.requestId = requestId ?? null;
   }
   get fields(): FieldIssue[] {
     const d = this.details as { fields?: FieldIssue[] } | null;
@@ -71,8 +74,8 @@ function buildUrl(path: string, query?: Query) {
 async function parse(res: Response) {
   if (res.status === 204) return null;
   const type = res.headers.get("content-type") ?? "";
-  if (type.includes("application/json")) return res.json();
-  return res.text();
+  if (type.includes("application/json")) return res.json().catch(() => null);
+  return res.text().catch(() => null);
 }
 
 export async function request<T>(
@@ -103,9 +106,20 @@ export async function request<T>(
   }
   const data = await parse(res);
   if (!res.ok) {
-    const e = (data as { error?: { code: string; message: string; details?: unknown } })?.error;
+    const e = (data as { error?: { code: string; message: string; details?: unknown; request_id?: string } } | null)?.error;
+    const requestId = e?.request_id ?? res.headers.get("x-request-id");
     if (res.status === 401 && onUnauthorized) onUnauthorized();
-    throw new ApiError(res.status, e?.code ?? "error", e?.message ?? `Request failed (${res.status}).`, e?.details);
+    if (!e && [502, 503, 504].includes(res.status)) {
+      // Not our JSON: the hosting proxy answered because the app is starting, restarting or asleep.
+      throw new ApiError(
+        res.status,
+        "server_unavailable",
+        `The server is starting or temporarily unavailable (HTTP ${res.status}). Free hosting sleeps when idle; try again in a minute.`,
+        undefined,
+        requestId,
+      );
+    }
+    throw new ApiError(res.status, e?.code ?? "error", e?.message ?? `Request failed (${res.status}).`, e?.details, requestId);
   }
   return data as T;
 }

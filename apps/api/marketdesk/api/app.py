@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import re
+import secrets
 import threading
 import time
 from contextlib import asynccontextmanager
@@ -30,6 +32,18 @@ from marketdesk.services.market import MarketDataService
 from marketdesk.services.runtime import build_market_service
 
 log = logging.getLogger("marketdesk")
+_REQUEST_ID_RE = re.compile(r"[A-Za-z0-9._-]{8,64}")
+
+
+def _configure_logging() -> None:
+    """Make marketdesk.* INFO lines (failures with request IDs, sign-in outcomes) visible in the host's logs."""
+    if log.handlers or logging.getLogger().handlers:
+        return
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+    log.addHandler(handler)
+    log.setLevel(logging.INFO)
+
 
 SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
@@ -64,6 +78,7 @@ def _static_dir(settings: Settings) -> Path | None:
 
 def create_app(settings: Settings | None = None, market: MarketDataService | None = None) -> FastAPI:
     settings = settings or get_settings()
+    _configure_logging()
     validate_settings(settings)
     init_engine(settings)
 
@@ -112,7 +127,12 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
     async def security_headers(request: Request, call_next):
         started = time.perf_counter()
         timings = timing.start()
+        # Request ID: reuse a well-formed upstream ID (e.g. from a proxy), otherwise create one. Returned in the
+        # X-Request-ID header and in error bodies, and written on server-side failure log lines.
+        inbound = request.headers.get("x-request-id", "")
+        request.state.request_id = inbound if _REQUEST_ID_RE.fullmatch(inbound) else secrets.token_hex(8)
         response = await call_next(request)
+        response.headers["X-Request-ID"] = request.state.request_id
         if request.url.path.startswith("/api/"):
             response.headers["Server-Timing"] = timing.header(timings, (time.perf_counter() - started) * 1000)
         for k, v in SECURITY_HEADERS.items():

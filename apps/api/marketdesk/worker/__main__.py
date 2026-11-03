@@ -56,7 +56,7 @@ async def run_cycle(market) -> dict:
 
 async def main_async(once: bool) -> None:
     settings = get_settings()
-    validate_settings(settings)
+    validate_settings(settings, role="worker")
     init_engine(settings)
     from marketdesk.db.migrations import ensure_migrated
 

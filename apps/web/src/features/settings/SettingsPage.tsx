@@ -38,7 +38,7 @@ export function SettingsPage() {
     patch.mutate(p, { onSuccess: () => toast("success", msg), onError: (e) => toast("error", errorMessage(e)) });
 
   if (isLoading || !prefs) return <div className="p-6"><SkeletonRows rows={8} /></div>;
-  const health = (status?.provider_health ?? {}) as { circuit?: string; consecutive_failures?: number; last_success_at?: string | null; last_failure_at?: string | null; last_error?: { kind?: string; message?: string } | null };
+  const health = (status?.provider_health ?? {}) as { circuit?: string; consecutive_failures?: number; last_success_at?: string | null; last_failure_at?: string | null; last_error?: { kind?: string; message?: string } | null; endpoints?: Record<string, { circuit: string; consecutive_failures: number }> };
 
   return (
     <div className="grid grid-cols-1 gap-4 p-4 md:p-6 lg:grid-cols-2 lg:gap-5">
@@ -105,6 +105,15 @@ export function SettingsPage() {
               {status.sample_data && <Row label="Dataset date"><span className="num">{formatSessionDate(status.dataset_date)}</span></Row>}
               <Row label="Market status">{status.market_status}</Row>
               <Row label="Provider health">{health.circuit === "closed" ? "Healthy" : health.circuit === "open" ? "Paused after repeated failures" : "Recovering"}{health.consecutive_failures ? ` · ${health.consecutive_failures} recent failure(s)` : ""}</Row>
+              {health.endpoints && (
+                <Row label="Provider endpoints">
+                  <span className="text-right">
+                    {Object.entries(health.endpoints)
+                      .map(([name, e]) => `${name} ${e.circuit === "closed" ? "ok" : e.circuit === "open" ? "paused" : "recovering"}${e.consecutive_failures ? ` (${e.consecutive_failures} failures)` : ""}`)
+                      .join(" · ")}
+                  </span>
+                </Row>
+              )}
               <Row label="Last successful fetch">{health.last_success_at ? `${formatRelative(health.last_success_at)}` : "None in this server process yet"}</Row>
               {health.last_error && <Row label="Last error"><span className="text-warn">{health.last_error.message}</span></Row>}
               <Row label="Storage">
@@ -128,7 +137,16 @@ export function SettingsPage() {
                 </Row>
               )}
               <Row label="Alert worker">{status.worker.running ? `Running · last cycle ${formatRelative(status.worker.last_cycle_at)}` : status.worker.message}</Row>
-              <Row label="Server mode">{status.environment} · {status.auth_mode === "dev_bypass" ? "development auth bypass" : "owner login"}</Row>
+              <Row label="Database schema">
+                {status.schema.up_to_date ? (
+                  <span>Up to date · <span className="num">{status.schema.current}</span></span>
+                ) : (
+                  <span className="text-warn">
+                    At <span className="num">{status.schema.current ?? "none"}</span>, expected <span className="num">{status.schema.head ?? "unknown"}</span> — restart the service to apply migrations
+                  </span>
+                )}
+              </Row>
+              <Row label="Server mode">{status.environment} · {status.auth_mode === "dev_bypass" ? "development auth bypass" : "owner login"} · v{status.version}</Row>
             </dl>
             {status.storage.warning && <InlineNotice tone="warn" className="mt-3">{status.storage.message}</InlineNotice>}
             <p className="mt-3 text-xs leading-4 text-fg-3">
@@ -176,6 +194,15 @@ export function SettingsPage() {
         </div>
         <div className="mt-4 space-y-2 text-[13px] leading-5 text-fg-2">
           <p>CSV exports re-import cleanly; spreadsheet formulas in text cells are neutralised with a leading apostrophe.</p>
+          <p>
+            <a className="inline-flex h-9 items-center gap-2 rounded-[var(--radius-control)] border border-line bg-elevated px-3 text-sm text-fg hover:bg-hover max-md:h-11" href="/api/backup/export">
+              <Download className="size-4" aria-hidden /> Full backup (JSON)
+            </a>
+          </p>
+          <p className="text-xs text-fg-3">
+            A consistent snapshot of watchlists, transactions, alerts and their history, journal notes and settings. It is private: store it like a bank statement.
+            Restore into an empty database with <code className="num">marketdesk import-data FILE --yes</code> (README → Backups).
+          </p>
           {status?.storage.path.startsWith("postgresql") ? (
             <>
               <p>

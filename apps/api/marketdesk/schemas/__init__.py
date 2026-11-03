@@ -435,6 +435,12 @@ class StorageOut(Model):
     round_trip_ms: float | None = None
 
 
+class SchemaOut(Model):
+    current: str | None = None
+    head: str | None = None
+    up_to_date: bool
+
+
 class StatusOut(Model):
     version: str
     environment: str
@@ -448,6 +454,7 @@ class StatusOut(Model):
     provider_health: dict
     worker: WorkerStatusOut
     storage: StorageOut
+    schema_: SchemaOut = Field(alias="schema", serialization_alias="schema")
     benchmarks: list[str]
     attribution: list[dict]
 
