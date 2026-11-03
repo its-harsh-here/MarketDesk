@@ -106,3 +106,20 @@ Consequential choices, newest last. Routine choices live in code comments.
     `TEST_DATABASE_URL` is set (CI job `api-postgres`), `alembic check` passes on both databases, and Postgres
     missing-table errors map to the same 503 as SQLite. This supersedes CLAUDE.md §4's "no untested second
     deployment" because it is now tested. `render.yaml` targets the Free plan with `DATABASE_URL` and no disk.
+34. **Performance on a free instance with a remote database (owner report: "the site became slow").** Measured live:
+    every database-backed request took ~1.1 s (health 0.25–0.4 s), consistent with ~120 ms per database round trip
+    and ~7 round trips per request, and async handlers ran their synchronous SQLAlchemy calls on the server's event
+    loop, so a page's parallel requests were served one after another. Changes: (a) async handlers that use the
+    database run on a private event loop in a worker thread (`marketdesk.asyncbridge.off_event_loop`), while market
+    data calls are forwarded to the server loop that owns the cache, de-duplication and breakers; the persisted
+    cache is read and written in threads. (b) Fewer round trips: pooled connections are pinged only after 30 s idle
+    instead of on every checkout; GET requests on PostgreSQL use autocommit (READ COMMITTED already gives each
+    statement its own snapshot, so this only drops BEGIN/ROLLBACK); session-revocation state is cached per process
+    for 15 s (sign-out in the process clears it at once; `revoke-sessions` from the CLI applies within 15 s);
+    preferences are read once per request; journal facets use one query. (c) A 10+10 connection pool so parallel
+    requests (each may open a second short session for the market cache) never wait on each other. (d) Startup:
+    yfinance is imported lazily (and warmed in a background thread), the argon2 dummy hash is computed on first use,
+    `serve` no longer runs a separate pre-start process and starts the worker 45 s after the site answers at nice 10.
+    (e) The browser polls alert events at the worker's sampling interval (10–60 s) instead of every 10 s and reuses
+    results younger than 15 s across pages. `/api/status` reports the database round-trip time so a region mismatch
+    is visible in Settings; `Server-Timing` headers expose per-request timings.

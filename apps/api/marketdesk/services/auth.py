@@ -4,11 +4,14 @@ cookies (HMAC with SESSION_SECRET, server-side revocation), CSRF tokens and logi
 from __future__ import annotations
 
 import base64
+import functools
 import hashlib
 import hmac
 import json
 import secrets
+import threading
 import time
+import weakref
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -22,7 +25,13 @@ from marketdesk.models import AppSetting, LoginAttempt
 
 COOKIE_NAME = "md_session"
 _hasher = PasswordHasher()
-_DUMMY_HASH = _hasher.hash("not-the-password")
+
+
+@functools.cache
+def _dummy_hash() -> str:
+    # Verified against when the username is wrong, so timing does not reveal valid usernames. Computed
+    # on first use: an argon2 hash costs about a second of CPU time on a 0.1-CPU host at startup.
+    return _hasher.hash("not-the-password")
 
 
 @dataclass(frozen=True)
@@ -49,10 +58,10 @@ def client_key(settings: Settings, address: str | None) -> str:
 
 def verify_credentials(settings: Settings, username: str, password: str) -> bool:
     expected_user = settings.owner_username or ""
-    stored = settings.owner_password_hash or _DUMMY_HASH
+    stored = settings.owner_password_hash or _dummy_hash()
     user_ok = hmac.compare_digest(username.encode(), expected_user.encode()) and bool(expected_user)
     try:
-        pw_ok = _hasher.verify(stored if user_ok else _DUMMY_HASH, password)
+        pw_ok = _hasher.verify(stored if user_ok else _dummy_hash(), password)
     except (VerifyMismatchError, VerificationError, InvalidHashError):
         pw_ok = False
     return bool(user_ok and pw_ok and settings.owner_password_hash)
@@ -126,9 +135,42 @@ def issue_session(settings: Settings, username: str, *, csrf: str | None = None,
     return f"{payload}.{_signature(settings, payload)}", claims
 
 
-def _setting(db: Session, key: str):
-    row = db.get(AppSetting, key)
-    return row.value if row is not None else None
+# The revocation state (sign-out list and "sign out everywhere" epoch) is read on every
+# authenticated request, so it is cached per database for a few seconds. Sign-out in this process
+# clears the cache at once; a `marketdesk revoke-sessions` run elsewhere applies within this window.
+REVOCATION_CACHE_SECONDS = 15.0
+_revocation_cache: weakref.WeakKeyDictionary = weakref.WeakKeyDictionary()
+_revocation_lock = threading.Lock()
+_revocation_generation = 0  # bumped on every revocation so a read that raced it is not cached
+_clock = time.monotonic
+
+
+def clear_revocation_cache() -> None:
+    global _revocation_generation
+    with _revocation_lock:
+        _revocation_generation += 1
+        _revocation_cache.clear()
+
+
+def _revocation_state(db: Session) -> tuple[object, object]:
+    pool = db.get_bind().pool
+    now = _clock()
+    with _revocation_lock:
+        generation = _revocation_generation
+        hit = _revocation_cache.get(pool)
+    if hit is not None and hit[0] > now:
+        return hit[1], hit[2]
+    rows = {
+        key: value
+        for key, value in db.execute(
+            select(AppSetting.key, AppSetting.value).where(AppSetting.key.in_([_EPOCH_KEY, _REVOKED_KEY]))
+        )
+    }
+    epoch, revoked = rows.get(_EPOCH_KEY), rows.get(_REVOKED_KEY)
+    with _revocation_lock:
+        if generation == _revocation_generation:
+            _revocation_cache[pool] = (now + REVOCATION_CACHE_SECONDS, epoch, revoked)
+    return epoch, revoked
 
 
 def read_session(db: Session, settings: Settings, token: str | None) -> dict | None:
@@ -146,10 +188,9 @@ def read_session(db: Session, settings: Settings, token: str | None) -> dict | N
         return None
     if not settings.owner_username or claims.get("u") != settings.owner_username:
         return None  # owner username was changed
-    epoch = _setting(db, _EPOCH_KEY)
+    epoch, revoked = _revocation_state(db)
     if isinstance(epoch, (int, float)) and claims.get("iat", 0) < epoch:
         return None
-    revoked = _setting(db, _REVOKED_KEY)
     if isinstance(revoked, dict) and claims.get("sid") in revoked:
         return None
     return claims
@@ -169,6 +210,7 @@ def revoke_session(db: Session, claims: dict) -> None:
     else:
         row.value = revoked
     db.commit()
+    clear_revocation_cache()
 
 
 def revoke_all_sessions(db: Session) -> None:
@@ -180,6 +222,7 @@ def revoke_all_sessions(db: Session) -> None:
     else:
         row.value = now
     db.commit()
+    clear_revocation_cache()
 
 
 def dev_bypass_principal(settings: Settings) -> Principal:

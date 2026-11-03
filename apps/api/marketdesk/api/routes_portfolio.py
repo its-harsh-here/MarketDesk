@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from marketdesk.api.deps import market_dep, require_reader, require_writer, settings_dep
 from marketdesk.api.errors import AppError
+from marketdesk.asyncbridge import off_event_loop
 from marketdesk.config import Settings
 from marketdesk.db import get_db
 from marketdesk.models import LedgerTransaction
@@ -32,6 +33,7 @@ def _with_state(db: Session, t: LedgerTransaction) -> dict:
 
 
 @router.get("/summary", response_model=PortfolioSummaryOut, dependencies=[Depends(require_reader)])
+@off_event_loop
 async def summary(db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)):
     return await svc.portfolio_summary(db, market)
 
@@ -48,12 +50,14 @@ def transactions(
 
 
 @router.post("/transactions", response_model=TransactionOut, status_code=201, dependencies=[Depends(require_writer)])
+@off_event_loop
 async def create(body: TransactionIn, db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)):
     t = await svc.create_transaction(db, market, body.model_dump())
     return _with_state(db, t)
 
 
 @router.put("/transactions/{tid}", response_model=TransactionOut, dependencies=[Depends(require_writer)])
+@off_event_loop
 async def update(
     tid: int, body: TransactionIn, db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)
 ):
@@ -68,6 +72,7 @@ def delete(tid: int, db: Session = Depends(get_db)):
 
 
 @router.post("/import/preview", response_model=ImportPreviewOut, dependencies=[Depends(require_writer)])
+@off_event_loop
 async def import_preview(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -82,6 +87,7 @@ async def import_preview(
 
 
 @router.post("/import/{token}/commit", response_model=ImportCommitOut, dependencies=[Depends(require_writer)])
+@off_event_loop
 async def import_commit(token: str, db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)):
     return await csv_io.commit_import(db, market, token)
 
@@ -104,5 +110,6 @@ def export_transactions(db: Session = Depends(get_db)):
 
 
 @router.get("/export/holdings.csv", dependencies=[Depends(require_reader)])
+@off_event_loop
 async def export_holdings(db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)):
     return _csv_response(csv_io.export_holdings_csv(await svc.portfolio_summary(db, market)), "holdings")

@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from datetime import date
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, literal, or_, select, union_all
 from sqlalchemy.orm import Session
 
 from marketdesk.api.errors import AppError
@@ -146,8 +146,15 @@ def list_entries(
         )
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     rows = db.scalars(stmt.order_by(JournalEntry.entry_date.desc(), JournalEntry.id.desc()).limit(limit).offset(offset))
-    tags = sorted(set(db.scalars(select(JournalTag.tag))))
-    symbols = sorted(
-        set(db.scalars(select(Instrument.symbol).join(JournalEntry, JournalEntry.instrument_id == Instrument.id)))
-    )
+    # Filter facets in one round trip.
+    facets = db.execute(
+        union_all(
+            select(literal("tag").label("facet"), JournalTag.tag.label("value")),
+            select(literal("symbol").label("facet"), Instrument.symbol.label("value")).join(
+                JournalEntry, JournalEntry.instrument_id == Instrument.id
+            ),
+        )
+    ).all()
+    tags = sorted({v for f, v in facets if f == "tag"})
+    symbols = sorted({v for f, v in facets if f == "symbol"})
     return {"items": [entry_dict(e, today) for e in rows], "total": total, "tags": tags, "symbols": symbols}

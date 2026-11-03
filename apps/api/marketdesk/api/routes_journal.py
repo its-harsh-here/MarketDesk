@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
 from marketdesk.api.deps import market_dep, require_reader, require_writer
+from marketdesk.asyncbridge import off_event_loop
 from marketdesk.db import get_db
 from marketdesk.schemas import JournalIn, JournalOut, JournalPage
 from marketdesk.services import journal as svc
@@ -26,11 +27,13 @@ def list_entries(
 
 
 @router.post("", response_model=JournalOut, status_code=201, dependencies=[Depends(require_writer)])
+@off_event_loop
 async def create(body: JournalIn, db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)):
     return svc.entry_dict(await svc.create_entry(db, market, body.model_dump()), today_local(db))
 
 
 @router.put("/{eid}", response_model=JournalOut, dependencies=[Depends(require_writer)])
+@off_event_loop
 async def update(
     eid: int, body: JournalIn, db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)
 ):

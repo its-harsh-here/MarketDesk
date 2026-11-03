@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -12,6 +13,7 @@ from marketdesk import __version__
 from marketdesk.api.deps import current_principal, market_dep, require_reader, require_writer, settings_dep
 from marketdesk.api.errors import AppError
 from marketdesk.api.routes_market import benchmark_symbols
+from marketdesk.asyncbridge import off_event_loop
 from marketdesk.config import Settings
 from marketdesk.db import get_db
 from marketdesk.models import AppSetting, Watchlist, WorkerStatus
@@ -63,6 +65,9 @@ ATTRIBUTION = [
 ]
 
 
+SLOW_DATABASE_MS = 40.0  # same-region hosted Postgres answers in a few milliseconds
+
+
 def storage_status(settings: Settings, db: Session | None = None) -> dict:
     """Is the database on persistent storage? Container hosts discard unmounted files on restart."""
     path = settings.data_dir.resolve()
@@ -70,15 +75,27 @@ def storage_status(settings: Settings, db: Session | None = None) -> dict:
         url = make_url(settings.effective_database_url)
         where = f"{url.get_backend_name()}://{url.host or 'localhost'}/{url.database or ''}"
         created = None
+        round_trip_ms = None
+        message = f"Data is stored in an external PostgreSQL database ({where}); it survives restarts."
         if db is not None:
             row = db.get(AppSetting, "database_created_at")
             created = row.value if row is not None else None
+            started = time.perf_counter()
+            db.execute(text("SELECT 1"))
+            round_trip_ms = round((time.perf_counter() - started) * 1000, 1)
+            if round_trip_ms >= SLOW_DATABASE_MS:
+                message += (
+                    f" Each database round trip takes about {round_trip_ms:.0f} ms, which usually means the web "
+                    "service and the database are in different regions; pages load faster when both are in the "
+                    "same region."
+                )
         return {
             "path": where,
             "persistent": True,
             "warning": False,
-            "message": f"Data is stored in an external PostgreSQL database ({where}); it survives restarts.",
+            "message": message,
             "database_created_at": created,
+            "round_trip_ms": round_trip_ms,
         }
     persistent, reason = is_persistent(path)
     created = None
@@ -283,6 +300,7 @@ def patch_settings(body: PrefsPatch, db: Session = Depends(get_db), market: Mark
 
 
 @router.get("/briefing", response_model=BriefingOut, dependencies=[Depends(require_reader)])
+@off_event_loop
 async def briefing(db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)):
     return await build_briefing(db, market, today_local(db))
 
@@ -356,6 +374,7 @@ def _starter_symbols(settings: Settings, market: MarketDataService) -> list[str]
 @router.post(
     "/workspace/starter-watchlist", response_model=WatchlistOut, status_code=201, dependencies=[Depends(require_writer)]
 )
+@off_event_loop
 async def starter_watchlist(
     db: Session = Depends(get_db),
     settings: Settings = Depends(settings_dep),
