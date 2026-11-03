@@ -11,10 +11,15 @@ interface PanelProps {
   bodyClassName?: string;
   as?: "section" | "div" | "aside";
   refreshing?: boolean;
+  /**
+   * For rich titles (symbol + price): the title keeps its natural width, the meta line wraps below it, and the
+   * actions move to their own line when the row is too narrow, instead of clipping the title.
+   */
+  wrapHeader?: boolean;
 }
 
 /** A bordered surface with an optional header row. Panels label themselves for screen readers. */
-export function Panel({ title, titleId, meta, actions, children, className, bodyClassName, as = "section", refreshing }: PanelProps) {
+export function Panel({ title, titleId, meta, actions, children, className, bodyClassName, as = "section", refreshing, wrapHeader }: PanelProps) {
   const Tag = as;
   return (
     <Tag
@@ -23,13 +28,13 @@ export function Panel({ title, titleId, meta, actions, children, className, body
     >
       {(title || actions || meta) && (
         <header className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 border-b border-line-subtle px-[var(--panel-pad)] py-2">
-          <div className="flex min-w-0 flex-1 items-baseline gap-3">
+          <div className={cn("flex min-w-0 items-baseline", wrapHeader ? "flex-[1_1_16rem] flex-wrap gap-x-3 gap-y-0.5" : "flex-1 gap-3")}>
             {title && (
-              <h2 id={titleId} className="truncate text-[13px] font-semibold tracking-wide text-fg">
+              <h2 id={titleId} className="max-w-full truncate text-[13px] font-semibold tracking-wide text-fg">
                 {title}
               </h2>
             )}
-            {meta && <div className="min-w-0 truncate text-xs text-fg-3">{meta}</div>}
+            {meta && <div className="min-w-0 max-w-full truncate text-xs text-fg-3">{meta}</div>}
           </div>
           {refreshing && (
             <span className="flex items-center gap-1.5 text-xs text-fg-3" role="status">
@@ -37,7 +42,7 @@ export function Panel({ title, titleId, meta, actions, children, className, body
               Refreshing
             </span>
           )}
-          {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
+          {actions && <div className="ml-auto flex shrink-0 items-center gap-1">{actions}</div>}
         </header>
       )}
       <div className={cn("min-w-0 flex-1", bodyClassName ?? "p-[var(--panel-pad)]")}>{children}</div>

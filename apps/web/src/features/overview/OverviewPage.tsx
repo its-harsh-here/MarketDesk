@@ -258,12 +258,12 @@ export function OverviewPage() {
             currency={chartSnap?.instrument.currency ?? "INR"}
             height={340}
             title={
-              <span className="flex items-center gap-2">
+              <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                 <Link to={`/instrument/${encodeURIComponent(chartSymbol)}`} className="num hover:text-accent-text">
                   {chartSymbol}
                 </Link>
                 {chartSnap?.quote && (
-                  <span className="num font-normal text-fg-2 max-sm:hidden">
+                  <span className="num whitespace-nowrap font-normal text-fg-2">
                     {formatMoney(chartSnap.quote.last_price, chartSnap.instrument.currency)}{" "}
                     <span className={cn(Number(chartSnap.quote.change_percent) > 0 ? "text-pos" : Number(chartSnap.quote.change_percent) < 0 ? "text-neg" : "")}>
                       {formatPercent(chartSnap.quote.change_percent)}

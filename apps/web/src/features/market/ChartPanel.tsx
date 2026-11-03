@@ -48,6 +48,7 @@ export function ChartPanel({
       titleId={titleId}
       className={className}
       refreshing={q.isFetching && !q.isLoading}
+      wrapHeader
       meta={
         q.data ? (
           <span className="inline-flex items-center gap-2">

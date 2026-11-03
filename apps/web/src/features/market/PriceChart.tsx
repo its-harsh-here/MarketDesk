@@ -95,6 +95,8 @@ export function PriceChart({
   const priceRef = useRef<ISeriesApi<SeriesType> | null>(null);
   const volRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const [hover, setHover] = useState<CleanBar | null>(null);
+  // Width of the plot area (chart minus the price axis), so the legend never runs under the axis labels.
+  const [plotWidth, setPlotWidth] = useState(0);
   const [theme, setTheme] = useState(() => document.documentElement.getAttribute("data-theme"));
   const byTime = useMemo(() => new Map(bars.map((b) => [b.time, b])), [bars]);
 
@@ -124,7 +126,10 @@ export function PriceChart({
       localization: { priceFormatter: (v: number) => formatNumber(v, 2) },
     });
     chartRef.current = chart;
+    const onSize = (width: number) => setPlotWidth(width);
+    chart.timeScale().subscribeSizeChange(onSize);
     return () => {
+      chart.timeScale().unsubscribeSizeChange(onSize);
       chart.remove();
       chartRef.current = null;
       priceRef.current = null;
@@ -222,7 +227,11 @@ export function PriceChart({
   return (
     <div className={cn("relative", className)} style={{ minHeight: height }}>
       {shown && (
-        <div className="pointer-events-none absolute top-1 left-2 z-10 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded bg-panel/80 px-1.5 py-0.5 text-[11px] text-fg-2 backdrop-blur-[2px]" aria-hidden>
+        <div
+          className="pointer-events-none absolute top-1 left-2 z-10 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded bg-panel/80 px-1.5 py-0.5 text-[11px] text-fg-2 backdrop-blur-[2px]"
+          style={plotWidth > 0 ? { maxWidth: Math.max(120, plotWidth - 16) } : undefined}
+          aria-hidden
+        >
           <span className="num font-semibold text-fg">{formatSessionDate(shown.time)}</span>
           {kind === "candle" && shown.open !== null && (
             <>
