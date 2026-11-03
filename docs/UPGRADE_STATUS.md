@@ -179,6 +179,24 @@ and test the migration on a copy (a Neon branch, or `pg_restore --no-owner --dbn
 
 Data migrations: none (no schema change). New environment variables: none (optional `WORKER_*` already existed).
 
+**Live verification on https://marketdesk-rhag.onrender.com after deploying ad45787 (3 Nov 2026, ~19:50 UTC).**
+- `/api/health` and `/api/readiness` return 200 with `X-Request-ID`.
+- An unauthenticated API call returns 401 with `request_id`, and the backup download refuses with 401.
+- A wrong password returns 401 `invalid_credentials` with `request_id`.
+- The owner's sign-in returns 200, with a cookie that is HttpOnly, Secure, SameSite=Lax and Path=/.
+- Authenticated API calls return 200. The same cookie in a new client (a reload) is still signed in.
+- Status: schema `0001` up to date, worker running, database round trip 2.1 ms.
+- The backup download returns 200 with `no-store`: 11 tables, 86 rows, valid checksum. Only the counts were
+  inspected; nothing was stored.
+- Logout returns 204, and the old cookie then gets 401. Only this check's own session was signed out.
+- The live sign-in page at 1440×900 (with the wrong-password state) and 390×844 renders without overflow;
+  screenshots inspected.
+- **Production sign-in therefore works on the deployed build.** The cause of the earlier 500 cannot be determined
+  without Render's logs from that time. If it recurs, the reference shown on the sign-in screen matches a
+  `request_id=` line in Render's logs.
+- **Owner actions (optional):** none are required. Recommended: download a backup from Settings → Export and backup
+  and keep it privately.
+
 ## Known limitations carried forward
 - Market open/closed status is always "unavailable" (no verified exchange calendar).
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.

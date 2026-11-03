@@ -32,5 +32,5 @@ correctness-critical work (M05, M08, M10) proceeds while Grok/Alpaca credentials
 earlier as soon as their credentials exist.
 
 ## Progress
-- Phase 1 (M00): implemented and verified locally; live verification after deploy recorded in `docs/UPGRADE_STATUS.md`.
+- Phase 1 (M00): ✅ done — verified locally and on the live service (`docs/UPGRADE_STATUS.md`).
 - Phase 2 (M01): next.
