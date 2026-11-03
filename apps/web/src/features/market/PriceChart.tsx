@@ -61,7 +61,7 @@ function palette() {
     border: cssVar("--border") || "#2A3545",
     pos: cssVar("--positive") || "#43D3A0",
     neg: cssVar("--negative") || "#FF7185",
-    accent: cssVar("--accent") || "#F2B84B",
+    accent: cssVar("--chart-line") || cssVar("--accent") || "#F2B84B",
     panel: cssVar("--panel") || "#141B25",
   };
 }

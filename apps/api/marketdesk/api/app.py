@@ -12,7 +12,14 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from marketdesk import __version__
-from marketdesk.api import routes_alerts, routes_journal, routes_market, routes_portfolio, routes_system, routes_watchlists
+from marketdesk.api import (
+    routes_alerts,
+    routes_journal,
+    routes_market,
+    routes_portfolio,
+    routes_system,
+    routes_watchlists,
+)
 from marketdesk.api.errors import error_body, install_error_handlers
 from marketdesk.config import REPO_ROOT, Settings, get_settings, validate_settings
 from marketdesk.db import init_engine, session_factory
@@ -62,8 +69,11 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
 
     if settings.extra_origins:
         app.add_middleware(
-            CORSMiddleware, allow_origins=settings.extra_origins, allow_credentials=True,
-            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"], allow_headers=["content-type", "x-csrf-token"],
+            CORSMiddleware,
+            allow_origins=settings.extra_origins,
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+            allow_headers=["content-type", "x-csrf-token"],
         )
 
     static = _static_dir(settings)

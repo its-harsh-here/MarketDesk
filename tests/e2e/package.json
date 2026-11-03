@@ -1,0 +1,14 @@
+{
+  "name": "marketdesk-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "screenshots": "SCREENSHOTS=1 playwright test screenshots.spec.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "22.19.1",
+    "typescript": "5.9.3"
+  }
+}

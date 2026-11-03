@@ -19,8 +19,11 @@ def list_all(db: Session = Depends(get_db)):
 
 
 @router.get("/membership", response_model=MembershipOut, dependencies=[Depends(require_reader)])
-def membership(symbol: str = Query(min_length=1, max_length=32), db: Session = Depends(get_db),
-               market: MarketDataService = Depends(market_dep)):
+def membership(
+    symbol: str = Query(min_length=1, max_length=32),
+    db: Session = Depends(get_db),
+    market: MarketDataService = Depends(market_dep),
+):
     ids = svc.membership(db, market, symbol)
     return {"symbol": market.validate_symbol(symbol), "watchlist_ids": ids}
 
@@ -47,14 +50,23 @@ def delete(wid: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{wid}/items", response_model=WatchlistOut, status_code=201, dependencies=[Depends(require_writer)])
-async def add_item(wid: int, body: AddSymbolIn, db: Session = Depends(get_db),
-                   settings: Settings = Depends(settings_dep), market: MarketDataService = Depends(market_dep)):
+async def add_item(
+    wid: int,
+    body: AddSymbolIn,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(settings_dep),
+    market: MarketDataService = Depends(market_dep),
+):
     return svc.watchlist_dict(await svc.add_symbol(db, settings, market, wid, body.symbol))
 
 
 @router.delete("/{wid}/items", response_model=WatchlistOut, dependencies=[Depends(require_writer)])
-def remove_item(wid: int, symbol: str = Query(min_length=1, max_length=32), db: Session = Depends(get_db),
-                market: MarketDataService = Depends(market_dep)):
+def remove_item(
+    wid: int,
+    symbol: str = Query(min_length=1, max_length=32),
+    db: Session = Depends(get_db),
+    market: MarketDataService = Depends(market_dep),
+):
     return svc.watchlist_dict(svc.remove_symbol(db, market, wid, symbol))
 
 

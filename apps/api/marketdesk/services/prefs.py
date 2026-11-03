@@ -37,8 +37,12 @@ def update_prefs(db: Session, patch: dict) -> dict:
         try:
             ZoneInfo(patch["display_timezone"])
         except (ZoneInfoNotFoundError, ValueError) as exc:
-            raise AppError(422, "validation_error", "Unknown timezone.", {"fields": [
-                {"field": "display_timezone", "message": "Use an IANA timezone such as Asia/Kolkata."}]}) from exc
+            raise AppError(
+                422,
+                "validation_error",
+                "Unknown timezone.",
+                {"fields": [{"field": "display_timezone", "message": "Use an IANA timezone such as Asia/Kolkata."}]},
+            ) from exc
     if patch.get("default_watchlist_id") is not None and db.get(Watchlist, patch["default_watchlist_id"]) is None:
         raise AppError(404, "not_found", "Watchlist not found.")
     current.update({k: v for k, v in patch.items() if k in PREF_DEFAULTS})

@@ -17,8 +17,12 @@ from marketdesk.services.prefs import get_prefs, update_prefs
 def _clean_name(name: str) -> str:
     cleaned = " ".join(name.split())
     if not cleaned:
-        raise AppError(422, "validation_error", "Name cannot be blank.",
-                       {"fields": [{"field": "name", "message": "Name cannot be blank."}]})
+        raise AppError(
+            422,
+            "validation_error",
+            "Name cannot be blank.",
+            {"fields": [{"field": "name", "message": "Name cannot be blank."}]},
+        )
     return cleaned
 
 
@@ -31,10 +35,16 @@ def watchlist_dict(w: Watchlist, include_items: bool = True) -> dict:
         "sort_dir": w.sort_dir,
         "item_count": len(w.items),
         "items": [
-            {"symbol": it.instrument.symbol, "instrument": instrument_dict(it.instrument), "position": it.position,
-             "added_at": it.added_at}
+            {
+                "symbol": it.instrument.symbol,
+                "instrument": instrument_dict(it.instrument),
+                "position": it.position,
+                "added_at": it.added_at,
+            }
             for it in w.items
-        ] if include_items else [],
+        ]
+        if include_items
+        else [],
         "created_at": w.created_at,
         "updated_at": w.updated_at,
     }

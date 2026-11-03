@@ -39,7 +39,7 @@ def test_malformed_rows_are_reported_and_block_import(api):
         "date,type,symbol,quantity,price,fees,amount,currency,notes\n"
         "02/01/2026,DEPOSIT,,,,,10000,INR,\n"
         "2026-01-03,BUY,SX:AURORA,ten,100,0,,INR,\n"
-        "2026-01-03,BUY,SX:AURORA,1,\"1,000\",0,,INR,\n"
+        '2026-01-03,BUY,SX:AURORA,1,"1,000",0,,INR,\n'
         "2026-01-03,TRANSFER,,,,,5,INR,\n"
         "2026-01-03,BUY,SX:HALCYON,1,10,0,,INR,\n"
         "2026-01-03,DEPOSIT,,,,,5,USD,\n"
@@ -63,7 +63,9 @@ def test_unknown_columns_and_file_type_rejected(api):
 
 
 def test_ledger_violation_in_file_points_to_row(api):
-    content = "date,type,symbol,quantity,price,fees,amount\n2026-01-02,DEPOSIT,,,,,100\n2026-01-03,BUY,SX:AURORA,2,60,,\n"
+    content = (
+        "date,type,symbol,quantity,price,fees,amount\n2026-01-02,DEPOSIT,,,,,100\n2026-01-03,BUY,SX:AURORA,2,60,,\n"
+    )
     p = upload(api, content).json()
     assert not p["can_import"]
     assert p["ledger_error"]["ref"] == "csv:3"
@@ -71,10 +73,21 @@ def test_ledger_violation_in_file_points_to_row(api):
 
 
 def test_export_defends_against_formula_injection_and_round_trips(api):
-    api.post("/api/portfolio/transactions", json={"type": "DEPOSIT", "effective_date": "2026-01-02",
-                                                  "amount": "1000", "notes": "=HYPERLINK(\"http://x\")"})
-    api.post("/api/portfolio/transactions", json={"type": "BUY", "effective_date": "2026-01-03", "symbol": "SX:AURORA",
-                                                  "quantity": "2", "price": "100", "notes": "@SUM(A1)"})
+    api.post(
+        "/api/portfolio/transactions",
+        json={"type": "DEPOSIT", "effective_date": "2026-01-02", "amount": "1000", "notes": '=HYPERLINK("http://x")'},
+    )
+    api.post(
+        "/api/portfolio/transactions",
+        json={
+            "type": "BUY",
+            "effective_date": "2026-01-03",
+            "symbol": "SX:AURORA",
+            "quantity": "2",
+            "price": "100",
+            "notes": "@SUM(A1)",
+        },
+    )
     body = api.get("/api/portfolio/export/transactions.csv").text
     rows = list(csv.reader(io.StringIO(body)))
     assert rows[1][-1].startswith("'=")

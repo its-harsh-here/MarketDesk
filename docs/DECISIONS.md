@@ -48,3 +48,12 @@ Consequential choices, newest last. Routine choices live in code comments.
 18. **Lucide 1.x icon names.** `Trash2` and `Filter` do not exist in lucide-react 1.66; `Trash` and `Funnel` are used.
 19. **Overview layout.** At ≥1280px the chart takes 8 columns and the watchlist 4 (compact columns, freshness dot next
     to the price); below that the panels stack and the watchlist shows its full columns.
+20. **E2E package.** `tests/e2e` is its own small npm package (pinned `@playwright/test` 1.63.0, matching the
+    pre-installed Chromium) so the suggested root-level layout works without a workspace setup. It runs against the
+    production build served by FastAPI plus the real worker (`scripts/e2e-server.sh`, poll every 2 s).
+21. **Docker build behind proxies.** Base images are build arguments (a registry mirror can be used when Docker Hub
+    rate-limits), and an optional `ca_bundle` BuildKit secret lets the build trust a TLS-intercepting proxy without
+    baking the certificate into the image. Inside the image the CLI runs as `python -m marketdesk.cli`.
+22. **Security headers.** The API sets CSP (`script-src 'self'` plus the hash of the inline theme bootstrap, computed
+    at build time into `dist/csp-hash.txt`), `X-Frame-Options: DENY`, `nosniff` and `Referrer-Policy`; API responses
+    are `Cache-Control: no-store`; OpenAPI docs are disabled in production.

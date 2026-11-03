@@ -345,8 +345,12 @@ class MarketDataService:
             with self._sf() as db:
                 db.merge(
                     MarketCacheEntry(
-                        key=key, kind=kind, provider=self.provider.name, payload=encode(value),
-                        fetched_at=fetched_at, last_access_at=datetime.now(UTC),
+                        key=key,
+                        kind=kind,
+                        provider=self.provider.name,
+                        payload=encode(value),
+                        fetched_at=fetched_at,
+                        last_access_at=datetime.now(UTC),
                     )
                 )
                 db.commit()
@@ -365,7 +369,5 @@ class MarketDataService:
             select(MarketCacheEntry.key).order_by(MarketCacheEntry.last_access_at.asc()).limit(count - limit)
         ).all()
         db.execute(delete(MarketCacheEntry).where(MarketCacheEntry.key.in_(cutoff_rows)))
-        db.execute(
-            delete(MarketCacheEntry).where(MarketCacheEntry.fetched_at < datetime.now(UTC) - timedelta(days=30))
-        )
+        db.execute(delete(MarketCacheEntry).where(MarketCacheEntry.fetched_at < datetime.now(UTC) - timedelta(days=30)))
         db.commit()

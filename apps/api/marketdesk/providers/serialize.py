@@ -75,22 +75,34 @@ def quote_from(d: dict) -> QuoteSnapshot:
 
 
 def history_to(h: PriceHistory) -> dict:
-    return {"instrument": ref_to(h.instrument), "range": h.range, "bars": [bar_to(b) for b in h.bars],
-            "adjustment": h.adjustment}
+    return {
+        "instrument": ref_to(h.instrument),
+        "range": h.range,
+        "bars": [bar_to(b) for b in h.bars],
+        "adjustment": h.adjustment,
+    }
 
 
 def history_from(d: dict) -> PriceHistory:
     return PriceHistory(ref_from(d["instrument"]), d["range"], [bar_from(b) for b in d["bars"]], d["adjustment"])
 
 
-_FUND_DEC = ("market_cap", "pe_ratio", "dividend_yield_percent", "fifty_two_week_high", "fifty_two_week_low",
-             "price_to_book")
+_FUND_DEC = (
+    "market_cap",
+    "pe_ratio",
+    "dividend_yield_percent",
+    "fifty_two_week_high",
+    "fifty_two_week_low",
+    "price_to_book",
+)
 
 
 def fundamentals_to(f: Fundamentals) -> dict:
     out = {k: _d(getattr(f, k)) for k in _FUND_DEC}
     out.update(
-        instrument=ref_to(f.instrument), sector=f.sector, industry=f.industry,
+        instrument=ref_to(f.instrument),
+        sector=f.sector,
+        industry=f.industry,
         last_fiscal_year_end=f.last_fiscal_year_end.isoformat() if f.last_fiscal_year_end else None,
         most_recent_quarter=f.most_recent_quarter.isoformat() if f.most_recent_quarter else None,
         notes=list(f.notes),
@@ -102,7 +114,8 @@ def fundamentals_from(d: dict) -> Fundamentals:
     return Fundamentals(
         instrument=ref_from(d["instrument"]),
         **{k: _pd(d[k]) for k in _FUND_DEC},
-        sector=d["sector"], industry=d["industry"],
+        sector=d["sector"],
+        industry=d["industry"],
         last_fiscal_year_end=_date(d["last_fiscal_year_end"]),
         most_recent_quarter=_date(d["most_recent_quarter"]),
         notes=list(d["notes"]),

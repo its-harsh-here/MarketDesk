@@ -23,8 +23,19 @@ def normalize_tags(tags: list[str]) -> list[str]:
         if not t:
             continue
         if not _TAG_RE.match(t):
-            raise AppError(422, "validation_error", f"Invalid tag '{raw[:40]}'.", {"fields": [
-                {"field": "tags", "message": "Tags use letters, numbers, spaces, '-' or '_' (max 32 characters)."}]})
+            raise AppError(
+                422,
+                "validation_error",
+                f"Invalid tag '{raw[:40]}'.",
+                {
+                    "fields": [
+                        {
+                            "field": "tags",
+                            "message": "Tags use letters, numbers, spaces, '-' or '_' (max 32 characters).",
+                        }
+                    ]
+                },
+            )
         if t not in out:
             out.append(t)
     return out
@@ -32,11 +43,19 @@ def normalize_tags(tags: list[str]) -> list[str]:
 
 def entry_dict(e: JournalEntry, today: date) -> dict:
     return {
-        "id": e.id, "symbol": e.instrument.symbol, "instrument": instrument_dict(e.instrument),
-        "entry_date": e.entry_date, "title": e.title, "thesis": e.thesis, "risks": e.risks,
-        "invalidation": e.invalidation, "tags": [t.tag for t in e.tags], "review_date": e.review_date,
+        "id": e.id,
+        "symbol": e.instrument.symbol,
+        "instrument": instrument_dict(e.instrument),
+        "entry_date": e.entry_date,
+        "title": e.title,
+        "thesis": e.thesis,
+        "risks": e.risks,
+        "invalidation": e.invalidation,
+        "tags": [t.tag for t in e.tags],
+        "review_date": e.review_date,
         "review_due": bool(e.review_date and e.review_date <= today),
-        "created_at": e.created_at, "updated_at": e.updated_at,
+        "created_at": e.created_at,
+        "updated_at": e.updated_at,
     }
 
 
@@ -44,9 +63,15 @@ async def create_entry(db: Session, market: MarketDataService, payload: dict) ->
     inst = await resolve_instrument(db, market, payload["symbol"])
     tags = normalize_tags(payload.get("tags") or [])
     _check_dates(payload)
-    e = JournalEntry(instrument_id=inst.id, entry_date=payload["entry_date"], title=payload["title"].strip(),
-                     thesis=payload.get("thesis") or "", risks=payload.get("risks") or "",
-                     invalidation=payload.get("invalidation") or "", review_date=payload.get("review_date"))
+    e = JournalEntry(
+        instrument_id=inst.id,
+        entry_date=payload["entry_date"],
+        title=payload["title"].strip(),
+        thesis=payload.get("thesis") or "",
+        risks=payload.get("risks") or "",
+        invalidation=payload.get("invalidation") or "",
+        review_date=payload.get("review_date"),
+    )
     e.tags = [JournalTag(tag=t) for t in tags]
     db.add(e)
     db.commit()
@@ -56,11 +81,19 @@ async def create_entry(db: Session, market: MarketDataService, payload: dict) ->
 
 def _check_dates(payload: dict) -> None:
     if payload.get("review_date") and payload["review_date"] < payload["entry_date"]:
-        raise AppError(422, "validation_error", "Review date cannot be before the entry date.",
-                       {"fields": [{"field": "review_date", "message": "Choose a date on or after the entry date."}]})
+        raise AppError(
+            422,
+            "validation_error",
+            "Review date cannot be before the entry date.",
+            {"fields": [{"field": "review_date", "message": "Choose a date on or after the entry date."}]},
+        )
     if not payload["title"].strip():
-        raise AppError(422, "validation_error", "Title is required.",
-                       {"fields": [{"field": "title", "message": "Title is required."}]})
+        raise AppError(
+            422,
+            "validation_error",
+            "Title is required.",
+            {"fields": [{"field": "title", "message": "Title is required."}]},
+        )
 
 
 async def update_entry(db: Session, market: MarketDataService, eid: int, payload: dict) -> JournalEntry:
@@ -93,8 +126,9 @@ def delete_entry(db: Session, eid: int) -> None:
     db.commit()
 
 
-def list_entries(db: Session, today: date, symbol: str | None, tag: str | None, q: str | None, limit: int,
-                 offset: int) -> dict:
+def list_entries(
+    db: Session, today: date, symbol: str | None, tag: str | None, q: str | None, limit: int, offset: int
+) -> dict:
     stmt = select(JournalEntry).join(Instrument, Instrument.id == JournalEntry.instrument_id)
     if symbol:
         stmt = stmt.where(Instrument.symbol == symbol.strip().upper())
@@ -102,11 +136,18 @@ def list_entries(db: Session, today: date, symbol: str | None, tag: str | None, 
         stmt = stmt.where(JournalEntry.tags.any(JournalTag.tag == tag.strip().lower()))
     if q:
         like = f"%{q.strip()[:80]}%"
-        stmt = stmt.where(or_(JournalEntry.title.ilike(like), JournalEntry.thesis.ilike(like),
-                              JournalEntry.risks.ilike(like), JournalEntry.invalidation.ilike(like)))
+        stmt = stmt.where(
+            or_(
+                JournalEntry.title.ilike(like),
+                JournalEntry.thesis.ilike(like),
+                JournalEntry.risks.ilike(like),
+                JournalEntry.invalidation.ilike(like),
+            )
+        )
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     rows = db.scalars(stmt.order_by(JournalEntry.entry_date.desc(), JournalEntry.id.desc()).limit(limit).offset(offset))
     tags = sorted(set(db.scalars(select(JournalTag.tag))))
-    symbols = sorted(set(db.scalars(
-        select(Instrument.symbol).join(JournalEntry, JournalEntry.instrument_id == Instrument.id))))
+    symbols = sorted(
+        set(db.scalars(select(Instrument.symbol).join(JournalEntry, JournalEntry.instrument_id == Instrument.id)))
+    )
     return {"items": [entry_dict(e, today) for e in rows], "total": total, "tags": tags, "symbols": symbols}

@@ -13,7 +13,19 @@ export default defineConfig({
     port: 5173,
     proxy: { "/api": { target: apiTarget, changeOrigin: false } },
   },
-  build: { sourcemap: false, chunkSizeWarningLimit: 900 },
+  build: {
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom", "react-router"],
+          charts: ["lightweight-charts"],
+          data: ["@tanstack/react-query", "react-hook-form", "zod", "@hookform/resolvers"],
+          radix: ["@radix-ui/react-dialog", "@radix-ui/react-dropdown-menu", "@radix-ui/react-tooltip", "@radix-ui/react-popover"],
+        },
+      },
+    },
+  },
   test: {
     environment: "jsdom",
     setupFiles: ["./tests/setup.ts"],

@@ -62,11 +62,13 @@ def test_acceptance_example_from_spec():
 
 
 def test_fees_are_included_in_basis_and_reduce_proceeds():
-    state = replay([
-        e(1, "DEPOSIT", 2, amount=D("1000")),
-        e(2, "BUY", 3, symbol=SYM, quantity=D("3"), price=D("100.10"), fees=D("2.35")),
-        e(3, "SELL", 4, symbol=SYM, quantity=D("3"), price=D("101"), fees=D("1.20")),
-    ])
+    state = replay(
+        [
+            e(1, "DEPOSIT", 2, amount=D("1000")),
+            e(2, "BUY", 3, symbol=SYM, quantity=D("3"), price=D("100.10"), fees=D("2.35")),
+            e(3, "SELL", 4, symbol=SYM, quantity=D("3"), price=D("101"), fees=D("1.20")),
+        ]
+    )
     # buy cost 300.30 + 2.35 = 302.65; proceeds 303.00 - 1.20 = 301.80; realized = -0.85
     assert state.realized_pnl == D("-0.85")
     assert state.cash == D("1000") - D("302.65") + D("301.80")
@@ -77,22 +79,26 @@ def test_fees_are_included_in_basis_and_reduce_proceeds():
 
 def test_oversell_is_rejected_with_offending_row():
     with pytest.raises(LedgerError) as exc:
-        replay([
-            e(1, "DEPOSIT", 2, amount=D("1000")),
-            e(2, "BUY", 3, symbol=SYM, quantity=D("2"), price=D("10")),
-            e(3, "SELL", 4, symbol=SYM, quantity=D("3"), price=D("10")),
-        ])
+        replay(
+            [
+                e(1, "DEPOSIT", 2, amount=D("1000")),
+                e(2, "BUY", 3, symbol=SYM, quantity=D("2"), price=D("10")),
+                e(3, "SELL", 4, symbol=SYM, quantity=D("3"), price=D("10")),
+            ]
+        )
     assert exc.value.ref == "txn:3"
     assert "only 2" in exc.value.message
 
 
 def test_negative_cash_is_rejected_at_intermediate_point():
     with pytest.raises(LedgerError) as exc:
-        replay([
-            e(1, "DEPOSIT", 2, amount=D("100")),
-            e(2, "BUY", 3, symbol=SYM, quantity=D("2"), price=D("60")),  # needs 120
-            e(3, "DEPOSIT", 9, amount=D("1000")),  # later deposit cannot fix an earlier shortfall
-        ])
+        replay(
+            [
+                e(1, "DEPOSIT", 2, amount=D("100")),
+                e(2, "BUY", 3, symbol=SYM, quantity=D("2"), price=D("60")),  # needs 120
+                e(3, "DEPOSIT", 9, amount=D("1000")),  # later deposit cannot fix an earlier shortfall
+            ]
+        )
     assert exc.value.ref == "txn:2"
     assert "negative" in exc.value.message
 
@@ -117,21 +123,25 @@ def test_historical_edit_replays_whole_ledger():
 
 
 def test_same_day_deposit_is_applied_before_trades():
-    state = replay([
-        e(2, "BUY", 3, symbol=SYM, quantity=D("1"), price=D("10")),
-        e(1, "DEPOSIT", 3, amount=D("10")),
-    ])
+    state = replay(
+        [
+            e(2, "BUY", 3, symbol=SYM, quantity=D("1"), price=D("10")),
+            e(1, "DEPOSIT", 3, amount=D("10")),
+        ]
+    )
     assert state.cash == 0
 
 
 def test_split_requires_position_and_preserves_basis():
     with pytest.raises(LedgerError):
         replay([e(1, "SPLIT", 2, symbol=SYM, split_from=D("1"), split_to=D("2"))])
-    state = replay([
-        e(1, "DEPOSIT", 2, amount=D("1000")),
-        e(2, "BUY", 3, symbol=SYM, quantity=D("3"), price=D("100")),
-        e(3, "SPLIT", 4, symbol=SYM, split_from=D("2"), split_to=D("3")),  # 3-for-2
-    ])
+    state = replay(
+        [
+            e(1, "DEPOSIT", 2, amount=D("1000")),
+            e(2, "BUY", 3, symbol=SYM, quantity=D("3"), price=D("100")),
+            e(3, "SPLIT", 4, symbol=SYM, split_from=D("2"), split_to=D("3")),  # 3-for-2
+        ]
+    )
     pos = state.positions[SYM]
     assert pos.quantity == D("4.5")
     assert pos.cost_basis == D("300")
@@ -139,22 +149,26 @@ def test_split_requires_position_and_preserves_basis():
 
 
 def test_post_split_sell_uses_split_adjusted_average_cost():
-    state = replay([
-        e(1, "DEPOSIT", 2, amount=D("1000")),
-        e(2, "BUY", 3, symbol=SYM, quantity=D("10"), price=D("50")),
-        e(3, "SPLIT", 4, symbol=SYM, split_from=D("1"), split_to=D("2")),
-        e(4, "SELL", 5, symbol=SYM, quantity=D("5"), price=D("30")),
-    ])
+    state = replay(
+        [
+            e(1, "DEPOSIT", 2, amount=D("1000")),
+            e(2, "BUY", 3, symbol=SYM, quantity=D("10"), price=D("50")),
+            e(3, "SPLIT", 4, symbol=SYM, split_from=D("1"), split_to=D("2")),
+            e(4, "SELL", 5, symbol=SYM, quantity=D("5"), price=D("30")),
+        ]
+    )
     assert state.realized_pnl == D("150") - D("125")
 
 
 def test_decimal_rounding_settles_cash_to_paise_half_up():
     assert money(D("0.005")) == D("0.01")
     assert money(D("2.344999")) == D("2.34")
-    state = replay([
-        e(1, "DEPOSIT", 2, amount=D("100")),
-        e(2, "BUY", 3, symbol=SYM, quantity=D("0.333333"), price=D("10.0015")),
-    ])
+    state = replay(
+        [
+            e(1, "DEPOSIT", 2, amount=D("100")),
+            e(2, "BUY", 3, symbol=SYM, quantity=D("0.333333"), price=D("10.0015")),
+        ]
+    )
     # 0.333333 * 10.0015 = 3.3338299995 -> settles at 3.33
     assert state.cash == D("96.67")
     assert state.positions[SYM].cost_basis == D("3.33")
@@ -171,22 +185,26 @@ def test_precision_limits_are_enforced():
 def test_dividend_requires_prior_holding_and_is_separate_from_realized():
     with pytest.raises(LedgerError):
         replay([e(1, "DEPOSIT", 2, amount=D("100")), e(2, "DIVIDEND", 3, symbol=SYM, amount=D("5"))])
-    state = replay([
-        e(1, "DEPOSIT", 2, amount=D("100")),
-        e(2, "BUY", 3, symbol=SYM, quantity=D("1"), price=D("10")),
-        e(3, "DIVIDEND", 4, symbol=SYM, amount=D("2.50")),
-    ])
+    state = replay(
+        [
+            e(1, "DEPOSIT", 2, amount=D("100")),
+            e(2, "BUY", 3, symbol=SYM, quantity=D("1"), price=D("10")),
+            e(3, "DIVIDEND", 4, symbol=SYM, amount=D("2.50")),
+        ]
+    )
     assert state.dividends == D("2.50")
     assert state.realized_pnl == 0
     assert state.cash == D("92.50")
 
 
 def test_missing_and_stale_marks_make_valuation_incomplete_not_zero():
-    state = replay([
-        e(1, "DEPOSIT", 2, amount=D("1000")),
-        e(2, "BUY", 3, symbol=SYM, quantity=D("1"), price=D("100")),
-        e(3, "BUY", 4, symbol="SX:QUILL", quantity=D("1"), price=D("100")),
-    ])
+    state = replay(
+        [
+            e(1, "DEPOSIT", 2, amount=D("1000")),
+            e(2, "BUY", 3, symbol=SYM, quantity=D("1"), price=D("100")),
+            e(3, "BUY", 4, symbol="SX:QUILL", quantity=D("1"), price=D("100")),
+        ]
+    )
     val = value_portfolio(state, {SYM: Mark(D("110"), "stale"), "SX:QUILL": None})
     assert not val.complete
     assert val.total_equity is None

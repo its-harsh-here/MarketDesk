@@ -13,8 +13,15 @@ from .conftest import OWNER_PW, Api, make_settings, migrated
 
 def test_private_api_requires_login(owner_api):
     api, _ = owner_api
-    for url in ("/api/watchlists", "/api/portfolio/summary", "/api/alerts", "/api/journal", "/api/status",
-                "/api/market/snapshots?symbols=SX:AURORA", "/api/portfolio/export/transactions.csv"):
+    for url in (
+        "/api/watchlists",
+        "/api/portfolio/summary",
+        "/api/alerts",
+        "/api/journal",
+        "/api/status",
+        "/api/market/snapshots?symbols=SX:AURORA",
+        "/api/portfolio/export/transactions.csv",
+    ):
         r = api.get(url)
         assert r.status_code == 401, url
         assert r.json()["error"]["code"] == "unauthorized"
@@ -86,8 +93,11 @@ def test_public_demo_reads_but_rejects_every_write(tmp_path):
         assert api.get("/api/market/snapshots", params={"symbols": "SX:AURORA"}).status_code == 200
         writes = [
             ("post", "/api/watchlists", {"json": {"name": "x"}}),
-            ("post", "/api/portfolio/transactions", {"json": {"type": "DEPOSIT", "effective_date": "2026-01-01",
-                                                              "amount": "1"}}),
+            (
+                "post",
+                "/api/portfolio/transactions",
+                {"json": {"type": "DEPOSIT", "effective_date": "2026-01-01", "amount": "1"}},
+            ),
             ("post", "/api/alerts", {"json": {"symbol": "SX:AURORA", "direction": "ABOVE", "target_price": "1"}}),
             ("post", "/api/journal", {"json": {"symbol": "SX:AURORA", "entry_date": "2026-01-01", "title": "t"}}),
             ("patch", "/api/settings", {"json": {"theme": "light"}}),

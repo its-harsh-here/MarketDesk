@@ -213,7 +213,9 @@ class YahooProvider:
     def validate_symbol(self, symbol: str) -> str:
         s = (symbol or "").strip().upper()
         if s.startswith("SX:"):
-            raise ProviderError("unsupported", "SX: symbols are fictitious sample instruments available only in fixture mode.")
+            raise ProviderError(
+                "unsupported", "SX: symbols are fictitious sample instruments available only in fixture mode."
+            )
         if not _SYMBOL_RE.match(s):
             raise ProviderError("unsupported", f"'{symbol}' is not a valid Yahoo symbol.")
         return s
@@ -251,8 +253,15 @@ class YahooProvider:
 
         def run():
             s = self._yf.Search(
-                q, max_results=limit, news_count=0, lists_count=0, include_cb=False,
-                recommended=0, enable_fuzzy_query=False, timeout=self.timeout, raise_errors=True,
+                q,
+                max_results=limit,
+                news_count=0,
+                lists_count=0,
+                include_cb=False,
+                recommended=0,
+                enable_fuzzy_query=False,
+                timeout=self.timeout,
+                raise_errors=True,
             )
             return s.quotes or []
 
@@ -292,7 +301,9 @@ class YahooProvider:
 
         def run():
             t = self._yf.Ticker(symbol)
-            df = t.history(period=_PERIODS[range_], interval="1d", auto_adjust=False, actions=False, timeout=self.timeout)
+            df = t.history(
+                period=_PERIODS[range_], interval="1d", auto_adjust=False, actions=False, timeout=self.timeout
+            )
             meta = dict(t.history_metadata or {})
             ref = instrument_from_meta(symbol, meta)
             bars = normalize_bars(df, int(meta.get("priceHint") or 2), (ref.kind or "").upper() == "INDEX")

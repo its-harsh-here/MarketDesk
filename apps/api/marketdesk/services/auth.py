@@ -57,16 +57,24 @@ def verify_credentials(settings: Settings, username: str, password: str) -> bool
 def login_blocked(db: Session, settings: Settings, key: str) -> int | None:
     """Return seconds until retry if too many recent failures from this client (or globally)."""
     since = datetime.now(UTC) - timedelta(minutes=settings.login_window_minutes)
-    per_client = db.scalar(
-        select(func.count()).select_from(LoginAttempt).where(
-            LoginAttempt.client_key == key, LoginAttempt.succeeded.is_(False), LoginAttempt.attempted_at >= since
+    per_client = (
+        db.scalar(
+            select(func.count())
+            .select_from(LoginAttempt)
+            .where(
+                LoginAttempt.client_key == key, LoginAttempt.succeeded.is_(False), LoginAttempt.attempted_at >= since
+            )
         )
-    ) or 0
-    overall = db.scalar(
-        select(func.count()).select_from(LoginAttempt).where(
-            LoginAttempt.succeeded.is_(False), LoginAttempt.attempted_at >= since
+        or 0
+    )
+    overall = (
+        db.scalar(
+            select(func.count())
+            .select_from(LoginAttempt)
+            .where(LoginAttempt.succeeded.is_(False), LoginAttempt.attempted_at >= since)
         )
-    ) or 0
+        or 0
+    )
     if per_client >= settings.login_max_failures or overall >= settings.login_max_failures * 4:
         return settings.login_window_minutes * 60
     return None

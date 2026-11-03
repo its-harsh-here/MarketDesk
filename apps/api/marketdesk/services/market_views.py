@@ -40,7 +40,9 @@ def snapshot_dict(symbol: str, result: Result[QuoteSnapshot], inst: Instrument |
         "symbol": symbol,
         "instrument": instrument,
         "quote": quote_dict(q) if q else None,
-        "sparkline": [{"date": b.session_date, "close": b.close} for b in (q.recent_bars[-SPARKLINE_POINTS:] if q else [])],
+        "sparkline": [
+            {"date": b.session_date, "close": b.close} for b in (q.recent_bars[-SPARKLINE_POINTS:] if q else [])
+        ],
         "meta": result.meta.to_dict(),
     }
 
@@ -102,8 +104,12 @@ async def fundamentals_payload(market: MarketDataService, symbol: str) -> dict:
             "most_recent_quarter": f.most_recent_quarter,
             "notes": f.notes,
         }
-    return {"symbol": symbol, "currency": f.instrument.currency if f else None, "values": values,
-            "meta": result.meta.to_dict()}
+    return {
+        "symbol": symbol,
+        "currency": f.instrument.currency if f else None,
+        "values": values,
+        "meta": result.meta.to_dict(),
+    }
 
 
 async def actions_payload(market: MarketDataService, symbol: str) -> dict:

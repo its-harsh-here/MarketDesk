@@ -8,8 +8,10 @@ def deposit(api, amount="10000", day="2026-01-02"):
 
 
 def trade(api, type_, qty, price, fees="0", day="2026-01-05", symbol="SX:AURORA"):
-    return api.post("/api/portfolio/transactions", json={
-        "type": type_, "effective_date": day, "symbol": symbol, "quantity": qty, "price": price, "fees": fees})
+    return api.post(
+        "/api/portfolio/transactions",
+        json={"type": type_, "effective_date": day, "symbol": symbol, "quantity": qty, "price": price, "fees": fees},
+    )
 
 
 def test_watchlist_crud_and_persistence(api):
@@ -91,14 +93,18 @@ def test_historical_edit_and_delete_replay(api):
     dep = deposit(api, "1000").json()
     buy = trade(api, "BUY", "5", "100").json()
     # editing the deposit below the buy cost is rejected and leaves data unchanged
-    r = api.put(f"/api/portfolio/transactions/{dep['id']}",
-                json={"type": "DEPOSIT", "effective_date": "2026-01-02", "amount": "100"})
+    r = api.put(
+        f"/api/portfolio/transactions/{dep['id']}",
+        json={"type": "DEPOSIT", "effective_date": "2026-01-02", "amount": "100"},
+    )
     assert r.status_code == 422
     assert api.get("/api/portfolio/summary").json()["cash"] == "500"
     # deleting the deposit is rejected because the buy would overdraw
     assert api.delete(f"/api/portfolio/transactions/{dep['id']}").status_code == 422
-    ok = api.put(f"/api/portfolio/transactions/{buy['id']}", json={
-        "type": "BUY", "effective_date": "2026-01-05", "symbol": "SX:AURORA", "quantity": "2", "price": "100"})
+    ok = api.put(
+        f"/api/portfolio/transactions/{buy['id']}",
+        json={"type": "BUY", "effective_date": "2026-01-05", "symbol": "SX:AURORA", "quantity": "2", "price": "100"},
+    )
     assert ok.status_code == 200 and ok.json()["created_at"] == buy["created_at"]
     assert api.get("/api/portfolio/summary").json()["cash"] == "800"
 
@@ -106,8 +112,13 @@ def test_historical_edit_and_delete_replay(api):
 def test_split_requires_explicit_confirmation(api):
     deposit(api, "1000")
     trade(api, "BUY", "5", "100")
-    payload = {"type": "SPLIT", "effective_date": "2026-01-07", "symbol": "SX:AURORA", "split_from": "1",
-               "split_to": "2"}
+    payload = {
+        "type": "SPLIT",
+        "effective_date": "2026-01-07",
+        "symbol": "SX:AURORA",
+        "split_from": "1",
+        "split_to": "2",
+    }
     r = api.post("/api/portfolio/transactions", json=payload)
     assert r.status_code == 422 and r.json()["error"]["code"] == "split_unconfirmed"
     r = api.post("/api/portfolio/transactions", json={**payload, "split_confirmed": True})

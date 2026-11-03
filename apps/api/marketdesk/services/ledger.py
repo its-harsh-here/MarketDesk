@@ -339,8 +339,20 @@ def value_portfolio(state: LedgerState, marks: dict[str, Mark | None]) -> Portfo
         if mark is None:
             missing.append(pos.symbol)
             holdings.append(
-                HoldingValuation(pos.symbol, pos.quantity, pos.average_cost, pos.cost_basis, pos.realized_pnl,
-                                 pos.dividends, None, None, None, None, "missing", None)
+                HoldingValuation(
+                    pos.symbol,
+                    pos.quantity,
+                    pos.average_cost,
+                    pos.cost_basis,
+                    pos.realized_pnl,
+                    pos.dividends,
+                    None,
+                    None,
+                    None,
+                    None,
+                    "missing",
+                    None,
+                )
             )
             continue
         if mark.status == "stale":
@@ -351,8 +363,20 @@ def value_portfolio(state: LedgerState, marks: dict[str, Mark | None]) -> Portfo
         valued_total += mv
         unrealized_total += upnl
         holdings.append(
-            HoldingValuation(pos.symbol, pos.quantity, pos.average_cost, pos.cost_basis, pos.realized_pnl,
-                             pos.dividends, mark.price, mv, upnl, upct, mark.status, mark.market_time)
+            HoldingValuation(
+                pos.symbol,
+                pos.quantity,
+                pos.average_cost,
+                pos.cost_basis,
+                pos.realized_pnl,
+                pos.dividends,
+                mark.price,
+                mv,
+                upnl,
+                upct,
+                mark.status,
+                mark.market_time,
+            )
         )
     complete = not missing
     partial_equity = state.cash + valued_total

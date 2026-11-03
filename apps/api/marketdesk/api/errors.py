@@ -27,9 +27,18 @@ def error_body(code: str, message: str, details: Any = None) -> dict:
     return {"error": {"code": code, "message": message, "details": details}}
 
 
-_STATUS_CODES = {400: "bad_request", 401: "unauthorized", 403: "forbidden", 404: "not_found",
-                 405: "method_not_allowed", 409: "conflict", 413: "payload_too_large", 415: "unsupported_media_type",
-                 422: "validation_error", 429: "rate_limited"}
+_STATUS_CODES = {
+    400: "bad_request",
+    401: "unauthorized",
+    403: "forbidden",
+    404: "not_found",
+    405: "method_not_allowed",
+    409: "conflict",
+    413: "payload_too_large",
+    415: "unsupported_media_type",
+    422: "validation_error",
+    429: "rate_limited",
+}
 
 
 def install_error_handlers(app: FastAPI) -> None:
@@ -51,7 +60,9 @@ def install_error_handlers(app: FastAPI) -> None:
     async def _http(_: Request, exc: StarletteHTTPException):
         code = _STATUS_CODES.get(exc.status_code, "error")
         message = exc.detail if isinstance(exc.detail, str) else "Request failed."
-        return JSONResponse(error_body(code, message), status_code=exc.status_code, headers=getattr(exc, "headers", None))
+        return JSONResponse(
+            error_body(code, message), status_code=exc.status_code, headers=getattr(exc, "headers", None)
+        )
 
     @app.exception_handler(Exception)
     async def _unhandled(_: Request, exc: Exception):  # pragma: no cover - safety net

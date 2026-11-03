@@ -37,6 +37,7 @@
   --shadow: 0 12px 32px rgb(0 0 0 / 0.45);
   --chart-grid: #1c2531;
   --chart-text: #a7b3c4;
+  --chart-line: #f2b84b;
   color-scheme: dark;
 }
 
@@ -69,6 +70,7 @@
   --shadow: 0 12px 32px rgb(15 23 34 / 0.14);
   --chart-grid: #edf1f5;
   --chart-text: #445064;
+  --chart-line: #b7791f; /* 3.2:1 on white for a graphical line */
   color-scheme: light;
 }
 

@@ -83,9 +83,7 @@ class WatchlistItem(Base):
 class LedgerTransaction(Base):
     __tablename__ = "ledger_transactions"
     __table_args__ = (
-        CheckConstraint(
-            "type IN ('DEPOSIT','WITHDRAWAL','BUY','SELL','DIVIDEND','SPLIT')", name="ck_txn_type"
-        ),
+        CheckConstraint("type IN ('DEPOSIT','WITHDRAWAL','BUY','SELL','DIVIDEND','SPLIT')", name="ck_txn_type"),
         Index("ix_txn_effective", "effective_date", "id"),
     )
 
@@ -174,9 +172,7 @@ class QuoteObservation(Base):
     """A distinct provider quotation, keyed by market timestamp so re-reading a cached quote is idempotent."""
 
     __tablename__ = "quote_observations"
-    __table_args__ = (
-        UniqueConstraint("instrument_id", "provider", "market_time", name="uq_observation_market_time"),
-    )
+    __table_args__ = (UniqueConstraint("instrument_id", "provider", "market_time", name="uq_observation_market_time"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     instrument_id: Mapped[int] = mapped_column(ForeignKey("instruments.id", ondelete="CASCADE"), index=True)

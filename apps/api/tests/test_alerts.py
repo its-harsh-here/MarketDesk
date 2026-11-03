@@ -84,8 +84,13 @@ def test_observation_from_other_provider_is_ignored(api, app):
     aid = make_alert(api, target="1")
     with db_session() as db:
         alert = db.get(Alert, aid)
-        obs = QuoteObservation(instrument_id=alert.instrument_id, provider="yahoo", price=alert.target_price * 10,
-                               market_time=datetime.now(UTC), fetched_at=datetime.now(UTC))
+        obs = QuoteObservation(
+            instrument_id=alert.instrument_id,
+            provider="yahoo",
+            price=alert.target_price * 10,
+            market_time=datetime.now(UTC),
+            fetched_at=datetime.now(UTC),
+        )
         db.add(obs)
         db.commit()
         assert evaluate_alert(db, alert, obs, "fixture") is None

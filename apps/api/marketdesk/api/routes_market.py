@@ -45,13 +45,18 @@ async def search(
 ):
     result = await market.search(q, limit)
     refs = result.value or []
-    known = {
-        i.symbol: i
-        for i in db.scalars(
-            select(Instrument).where(Instrument.provider == market.source,
-                                     Instrument.symbol.in_([r.symbol for r in refs]))
-        )
-    } if refs else {}
+    known = (
+        {
+            i.symbol: i
+            for i in db.scalars(
+                select(Instrument).where(
+                    Instrument.provider == market.source, Instrument.symbol.in_([r.symbol for r in refs])
+                )
+            )
+        }
+        if refs
+        else {}
+    )
     out = []
     for r in refs:
         d = r.to_dict()
@@ -96,7 +101,9 @@ async def history(
 
 
 @router.get("/fundamentals", response_model=FundamentalsOut)
-async def fundamentals(symbol: str = Query(min_length=1, max_length=32), market: MarketDataService = Depends(market_dep)):
+async def fundamentals(
+    symbol: str = Query(min_length=1, max_length=32), market: MarketDataService = Depends(market_dep)
+):
     return await fundamentals_payload(market, validate_symbol(market, symbol))
 
 

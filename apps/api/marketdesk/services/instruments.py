@@ -30,8 +30,14 @@ def upsert_instrument(db: Session, provider: str, ref: InstrumentRef) -> Instrum
 
 def instrument_dict(inst: Instrument | None, fallback: InstrumentRef | None = None, symbol: str = "") -> dict:
     if inst is not None:
-        return {"symbol": inst.symbol, "name": inst.name, "exchange": inst.exchange, "currency": inst.currency,
-                "timezone": inst.timezone, "kind": inst.kind}
+        return {
+            "symbol": inst.symbol,
+            "name": inst.name,
+            "exchange": inst.exchange,
+            "currency": inst.currency,
+            "timezone": inst.timezone,
+            "kind": inst.kind,
+        }
     if fallback is not None:
         return fallback.to_dict()
     return {"symbol": symbol, "name": None, "exchange": None, "currency": None, "timezone": None, "kind": None}

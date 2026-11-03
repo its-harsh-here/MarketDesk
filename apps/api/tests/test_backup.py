@@ -18,8 +18,9 @@ def test_backup_and_restore_preserve_core_records(tmp_path):
         api.refresh_csrf()
         wid = api.post("/api/watchlists", json={"name": "Keep"}).json()["id"]
         api.post(f"/api/watchlists/{wid}/items", json={"symbol": "SX:AURORA"})
-        api.post("/api/portfolio/transactions", json={"type": "DEPOSIT", "effective_date": "2026-01-02",
-                                                      "amount": "500"})
+        api.post(
+            "/api/portfolio/transactions", json={"type": "DEPOSIT", "effective_date": "2026-01-02", "amount": "500"}
+        )
         api.post("/api/alerts", json={"symbol": "SX:AURORA", "direction": "BELOW", "target_price": "150"})
         api.post("/api/journal", json={"symbol": "SX:AURORA", "entry_date": "2026-01-02", "title": "Note"})
         db_path = live / "marketdesk.db"

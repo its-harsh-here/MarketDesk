@@ -267,4 +267,3 @@ class FixtureProvider:
             if d <= cursor:
                 out.append(CorporateAction(d, a["kind"], Decimal(a["value"]), a["description"]))
         return sorted(out, key=lambda a: a.action_date, reverse=True)
-

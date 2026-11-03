@@ -28,19 +28,28 @@ def frame(rows, tz="Asia/Kolkata"):
 
 
 META = {
-    "regularMarketPrice": 1294.6, "regularMarketTime": pd.Timestamp("2026-11-03 10:30:26+0530"),
-    "currency": "INR", "exchangeTimezoneName": "Asia/Kolkata", "fullExchangeName": "NSE",
-    "longName": "Example Industries", "instrumentType": "EQUITY", "priceHint": 2, "regularMarketVolume": 123456,
-    "regularMarketDayHigh": 1300.0, "regularMarketDayLow": 1280.25,
+    "regularMarketPrice": 1294.6,
+    "regularMarketTime": pd.Timestamp("2026-11-03 10:30:26+0530"),
+    "currency": "INR",
+    "exchangeTimezoneName": "Asia/Kolkata",
+    "fullExchangeName": "NSE",
+    "longName": "Example Industries",
+    "instrumentType": "EQUITY",
+    "priceHint": 2,
+    "regularMarketVolume": 123456,
+    "regularMarketDayHigh": 1300.0,
+    "regularMarketDayLow": 1280.25,
 }
 
 
 def test_quote_uses_previous_session_close_from_same_series():
-    df = frame([
-        ("2026-10-30", 1170.4, 1180, 1160, 1175.5999755859375, 1000),
-        ("2026-11-02", 1228.1, 1240, 1220, 1230.0999755859375, 2000),
-        ("2026-11-03", 1287.9, 1300, 1280, 1294.5999755859375, 3000),  # current, incomplete session
-    ])
+    df = frame(
+        [
+            ("2026-10-30", 1170.4, 1180, 1160, 1175.5999755859375, 1000),
+            ("2026-11-02", 1228.1, 1240, 1220, 1230.0999755859375, 2000),
+            ("2026-11-03", 1287.9, 1300, 1280, 1294.5999755859375, 3000),  # current, incomplete session
+        ]
+    )
     q = quote_from_history("EXAMPLE.NS", df, META)
     assert q.last_price == Decimal("1294.60")
     assert q.previous_close == Decimal("1230.10")
@@ -63,13 +72,17 @@ def test_index_volume_is_not_reported():
 
 
 def test_bars_validation_sorts_dedupes_and_drops_bad_rows():
-    bars = validate_bars([
-        DailyBar(date(2026, 1, 3), Decimal(1), Decimal(2), Decimal("0.5"), Decimal("1.5"), 1),
-        DailyBar(date(2026, 1, 1), Decimal(1), Decimal(2), Decimal("0.5"), Decimal("1.5"), 1),
-        DailyBar(date(2026, 1, 3), Decimal(1), Decimal(2), Decimal("0.5"), Decimal("1.7"), 1),  # duplicate: last wins
-        DailyBar(date(2026, 1, 2), Decimal(1), Decimal("0.9"), Decimal("0.5"), Decimal("1.5"), 1),  # high < close
-        DailyBar(date(2026, 1, 4), None, None, None, Decimal("0"), None),  # non-positive close dropped
-    ])
+    bars = validate_bars(
+        [
+            DailyBar(date(2026, 1, 3), Decimal(1), Decimal(2), Decimal("0.5"), Decimal("1.5"), 1),
+            DailyBar(date(2026, 1, 1), Decimal(1), Decimal(2), Decimal("0.5"), Decimal("1.5"), 1),
+            DailyBar(
+                date(2026, 1, 3), Decimal(1), Decimal(2), Decimal("0.5"), Decimal("1.7"), 1
+            ),  # duplicate: last wins
+            DailyBar(date(2026, 1, 2), Decimal(1), Decimal("0.9"), Decimal("0.5"), Decimal("1.5"), 1),  # high < close
+            DailyBar(date(2026, 1, 4), None, None, None, Decimal("0"), None),  # non-positive close dropped
+        ]
+    )
     assert [b.session_date.day for b in bars] == [1, 2, 3]
     assert bars[2].close == Decimal("1.7")
     assert bars[1].open is None and bars[1].close == Decimal("1.5")  # inconsistent candle body removed
@@ -77,23 +90,37 @@ def test_bars_validation_sorts_dedupes_and_drops_bad_rows():
 
 def test_dividend_yield_units_are_cross_checked():
     # yfinance 1.7 observed: dividendYield in percent points
-    assert normalize_dividend_yield({"dividendYield": 6.02, "dividendRate": 16.0, "currentPrice": 266.8})[0] == \
-        Decimal("6.02")
+    assert normalize_dividend_yield({"dividendYield": 6.02, "dividendRate": 16.0, "currentPrice": 266.8})[0] == Decimal(
+        "6.02"
+    )
     # legacy fraction form
-    assert normalize_dividend_yield({"dividendYield": 0.0602, "dividendRate": 16.0, "currentPrice": 266.8})[0] == \
-        Decimal("6.02")
+    assert normalize_dividend_yield({"dividendYield": 0.0602, "dividendRate": 16.0, "currentPrice": 266.8})[
+        0
+    ] == Decimal("6.02")
     # unverifiable small value is withheld rather than guessed
     value, note = normalize_dividend_yield({"dividendYield": 0.5})
     assert value is None and "could not be verified" in note
 
 
 def test_fundamentals_preserve_units_and_dates():
-    f = fundamentals_from_info("ITC.NS", {
-        "marketCap": 3343514075136, "trailingPE": 16.790434, "dividendYield": 6.02, "dividendRate": 16.0,
-        "currentPrice": 266.8, "fiftyTwoWeekHigh": 421.65, "fiftyTwoWeekLow": 252.8, "priceToBook": 4.610413,
-        "mostRecentQuarter": 1782777600, "lastFiscalYearEnd": 1774915200, "currency": "INR",
-        "financialCurrency": "INR", "longName": "Example Ltd",
-    })
+    f = fundamentals_from_info(
+        "ITC.NS",
+        {
+            "marketCap": 3343514075136,
+            "trailingPE": 16.790434,
+            "dividendYield": 6.02,
+            "dividendRate": 16.0,
+            "currentPrice": 266.8,
+            "fiftyTwoWeekHigh": 421.65,
+            "fiftyTwoWeekLow": 252.8,
+            "priceToBook": 4.610413,
+            "mostRecentQuarter": 1782777600,
+            "lastFiscalYearEnd": 1774915200,
+            "currency": "INR",
+            "financialCurrency": "INR",
+            "longName": "Example Ltd",
+        },
+    )
     assert f.market_cap == Decimal("3343514075136")
     assert f.pe_ratio == Decimal("16.79") and f.price_to_book == Decimal("4.61")
     assert f.most_recent_quarter == date(2026, 6, 30) and f.last_fiscal_year_end == date(2026, 3, 31)
@@ -144,8 +171,11 @@ def test_fixture_provider_namespace_cursor_and_fault():
 
 
 def test_fixture_dataset_regenerates_identically(tmp_path):
-    subprocess.run([sys.executable, str(REPO_ROOT / "scripts" / "generate_fixtures.py"), "--out", str(tmp_path)],
-                   check=True, capture_output=True)
+    subprocess.run(
+        [sys.executable, str(REPO_ROOT / "scripts" / "generate_fixtures.py"), "--out", str(tmp_path)],
+        check=True,
+        capture_output=True,
+    )
     for name in ("daily_bars.csv", "instruments.json"):
         committed = hashlib.sha256((REPO_ROOT / "fixtures" / "market" / name).read_bytes()).hexdigest()
         regenerated = hashlib.sha256((tmp_path / name).read_bytes()).hexdigest()

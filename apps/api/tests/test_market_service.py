@@ -18,8 +18,18 @@ REF = InstrumentRef("TEST.NS", "Test Co", "NSE", "INR", "Asia/Kolkata", "EQUITY"
 
 
 def snap(price="100"):
-    return QuoteSnapshot(REF, Decimal(price), Decimal("99"), datetime(2026, 6, 30, 10, tzinfo=UTC), date(2026, 6, 30),
-                         None, None, 10, None, [])
+    return QuoteSnapshot(
+        REF,
+        Decimal(price),
+        Decimal("99"),
+        datetime(2026, 6, 30, 10, tzinfo=UTC),
+        date(2026, 6, 30),
+        None,
+        None,
+        10,
+        None,
+        [],
+    )
 
 
 class FakeProvider:
@@ -107,8 +117,9 @@ def test_retries_are_bounded(tmp_path):
 
 
 def test_circuit_opens_after_repeated_failures(tmp_path):
-    svc, p = service(tmp_path, persisted=False, provider_max_retries=0, circuit_failure_threshold=2,
-                     quote_ttl_seconds=0)
+    svc, p = service(
+        tmp_path, persisted=False, provider_max_retries=0, circuit_failure_threshold=2, quote_ttl_seconds=0
+    )
     p.fail = ProviderError("upstream_unavailable", "down", retryable=True)
     asyncio.run(svc.quote("A"))
     asyncio.run(svc.quote("B"))

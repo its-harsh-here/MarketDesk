@@ -54,8 +54,9 @@ async def create(body: TransactionIn, db: Session = Depends(get_db), market: Mar
 
 
 @router.put("/transactions/{tid}", response_model=TransactionOut, dependencies=[Depends(require_writer)])
-async def update(tid: int, body: TransactionIn, db: Session = Depends(get_db),
-                 market: MarketDataService = Depends(market_dep)):
+async def update(
+    tid: int, body: TransactionIn, db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)
+):
     t = await svc.update_transaction(db, market, tid, body.model_dump())
     return _with_state(db, t)
 
@@ -88,9 +89,12 @@ async def import_commit(token: str, db: Session = Depends(get_db), market: Marke
 def _csv_response(body: str, name: str) -> Response:
     stamp = datetime.now(UTC).strftime("%Y%m%d")
     return Response(
-        content=body, media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="marketdesk-{name}-{stamp}.csv"',
-                 "Cache-Control": "no-store"},
+        content=body,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="marketdesk-{name}-{stamp}.csv"',
+            "Cache-Control": "no-store",
+        },
     )
 
 

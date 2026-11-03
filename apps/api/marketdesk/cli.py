@@ -1,12 +1,12 @@
 """MarketDesk operations CLI.
 
-    marketdesk migrate                    apply Alembic migrations (run once, before web/worker start)
-    marketdesk hash-password              print an argon2 hash for OWNER_PASSWORD_HASH (reads stdin/prompt)
-    marketdesk revoke-sessions            sign out every browser session
-    marketdesk backup PATH                consistent online SQLite backup (includes WAL contents)
-    marketdesk restore PATH               restore a backup (stop web and worker first)
-    marketdesk seed-demo                  fixture mode only: sample watchlist, portfolio, alert, journal note
-    marketdesk worker-health              exit 0 if the alert worker heartbeat is recent
+marketdesk migrate                    apply Alembic migrations (run once, before web/worker start)
+marketdesk hash-password              print an argon2 hash for OWNER_PASSWORD_HASH (reads stdin/prompt)
+marketdesk revoke-sessions            sign out every browser session
+marketdesk backup PATH                consistent online SQLite backup (includes WAL contents)
+marketdesk restore PATH               restore a backup (stop web and worker first)
+marketdesk seed-demo                  fixture mode only: sample watchlist, portfolio, alert, journal note
+marketdesk worker-health              exit 0 if the alert worker heartbeat is recent
 """
 
 from __future__ import annotations
@@ -130,23 +130,46 @@ async def _seed_demo() -> None:
             await watchlists.add_symbol(db, settings, market, w.id, sym)
         base = market.provider.dataset.base_date
         steps = [
-            ("DEPOSIT", 60, None, None, None, "500000"), ("BUY", 58, "SX:AURORA", "400", "158.40", None),
-            ("BUY", 57, "SX:GLASSWING", "25", "2610.00", None), ("BUY", 55, "SX:PEREGRINE", "60", "1488.50", None),
+            ("DEPOSIT", 60, None, None, None, "500000"),
+            ("BUY", 58, "SX:AURORA", "400", "158.40", None),
+            ("BUY", 57, "SX:GLASSWING", "25", "2610.00", None),
+            ("BUY", 55, "SX:PEREGRINE", "60", "1488.50", None),
             ("SELL", 40, "SX:AURORA", "100", "171.20", None),
         ]
         for t, days, sym, qty, price, amount in steps:
-            await portfolio.create_transaction(db, market, {
-                "type": t, "effective_date": base - timedelta(days=days), "symbol": sym,
-                "quantity": Decimal(qty) if qty else None, "price": Decimal(price) if price else None,
-                "fees": Decimal("20") if t in ("BUY", "SELL") else Decimal(0),
-                "amount": Decimal(amount) if amount else None, "notes": "Sample workspace (fictitious)"})
-        await alerts.create_alert(db, market, {"symbol": "SX:AURORA", "direction": "ABOVE",
-                                               "target_price": Decimal("172.00"), "note": "Sample alert"})
-        await journal.create_entry(db, market, {
-            "symbol": "SX:GLASSWING", "entry_date": base - timedelta(days=57), "title": "Sample thesis note",
-            "thesis": "Example of a structured note: what you expect and why, in your own words.",
-            "risks": "What could go wrong.", "invalidation": "Conditions that would prove the note wrong.",
-            "tags": ["sample", "software"], "review_date": base + timedelta(days=30)})
+            await portfolio.create_transaction(
+                db,
+                market,
+                {
+                    "type": t,
+                    "effective_date": base - timedelta(days=days),
+                    "symbol": sym,
+                    "quantity": Decimal(qty) if qty else None,
+                    "price": Decimal(price) if price else None,
+                    "fees": Decimal("20") if t in ("BUY", "SELL") else Decimal(0),
+                    "amount": Decimal(amount) if amount else None,
+                    "notes": "Sample workspace (fictitious)",
+                },
+            )
+        await alerts.create_alert(
+            db,
+            market,
+            {"symbol": "SX:AURORA", "direction": "ABOVE", "target_price": Decimal("172.00"), "note": "Sample alert"},
+        )
+        await journal.create_entry(
+            db,
+            market,
+            {
+                "symbol": "SX:GLASSWING",
+                "entry_date": base - timedelta(days=57),
+                "title": "Sample thesis note",
+                "thesis": "Example of a structured note: what you expect and why, in your own words.",
+                "risks": "What could go wrong.",
+                "invalidation": "Conditions that would prove the note wrong.",
+                "tags": ["sample", "software"],
+                "review_date": base + timedelta(days=30),
+            },
+        )
     print("sample workspace created (fictitious SX: instruments)")
 
 

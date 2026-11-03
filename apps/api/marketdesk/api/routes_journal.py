@@ -31,8 +31,9 @@ async def create(body: JournalIn, db: Session = Depends(get_db), market: MarketD
 
 
 @router.put("/{eid}", response_model=JournalOut, dependencies=[Depends(require_writer)])
-async def update(eid: int, body: JournalIn, db: Session = Depends(get_db),
-                 market: MarketDataService = Depends(market_dep)):
+async def update(
+    eid: int, body: JournalIn, db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)
+):
     return svc.entry_dict(await svc.update_entry(db, market, eid, body.model_dump()), today_local(db))
 
 

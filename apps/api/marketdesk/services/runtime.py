@@ -15,8 +15,9 @@ def build_provider(settings: Settings):
         return FixtureProvider(settings.fixtures_dir, fixture_state_getter)
     from marketdesk.providers.yahoo import YahooProvider
 
-    return YahooProvider(timeout=min(10.0, settings.provider_timeout_seconds),
-                         cache_dir=settings.data_dir / "yfinance-cache")
+    return YahooProvider(
+        timeout=min(10.0, settings.provider_timeout_seconds), cache_dir=settings.data_dir / "yfinance-cache"
+    )
 
 
 def build_market_service(settings: Settings, sf: sessionmaker[Session] | None) -> MarketDataService:

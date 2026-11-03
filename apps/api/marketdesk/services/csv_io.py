@@ -38,8 +38,19 @@ from marketdesk.services.portfolio import (
     txn_dict,
 )
 
-COLUMNS = ["date", "type", "symbol", "quantity", "price", "fees", "amount", "currency", "split_from", "split_to",
-           "notes"]
+COLUMNS = [
+    "date",
+    "type",
+    "symbol",
+    "quantity",
+    "price",
+    "fees",
+    "amount",
+    "currency",
+    "split_from",
+    "split_to",
+    "notes",
+]
 REQUIRED = {"date", "type"}
 NUMERIC = ("quantity", "price", "fees", "amount", "split_from", "split_to")
 _DANGEROUS = ("=", "+", "-", "@", "\t", "\r")
@@ -171,7 +182,11 @@ def _entry(pr: ParsedRow, symbol: str | None) -> LedgerEntry:
     v = pr.values
     t = TxnType(pr.type)
     return LedgerEntry(
-        ref=f"csv:{pr.row}", type=t, effective_date=pr.effective_date, seq=10**8 + pr.row, symbol=symbol,
+        ref=f"csv:{pr.row}",
+        type=t,
+        effective_date=pr.effective_date,
+        seq=10**8 + pr.row,
+        symbol=symbol,
         quantity=v.get("quantity") if t in (TxnType.BUY, TxnType.SELL) else None,
         price=v.get("price") if t in (TxnType.BUY, TxnType.SELL) else None,
         fees=v.get("fees") or Decimal(0),
@@ -182,8 +197,9 @@ def _entry(pr: ParsedRow, symbol: str | None) -> LedgerEntry:
     )
 
 
-async def build_preview(db: Session, settings: Settings, market: MarketDataService, filename: str | None,
-                        content: bytes) -> dict:
+async def build_preview(
+    db: Session, settings: Settings, market: MarketDataService, filename: str | None, content: bytes
+) -> dict:
     rows, header_errors = parse_csv(content, settings)
     symbols: dict[str, str] = {}
     unique_syms = {r.symbol for r in rows if r.symbol and not r.errors}
@@ -212,8 +228,19 @@ async def build_preview(db: Session, settings: Settings, market: MarketDataServi
         except LedgerError as err:
             r.errors.append(err.message)
             continue
-        r.fingerprint = fingerprint(r.effective_date, r.type, sym, entry.quantity, entry.price, entry.fees,
-                                    entry.amount, entry.split_from, entry.split_to, "INR", r.notes)
+        r.fingerprint = fingerprint(
+            r.effective_date,
+            r.type,
+            sym,
+            entry.quantity,
+            entry.price,
+            entry.fees,
+            entry.amount,
+            entry.split_from,
+            entry.split_to,
+            "INR",
+            r.notes,
+        )
         if r.fingerprint in seen:
             r.duplicate = True
         else:
@@ -224,8 +251,12 @@ async def build_preview(db: Session, settings: Settings, market: MarketDataServi
     error_rows = [r for r in rows if r.errors]
     if not error_rows and new_rows and not header_errors:
         try:
-            replay([*(to_entry(t) for t in existing), *(_entry(r, symbols.get(r.symbol) if r.symbol else None)
-                                                         for r in new_rows)])
+            replay(
+                [
+                    *(to_entry(t) for t in existing),
+                    *(_entry(r, symbols.get(r.symbol) if r.symbol else None) for r in new_rows),
+                ]
+            )
         except LedgerError as err:
             ledger_error = err.to_dict()
             if err.ref.startswith("csv:"):
@@ -246,12 +277,16 @@ async def build_preview(db: Session, settings: Settings, market: MarketDataServi
     token = None
     if can_import:
         token = secrets.token_urlsafe(24)
-        db.add(ImportBatch(
-            token=token, filename=(filename or "")[:200] or None,
-            content_sha256=hashlib.sha256(content).hexdigest(), status="previewed",
-            rows=[_row_payload(r, symbols) for r in new_rows],
-            summary={"total": len(rows), "new": len(new_rows), "duplicates": sum(r.duplicate for r in rows)},
-        ))
+        db.add(
+            ImportBatch(
+                token=token,
+                filename=(filename or "")[:200] or None,
+                content_sha256=hashlib.sha256(content).hexdigest(),
+                status="previewed",
+                rows=[_row_payload(r, symbols) for r in new_rows],
+                summary={"total": len(rows), "new": len(new_rows), "duplicates": sum(r.duplicate for r in rows)},
+            )
+        )
         db.commit()
     return {
         "token": token,
@@ -265,10 +300,13 @@ async def build_preview(db: Session, settings: Settings, market: MarketDataServi
         "ledger_error": ledger_error,
         "header_errors": header_errors,
         "rows": [
-            {"row": r.row, "status": "error" if r.errors else ("duplicate" if r.duplicate else "ok"),
-             "values": {k: r.raw.get(k) for k in COLUMNS},
-             "messages": r.errors or (["Already in the ledger (or repeated in this file); will be skipped."]
-                                       if r.duplicate else [])}
+            {
+                "row": r.row,
+                "status": "error" if r.errors else ("duplicate" if r.duplicate else "ok"),
+                "values": {k: r.raw.get(k) for k in COLUMNS},
+                "messages": r.errors
+                or (["Already in the ledger (or repeated in this file); will be skipped."] if r.duplicate else []),
+            }
             for r in rows
         ],
     }
@@ -276,10 +314,13 @@ async def build_preview(db: Session, settings: Settings, market: MarketDataServi
 
 def _row_payload(r: ParsedRow, symbols: dict[str, str]) -> dict:
     return {
-        "row": r.row, "type": r.type, "date": r.effective_date.isoformat(),
+        "row": r.row,
+        "type": r.type,
+        "date": r.effective_date.isoformat(),
         "symbol": symbols.get(r.symbol) if r.symbol else None,
         **{k: (format(v, "f") if v is not None else None) for k, v in r.values.items()},
-        "notes": r.notes, "fingerprint": r.fingerprint,
+        "notes": r.notes,
+        "fingerprint": r.fingerprint,
     }
 
 
@@ -308,23 +349,43 @@ async def commit_import(db: Session, market: MarketDataService, token: str) -> d
             seen.add(r["fingerprint"])
             dec = {k: (Decimal(r[k]) if r.get(k) is not None else None) for k in NUMERIC}
             inst = insts.get(r["symbol"]) if r["symbol"] else None
-            new.append(LedgerTransaction(
-                type=r["type"], effective_date=date.fromisoformat(r["date"]), instrument_id=inst.id if inst else None,
-                instrument=inst, quantity=dec["quantity"], price=dec["price"], fees=dec["fees"] or Decimal(0),
-                amount=dec["amount"], split_from=dec["split_from"], split_to=dec["split_to"], currency="INR",
-                notes=r["notes"], fingerprint=r["fingerprint"], source="import", created_via="csv",
-                import_batch_id=batch.id,
-            ))
+            new.append(
+                LedgerTransaction(
+                    type=r["type"],
+                    effective_date=date.fromisoformat(r["date"]),
+                    instrument_id=inst.id if inst else None,
+                    instrument=inst,
+                    quantity=dec["quantity"],
+                    price=dec["price"],
+                    fees=dec["fees"] or Decimal(0),
+                    amount=dec["amount"],
+                    split_from=dec["split_from"],
+                    split_to=dec["split_to"],
+                    currency="INR",
+                    notes=r["notes"],
+                    fingerprint=r["fingerprint"],
+                    source="import",
+                    created_via="csv",
+                    import_batch_id=batch.id,
+                )
+            )
             new_rows.append(r["row"])
         entries = [to_entry(t) for t in existing]
         for i, (t, row_no) in enumerate(zip(new, new_rows, strict=True)):
-            entries.append(replace(to_entry(t), ref=f"csv:{row_no}", seq=10**8 + i,
-                                   label=f"{t.type} on {t.effective_date.isoformat()} (CSV row {row_no})"))
+            entries.append(
+                replace(
+                    to_entry(t),
+                    ref=f"csv:{row_no}",
+                    seq=10**8 + i,
+                    label=f"{t.type} on {t.effective_date.isoformat()} (CSV row {row_no})",
+                )
+            )
         try:
             replay(entries)
         except LedgerError as err:
-            raise AppError(422, "ledger_rejected", f"Import rejected: {err.message}", {"ledger_error": err.to_dict()}) \
-                from err
+            raise AppError(
+                422, "ledger_rejected", f"Import rejected: {err.message}", {"ledger_error": err.to_dict()}
+            ) from err
         db.add_all(new)
         batch.status = "committed"
         batch.committed_at = datetime.now(UTC)
@@ -338,26 +399,74 @@ def export_transactions_csv(db: Session) -> str:
     w.writerow(COLUMNS)
     for t in all_transactions(db):
         d = txn_dict(t)
-        w.writerow([safe_cell(x) for x in (
-            t.effective_date.isoformat(), t.type, d["symbol"], _plain(t.quantity), _plain(t.price), _plain(t.fees),
-            _plain(t.amount), t.currency, _plain(t.split_from), _plain(t.split_to), t.notes,
-        )])
+        w.writerow(
+            [
+                safe_cell(x)
+                for x in (
+                    t.effective_date.isoformat(),
+                    t.type,
+                    d["symbol"],
+                    _plain(t.quantity),
+                    _plain(t.price),
+                    _plain(t.fees),
+                    _plain(t.amount),
+                    t.currency,
+                    _plain(t.split_from),
+                    _plain(t.split_to),
+                    t.notes,
+                )
+            ]
+        )
     return buf.getvalue()
 
 
 def export_holdings_csv(summary: dict) -> str:
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\n")
-    w.writerow(["symbol", "name", "quantity", "average_cost", "cost_basis", "last_price", "market_value",
-                "unrealized_pnl", "realized_pnl", "dividends", "mark_status", "mark_time", "currency"])
+    w.writerow(
+        [
+            "symbol",
+            "name",
+            "quantity",
+            "average_cost",
+            "cost_basis",
+            "last_price",
+            "market_value",
+            "unrealized_pnl",
+            "realized_pnl",
+            "dividends",
+            "mark_status",
+            "mark_time",
+            "currency",
+        ]
+    )
     for h in summary["holdings"]:
-        w.writerow([safe_cell(x) for x in (
-            h["symbol"], h["name"], _plain(h["quantity"]), _plain(h["average_cost"], 4), _plain(h["cost_basis"], 2),
-            _plain(h["last_price"]), _plain(h["market_value"], 2), _plain(h["unrealized_pnl"], 2),
-            _plain(h["realized_pnl"], 2), _plain(h["dividends"], 2), h["mark_status"], h["mark_time"], "INR",
-        )])
-    w.writerow([safe_cell(x) for x in ("CASH", "Cash balance", "", "", "", "", _plain(summary["cash"], 2), "", "", "",
-                                        "", "", "INR")])
+        w.writerow(
+            [
+                safe_cell(x)
+                for x in (
+                    h["symbol"],
+                    h["name"],
+                    _plain(h["quantity"]),
+                    _plain(h["average_cost"], 4),
+                    _plain(h["cost_basis"], 2),
+                    _plain(h["last_price"]),
+                    _plain(h["market_value"], 2),
+                    _plain(h["unrealized_pnl"], 2),
+                    _plain(h["realized_pnl"], 2),
+                    _plain(h["dividends"], 2),
+                    h["mark_status"],
+                    h["mark_time"],
+                    "INR",
+                )
+            ]
+        )
+    w.writerow(
+        [
+            safe_cell(x)
+            for x in ("CASH", "Cash balance", "", "", "", "", _plain(summary["cash"], 2), "", "", "", "", "", "INR")
+        ]
+    )
     return buf.getvalue()
 
 

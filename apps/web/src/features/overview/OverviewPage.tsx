@@ -270,7 +270,7 @@ export function OverviewPage() {
                 <span className="max-sm:sr-only">Chart</span>
                 <Select
                   aria-label="Chart symbol"
-                  className="h-8 w-40 text-[13px] max-md:h-10 max-sm:w-36"
+                  className="h-8 w-40 text-[13px] max-md:h-10"
                   value={chartSymbol}
                   disabled={readOnly}
                   title={readOnly ? "Preference changes are disabled in the read-only demo" : undefined}

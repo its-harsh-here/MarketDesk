@@ -32,34 +32,61 @@ EVALUABLE_STATUSES = {"sample", "available", "cached"}
 
 def event_dict(ev: AlertEvent, symbol: str) -> dict:
     return {
-        "id": ev.id, "alert_id": ev.alert_id, "symbol": symbol, "arm_seq": ev.arm_seq, "direction": ev.direction,
-        "target_price": ev.target_price, "observed_price": ev.observed_price,
-        "observed_market_time": ev.observed_market_time, "provider": ev.provider, "triggered_at": ev.triggered_at,
+        "id": ev.id,
+        "alert_id": ev.alert_id,
+        "symbol": symbol,
+        "arm_seq": ev.arm_seq,
+        "direction": ev.direction,
+        "target_price": ev.target_price,
+        "observed_price": ev.observed_price,
+        "observed_market_time": ev.observed_market_time,
+        "provider": ev.provider,
+        "triggered_at": ev.triggered_at,
         "read_at": ev.read_at,
     }
 
 
 def alert_dict(a: Alert) -> dict:
     return {
-        "id": a.id, "symbol": a.instrument.symbol, "instrument": instrument_dict(a.instrument),
-        "direction": a.direction, "target_price": a.target_price, "note": a.note, "active": a.active,
-        "arm_seq": a.arm_seq, "armed_at": a.armed_at, "last_evaluated_at": a.last_evaluated_at,
-        "last_observed_price": a.last_observed_price, "last_observed_market_time": a.last_observed_market_time,
-        "created_at": a.created_at, "events": [event_dict(e, a.instrument.symbol) for e in a.events[:20]],
+        "id": a.id,
+        "symbol": a.instrument.symbol,
+        "instrument": instrument_dict(a.instrument),
+        "direction": a.direction,
+        "target_price": a.target_price,
+        "note": a.note,
+        "active": a.active,
+        "arm_seq": a.arm_seq,
+        "armed_at": a.armed_at,
+        "last_evaluated_at": a.last_evaluated_at,
+        "last_observed_price": a.last_observed_price,
+        "last_observed_market_time": a.last_observed_market_time,
+        "created_at": a.created_at,
+        "events": [event_dict(e, a.instrument.symbol) for e in a.events[:20]],
     }
 
 
 def _check_target(value: Decimal) -> None:
     if value <= 0 or places(value) > 4:
-        raise AppError(422, "validation_error", "Target price must be positive with at most 4 decimal places.",
-                       {"fields": [{"field": "target_price", "message": "Use a positive price (max 4 decimals)."}]})
+        raise AppError(
+            422,
+            "validation_error",
+            "Target price must be positive with at most 4 decimal places.",
+            {"fields": [{"field": "target_price", "message": "Use a positive price (max 4 decimals)."}]},
+        )
 
 
 async def create_alert(db: Session, market: MarketDataService, payload: dict) -> Alert:
     _check_target(payload["target_price"])
     inst = await resolve_instrument(db, market, payload["symbol"])
-    a = Alert(instrument_id=inst.id, direction=payload["direction"], target_price=payload["target_price"],
-              note=(payload.get("note") or "").strip() or None, active=True, arm_seq=1, armed_at=datetime.now(UTC))
+    a = Alert(
+        instrument_id=inst.id,
+        direction=payload["direction"],
+        target_price=payload["target_price"],
+        note=(payload.get("note") or "").strip() or None,
+        active=True,
+        arm_seq=1,
+        armed_at=datetime.now(UTC),
+    )
     db.add(a)
     db.commit()
     db.refresh(a)
@@ -117,8 +144,11 @@ def list_alerts(db: Session) -> list[Alert]:
 
 
 def list_events(db: Session, limit: int, unread_only: bool = False) -> list[dict]:
-    q = select(AlertEvent, Instrument.symbol).join(Alert, Alert.id == AlertEvent.alert_id).join(
-        Instrument, Instrument.id == Alert.instrument_id)
+    q = (
+        select(AlertEvent, Instrument.symbol)
+        .join(Alert, Alert.id == AlertEvent.alert_id)
+        .join(Instrument, Instrument.id == Alert.instrument_id)
+    )
     if unread_only:
         q = q.where(AlertEvent.read_at.is_(None))
     q = q.order_by(AlertEvent.triggered_at.desc()).limit(limit)
@@ -135,22 +165,33 @@ def mark_read(db: Session, event_id: int | None = None) -> int:
 
 
 # --------------------------------------------------------------------------- evaluation
-def record_observation(db: Session, inst: Instrument, provider: str, q: QuoteSnapshot, fetched_at: datetime) -> QuoteObservation:
-    existing = db.scalar(select(QuoteObservation).where(
-        QuoteObservation.instrument_id == inst.id, QuoteObservation.provider == provider,
-        QuoteObservation.market_time == q.market_time))
+def record_observation(
+    db: Session, inst: Instrument, provider: str, q: QuoteSnapshot, fetched_at: datetime
+) -> QuoteObservation:
+    existing = db.scalar(
+        select(QuoteObservation).where(
+            QuoteObservation.instrument_id == inst.id,
+            QuoteObservation.provider == provider,
+            QuoteObservation.market_time == q.market_time,
+        )
+    )
     if existing is not None:
         return existing
-    obs = QuoteObservation(instrument_id=inst.id, provider=provider, price=q.last_price, market_time=q.market_time,
-                           fetched_at=fetched_at)
+    obs = QuoteObservation(
+        instrument_id=inst.id, provider=provider, price=q.last_price, market_time=q.market_time, fetched_at=fetched_at
+    )
     db.add(obs)
     try:
         db.commit()
     except IntegrityError:  # recorded concurrently by another process
         db.rollback()
-        return db.scalar(select(QuoteObservation).where(
-            QuoteObservation.instrument_id == inst.id, QuoteObservation.provider == provider,
-            QuoteObservation.market_time == q.market_time))
+        return db.scalar(
+            select(QuoteObservation).where(
+                QuoteObservation.instrument_id == inst.id,
+                QuoteObservation.provider == provider,
+                QuoteObservation.market_time == q.market_time,
+            )
+        )
     return obs
 
 
@@ -172,9 +213,16 @@ def evaluate_alert(db: Session, alert: Alert, obs: QuoteObservation, provider: s
     event = None
     if matches(alert.direction, alert.target_price, obs.price):
         event = AlertEvent(
-            alert_id=alert.id, arm_seq=alert.arm_seq, event_key=f"{alert.id}:{alert.arm_seq}",
-            observation_id=obs.id, direction=alert.direction, target_price=alert.target_price,
-            observed_price=obs.price, observed_market_time=obs.market_time, provider=provider, triggered_at=now,
+            alert_id=alert.id,
+            arm_seq=alert.arm_seq,
+            event_key=f"{alert.id}:{alert.arm_seq}",
+            observation_id=obs.id,
+            direction=alert.direction,
+            target_price=alert.target_price,
+            observed_price=obs.price,
+            observed_market_time=obs.market_time,
+            provider=provider,
+            triggered_at=now,
         )
         db.add(event)
         alert.active = False
@@ -198,8 +246,14 @@ async def run_evaluation_cycle(db: Session, market: MarketDataService) -> dict:
     for a in alerts:
         if a.instrument.provider == provider:
             by_symbol.setdefault(a.instrument.symbol, []).append(a)
-    summary = {"active_alerts": len(alerts), "symbols": len(by_symbol), "evaluated": 0, "triggered": 0,
-               "skipped": [], "provider": provider}
+    summary = {
+        "active_alerts": len(alerts),
+        "symbols": len(by_symbol),
+        "evaluated": 0,
+        "triggered": 0,
+        "skipped": [],
+        "provider": provider,
+    }
     if not by_symbol:
         return summary
     results: dict[str, Result[QuoteSnapshot]] = await market.quotes(list(by_symbol))
