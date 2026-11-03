@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import threading
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -19,6 +21,7 @@ from marketdesk.api import (
     routes_portfolio,
     routes_system,
     routes_watchlists,
+    timing,
 )
 from marketdesk.api.errors import error_body, install_error_handlers
 from marketdesk.config import REPO_ROOT, Settings, get_settings, validate_settings
@@ -71,6 +74,9 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
 
         ensure_migrated(settings.effective_database_url, settings.data_dir)
         _stamp_database_created()
+        warm = getattr(app.state.market.provider, "warm", None)
+        if warm is not None:  # load the market-data library without delaying the first page
+            threading.Thread(target=warm, name="provider-warm", daemon=True).start()
         yield
 
     app = FastAPI(
@@ -100,9 +106,15 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
         hash_file = static / "csp-hash.txt"
         csp_hash = hash_file.read_text().strip() if hash_file.exists() else None
 
+    timing.install_db_listeners()
+
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
+        started = time.perf_counter()
+        timings = timing.start()
         response = await call_next(request)
+        if request.url.path.startswith("/api/"):
+            response.headers["Server-Timing"] = timing.header(timings, (time.perf_counter() - started) * 1000)
         for k, v in SECURITY_HEADERS.items():
             if k == "Content-Security-Policy":
                 v = v.replace("'sha256-REPLACED_AT_BUILD'", f"'{csp_hash}'" if csp_hash else "")

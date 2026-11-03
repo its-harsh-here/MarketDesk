@@ -21,7 +21,7 @@ export function usePatchPrefs() {
 }
 
 export function useStatus() {
-  return useQuery({ queryKey: ["status"], queryFn: () => api.get<Status>("/api/status"), refetchInterval: 30_000, staleTime: 10_000 });
+  return useQuery({ queryKey: ["status"], queryFn: () => api.get<Status>("/api/status"), refetchInterval: 60_000, staleTime: 30_000 });
 }
 
 export function useFixture() {

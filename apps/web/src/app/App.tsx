@@ -29,6 +29,8 @@ const queryClient = new QueryClient({
     queries: {
       retry: (count, err) => !(err instanceof ApiError && err.status >= 400 && err.status < 500) && count < 2,
       refetchOnWindowFocus: true,
+      // Moving between pages reuses results fetched in the last 15 s instead of refetching everything.
+      staleTime: 15_000,
     },
   },
 });

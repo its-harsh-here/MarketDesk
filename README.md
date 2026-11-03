@@ -71,6 +71,10 @@ cookies and survive restarts on their own.
    Instance type **Free**, Environment → add `DATABASE_URL`, and remove any custom start command.
 3. Open `https://<service>.onrender.com`, sign in, and check **Settings → Data status → Storage**: it should say
    *external PostgreSQL database*. The Overview shows a warning if data is not persistent.
+4. Check **Settings → Data status → Database round trip**. Same-region hosting answers in a few milliseconds; around
+   100 ms or more means the web service and the database are in different regions, and every page waits for several
+   round trips. Both regions are fixed when created: create the Render service in **Singapore** to match a Neon
+   project in *AWS Asia Pacific (Singapore)* (or the other way round).
 
 Free-tier trade-offs (Render docs, Nov 2026): the service sleeps after 15 minutes without visits and takes about a
 minute to wake; **price alerts are only evaluated while it is awake**; 750 free instance hours per month. Neon's free
@@ -105,8 +109,13 @@ If Docker Hub rate-limits pulls, set `PYTHON_IMAGE=mirror.gcr.io/library/python:
 - The image's entrypoint makes `/data` writable (platform disks are mounted root-owned) and drops to the unprivileged
   `marketdesk` user; no MarketDesk process runs as root. CLI commands run through `docker compose exec` also switch
   to that user automatically.
-- Default command: `python -m marketdesk.serve` — validate settings, migrate, then supervise web + worker in one
-  container (Render, Fly.io, a single VM), listening on `$PORT`. Compose runs migrate, web and worker separately.
+- Default command: `python -m marketdesk.serve` — supervises web + worker in one container (Render, Fly.io, a single
+  VM), listening on `$PORT`. The web server starts first (it migrates the database and answers as soon as it can);
+  the alert worker starts `WORKER_START_DELAY_SECONDS` (default 45) after the site is up, at lower CPU priority
+  (`WORKER_NICE`, default 10), so a 0.1-CPU free instance serves pages first. Compose runs migrate, web and worker
+  separately.
+- Every `/api` response carries a `Server-Timing` header (application time, database time and statement count),
+  visible in the browser's network panel, for diagnosing slow pages. It contains durations only.
 - Storage: SQLite at `DATA_DIR` (needs a persistent mount) or PostgreSQL via `DATABASE_URL` (`postgres://` URLs are
   accepted as given). Both are covered by the test suite and CI.
 - Production refuses to start if credentials or the session secret are missing, or if `DATA_PROVIDER=fixture`.

@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import math
 import re
+import threading
 import time
 from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -197,17 +198,38 @@ class YahooProvider:
     is_sample = False
 
     def __init__(self, timeout: float = 10.0, cache_dir: Path | None = None):
-        import yfinance as yf
-
-        self._yf = yf
         self.timeout = timeout
+        self._cache_dir = cache_dir
         self._summary_blocked_until = 0.0
-        # Raise errors instead of logging and returning empty frames.
-        yf.config.debug.hide_exceptions = False
-        yf.config.network.retries = 0  # MarketDesk applies its own bounded retry policy
-        if cache_dir is not None:
-            cache_dir.mkdir(parents=True, exist_ok=True)
-            yf.set_tz_cache_location(str(cache_dir))
+        self._module = None
+        self._import_lock = threading.Lock()
+
+    # yfinance (with pandas) takes about a second of CPU to import, which is ten seconds on a
+    # 0.1-CPU free instance. It is imported on first use (or by warm() in the background) so the
+    # web server can answer before it is loaded.
+    @property
+    def _yf(self):
+        if self._module is None:
+            with self._import_lock:
+                if self._module is None:
+                    import yfinance as yf
+
+                    # Raise errors instead of logging and returning empty frames.
+                    yf.config.debug.hide_exceptions = False
+                    yf.config.network.retries = 0  # MarketDesk applies its own bounded retry policy
+                    if self._cache_dir is not None:
+                        self._cache_dir.mkdir(parents=True, exist_ok=True)
+                        yf.set_tz_cache_location(str(self._cache_dir))
+                    self._module = yf
+        return self._module
+
+    @_yf.setter
+    def _yf(self, module) -> None:  # tests substitute a fake module
+        self._module = module
+
+    def warm(self) -> None:
+        """Import yfinance now (called from a background thread after startup)."""
+        _ = self._yf
 
     def cache_namespace(self) -> str:
         return "y2"  # bump when the shape or wording of cached provider payloads changes

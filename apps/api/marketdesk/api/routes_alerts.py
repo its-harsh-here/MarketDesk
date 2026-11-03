@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
 from marketdesk.api.deps import market_dep, require_reader, require_writer
+from marketdesk.asyncbridge import off_event_loop
 from marketdesk.db import get_db
 from marketdesk.schemas import AlertEventOut, AlertIn, AlertOut, AlertPatch
 from marketdesk.services import alerts as svc
@@ -18,6 +19,7 @@ def list_alerts(db: Session = Depends(get_db)):
 
 
 @router.post("/alerts", response_model=AlertOut, status_code=201, dependencies=[Depends(require_writer)])
+@off_event_loop
 async def create(body: AlertIn, db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)):
     return svc.alert_dict(await svc.create_alert(db, market, body.model_dump()))
 

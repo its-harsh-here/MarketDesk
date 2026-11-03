@@ -27,6 +27,7 @@ from typing import Any, Generic, Literal, TypeVar
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from marketdesk.asyncbridge import run_on_home_loop
 from marketdesk.config import Settings
 from marketdesk.models import MarketCacheEntry
 from marketdesk.providers.base import (
@@ -244,22 +245,35 @@ class MarketDataService:
         return DataMeta(source=self.provider.name, status=status, message=err.message, error_kind=err.kind)
 
     async def _get(self, kind: str, ident: str, fn: Callable[[], Any]) -> Result:
+        # The cache, de-duplication and breakers belong to the server's event loop; handlers running
+        # on a private loop (see marketdesk.asyncbridge) are forwarded there.
+        return await run_on_home_loop(lambda: self._get_here(kind, ident, fn))
+
+    def _key_and_bypass(self, kind: str, ident: str) -> tuple[str, bool]:
         try:
             key = self._key(kind, ident)
         except Exception as exc:  # fixture state read failure etc.
             log.warning("cache key failed: %s", type(exc).__name__)
             key = f"{kind}:{self.provider.name}:?:{ident}"
-        now_mono = time.monotonic()
-        entry = self._mem.get(key)
         # Fixture outage drills bypass fresh-cache shortcuts so the stale path is exercised.
         bypass = bool(getattr(self.provider, "simulating_outage", lambda: False)())
+        return key, bypass
+
+    async def _get_here(self, kind: str, ident: str, fn: Callable[[], Any]) -> Result:
+        if self.provider.is_sample:
+            # The fixture provider reads its replay state from the database: never on the event loop.
+            key, bypass = await asyncio.to_thread(self._key_and_bypass, kind, ident)
+        else:
+            key, bypass = self._key_and_bypass(kind, ident)
+        now_mono = time.monotonic()
+        entry = self._mem.get(key)
         if entry is not None and entry.expires_at > now_mono and not bypass:
             self._mem.move_to_end(key)
             if entry.error is not None:
                 return Result(None, self._error_meta(entry.error))
             return Result(entry.value, self._meta_for(kind, entry.value, "cached", entry.fetched_at))
 
-        persisted = self._persist_get(key, kind)
+        persisted = await asyncio.to_thread(self._persist_get, key, kind) if self._sf is not None else None
         if persisted is not None and not bypass:
             value, fetched_at = persisted
             age = (datetime.now(UTC) - fetched_at).total_seconds()
@@ -316,7 +330,8 @@ class MarketDataService:
         circuit.record_success()
         fetched_at = datetime.now(UTC)
         self._mem_put(key, _MemEntry(value, fetched_at, time.monotonic() + self.ttl[kind]))
-        self._persist_put(key, kind, value, fetched_at)
+        if self._sf is not None:
+            await asyncio.to_thread(self._persist_put, key, kind, value, fetched_at)
         return Result(value, self._meta_for(kind, value, "available", fetched_at))
 
     async def _run_with_retry(self, fn: Callable[[], Any]) -> Any:

@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 2026-11-03 — real-data-only product; deployment-ready for Render or Docker Compose (not yet deployed)._
+_Last updated: 2026-11-03 — real-data-only product, live on Render Free + Neon PostgreSQL; performance pass in review._
 
 ## Done
 - **Real data only** (owner directive): Yahoo is the default; the synthetic fixture provider is a test harness that
@@ -105,12 +105,32 @@ Live journeys passing: sign-in, overview, watchlist create/add (click and quick-
 candles, index page, command palette, alert create/delete, journal create/delete, transaction dialog validation
 (not submitted — real ledger), settings/data status, phone layouts (no overflow), reload keeps session.
 
-## Free hosting (PostgreSQL) — in review
-- Branch `claude/gifted-babbage-cg6smx`, pull request to `main` (owner reviews and merges every change from now on).
+## Free hosting (PostgreSQL) — merged (PR #1), live
+- The owner merged the PR and set `DATABASE_URL` (Neon, AWS ap-southeast-1 pooler); live storage check reports the
+  external database as persistent and the worker as running.
 - Verified: full pytest suite on PostgreSQL 17 (84 passed, SQLite-only backup test skipped) and on SQLite (85 passed);
   `alembic check` clean on Postgres; production image with no disk + external Postgres: data, ledger and sign-in
   survived destroying and recreating the container; storage check reports external Postgres as persistent.
 - Owner actions after merging: create a free Neon project, set `DATABASE_URL` on Render, switch the instance to Free.
+
+## Performance pass (owner report: "the site became pretty slow")
+Live baseline (signed in, from a US-East client): `/api/health` 0.25–0.44 s; every database-backed endpoint ≈ 1.1 s;
+briefing 2.2 s; first quote fetch for 6 symbols 10.7 s; cold start ≈ 84 s. Diagnosis and changes: decision 34.
+
+Measured in this environment (same code before → after):
+| Scenario | Before | After |
+| --- | --- | --- |
+| Postgres behind a 120 ms round-trip proxy: `/api/settings` | 742 ms | 251 ms |
+| same: `/api/auth/session` | 493 ms | 2 ms |
+| same: briefing / journal | 1611 / 1238 ms | 750 / 745 ms (now 6 / 4 statements) |
+| same: Overview burst (11 parallel requests, wall time) | 2.8–3.4 s | 0.8–1.3 s |
+| 0.1 CPU / 512 MB container (Render Free emulation): boot to first `/api/health` | 98.9 s | 35 s |
+| same, after startup settles: settings / status / session | 96 / 94 / 7 ms | 6 / 8 / 3 ms |
+| same: login | 6.4 s | 2.7 s |
+
+Checks: pytest 94 passed (SQLite) and 93 passed + 1 skipped (PostgreSQL 17); Vitest 21 passed; Playwright journeys
+10/10 on SQLite and 10/10 on PostgreSQL (the PostgreSQL run caught a connection-pool starvation, fixed before commit).
+Live re-measurement after deploy: see below.
 
 ## Next — deployment (owner chose Render)
 1. Generate the password hash (README → Deploy).

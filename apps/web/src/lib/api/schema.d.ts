@@ -1377,6 +1377,8 @@ export interface components {
             message: string;
             /** Database Created At */
             database_created_at?: string | null;
+            /** Round Trip Ms */
+            round_trip_ms?: number | null;
         };
         /** TransactionIn */
         TransactionIn: {

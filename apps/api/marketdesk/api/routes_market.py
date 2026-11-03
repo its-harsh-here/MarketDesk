@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from marketdesk.api.deps import market_dep, require_reader, settings_dep
 from marketdesk.api.errors import AppError
+from marketdesk.asyncbridge import off_event_loop
 from marketdesk.config import Settings
 from marketdesk.db import get_db
 from marketdesk.models import Instrument
@@ -39,6 +40,7 @@ def benchmark_symbols(settings: Settings, market: MarketDataService) -> list[str
 
 
 @router.get("/search", response_model=SearchResultOut)
+@off_event_loop
 async def search(
     q: str = Query(min_length=1, max_length=64),
     limit: int = Query(default=10, ge=1, le=20),
@@ -71,6 +73,7 @@ async def search(
 
 
 @router.get("/snapshots", response_model=list[SnapshotOut])
+@off_event_loop
 async def snapshots(
     symbols: str = Query(min_length=1, max_length=2000),
     db: Session = Depends(get_db),
@@ -85,6 +88,7 @@ async def snapshots(
 
 
 @router.get("/benchmarks", response_model=list[SnapshotOut])
+@off_event_loop
 async def benchmarks(
     db: Session = Depends(get_db),
     settings: Settings = Depends(settings_dep),

@@ -109,13 +109,19 @@ export function SettingsPage() {
               {health.last_error && <Row label="Last error"><span className="text-warn">{health.last_error.message}</span></Row>}
               <Row label="Storage">
                 {status.storage.persistent ? (
-                  <span>Persistent disk · <span className="num">{status.storage.path}</span></span>
+                  <span>Persistent · <span className="num">{status.storage.path}</span></span>
                 ) : status.storage.warning ? (
                   <span className="text-warn">Not persistent — see warning below</span>
                 ) : (
                   <span className="num">{status.storage.path}</span>
                 )}
               </Row>
+              {status.storage.round_trip_ms != null && (
+                <Row label="Database round trip">
+                  <span className="num">{Math.round(status.storage.round_trip_ms)} ms</span>
+                  {status.storage.round_trip_ms >= 40 && <span className="text-warn"> · slow: web service and database are probably in different regions</span>}
+                </Row>
+              )}
               {status.storage.database_created_at && (
                 <Row label="Database created">
                   <span title={formatInstant(status.storage.database_created_at, tz)}>{formatRelative(status.storage.database_created_at)}</span>

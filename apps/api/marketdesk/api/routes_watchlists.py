@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
 from marketdesk.api.deps import market_dep, require_reader, require_writer, settings_dep
+from marketdesk.asyncbridge import off_event_loop
 from marketdesk.config import Settings
 from marketdesk.db import get_db
 from marketdesk.schemas import AddSymbolIn, MembershipOut, ReorderIn, WatchlistIn, WatchlistOut, WatchlistPatch
@@ -50,6 +51,7 @@ def delete(wid: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{wid}/items", response_model=WatchlistOut, status_code=201, dependencies=[Depends(require_writer)])
+@off_event_loop
 async def add_item(
     wid: int,
     body: AddSymbolIn,

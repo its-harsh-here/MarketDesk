@@ -432,6 +432,7 @@ class StorageOut(Model):
     warning: bool
     message: str
     database_created_at: datetime | None = None
+    round_trip_ms: float | None = None
 
 
 class StatusOut(Model):
