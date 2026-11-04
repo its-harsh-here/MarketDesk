@@ -186,7 +186,8 @@ class MarketDataService:
         return await self._get("fundamentals", symbol, lambda: self.provider.fundamentals(symbol))
 
     async def statements(self, symbol: str) -> Result[AnnualStatements]:
-        return await self._get("statements", symbol, lambda: self.provider.annual_statements(symbol))
+        # "|v2": entries cached before cash-flow lines were added (M11) are not reused.
+        return await self._get("statements", f"{symbol}|v2", lambda: self.provider.annual_statements(symbol))
 
     async def actions(self, symbol: str) -> Result[list[CorporateAction]]:
         return await self._get("actions", symbol, lambda: self.provider.corporate_actions(symbol))

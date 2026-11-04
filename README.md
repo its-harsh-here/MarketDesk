@@ -269,6 +269,22 @@ Portfolio → **Rebalance**: target weights per holding (saved), then a **simula
 shares and an assumed fee; the proposed share counts are editable and recalculate on the page. Nothing is submitted
 or recorded.
 
+## Earnings and filing analysis
+
+Instrument → **Earnings**:
+- **Results calendar:** past results dates from SEC 8-K Item 2.02 filings (US). The next date is never shown as
+  announced: US — *estimated* from the median gap between past results filings (±7-day window); India — the SEBI LODR
+  33(3) *deadline* (45 days after a quarter, 60 after the financial year). No consensus estimates, so no "surprise".
+  "Remind me" creates a **Results reminder** alert (N days before; once per date; inbox). Alerts → **Upcoming results**
+  lists dates across watchlists, holdings, lists, peers and alerts.
+- **Reported changes:** vs a year ago and vs the prior quarter from SEC quarterly facts (three-month durations only —
+  never year-to-date), fiscal-year changes from annual facts or the provider's statements; margins in percentage
+  points; restated values marked; every value links to its filing.
+- **What changed in the risk factors:** Item 1A paragraphs added, removed or reworded between the latest two 10-Ks
+  (or 10-Qs), quoted from the filings. **Guidance:** sentences about guidance/outlook with a figure, quoted from recent
+  results releases. Nothing is paraphrased.
+- **Bull · base · bear brief:** an AI research task (M03 pipeline) with three cited cases and explicit assumptions.
+
 ## Valuation lab
 
 Instrument → **Valuation** (every output labelled hypothetical — not a fair value, forecast or recommendation):

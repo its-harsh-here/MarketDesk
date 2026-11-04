@@ -19,6 +19,7 @@ from marketdesk import __version__
 from marketdesk.api import (
     routes_ai,
     routes_alerts,
+    routes_earnings,
     routes_inbox,
     routes_journal,
     routes_market,
@@ -168,6 +169,7 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
         routes_screener,
         routes_performance,
         routes_valuation,
+        routes_earnings,
     ):
         app.include_router(r.router)
 

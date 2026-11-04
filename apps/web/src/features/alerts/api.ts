@@ -21,14 +21,14 @@ export function useAlerts() {
   return useQuery({ queryKey: ["alerts"], queryFn: () => api.get<Alert[]>("/api/alerts"), refetchInterval });
 }
 
-export type RuleName = "PRICE" | "CROSS" | "VOLUME" | "VOLATILITY" | "FILING";
+export type RuleName = "PRICE" | "CROSS" | "VOLUME" | "VOLATILITY" | "FILING" | "EARNINGS";
 
 export interface AlertInput {
   symbol: string;
   rule: RuleName;
   direction: "ABOVE" | "BELOW";
   target_price?: string | null;
-  params?: { lookback?: number; forms?: string[] } | null;
+  params?: { lookback?: number; forms?: string[]; days_before?: number } | null;
   cooldown_minutes?: number | null;
   quiet_start?: string | null;
   quiet_end?: string | null;

@@ -9,6 +9,7 @@ Granularity per rule:
 - VOLATILITY: completed daily sessions only. Fires when |daily close-to-close return| >= multiple x the standard
   deviation of the previous `lookback` daily returns.
 - FILING: new SEC filings (US listings) of the chosen forms, checked with the research service.
+- EARNINGS: a reminder N days before the next results date (an estimate or a regulatory deadline, never announced).
 Missing data policy (all rules): if the required data is missing, stale, or there are too few comparable sessions,
 the rule is not evaluated and the reason is recorded; missing values are never treated as zero.
 """
@@ -20,7 +21,7 @@ from decimal import Decimal
 from statistics import mean, pstdev
 from zoneinfo import ZoneInfo
 
-RULES = ("PRICE", "CROSS", "VOLUME", "VOLATILITY", "FILING")
+RULES = ("PRICE", "CROSS", "VOLUME", "VOLATILITY", "FILING", "EARNINGS")
 FILING_FORMS = ("10-K", "10-Q", "8-K", "20-F", "6-K", "DEF 14A")
 
 

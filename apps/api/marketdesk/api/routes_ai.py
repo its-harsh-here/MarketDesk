@@ -27,7 +27,7 @@ MAX_RUNNING = 2
 
 
 class AskIn(Model):
-    kind: Literal["ask", "results", "catalysts", "compare"]
+    kind: Literal["ask", "results", "catalysts", "compare", "brief"]
     symbols: list[str] = Field(min_length=1, max_length=3)
     question: str = Field(default="", max_length=500)
 

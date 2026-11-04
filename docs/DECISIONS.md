@@ -218,4 +218,11 @@ Consequential choices, newest last. Routine choices live in code comments.
     statements gained operating cash flow, capex and cash (Yahoo cash-flow statement; cache entries from before stay
     readable). Peer multiples use the M06 peer group and snapshots. Stress tests apply instantaneous shocks to current
     marks. Saved scenarios (`valuation_scenarios`) are owner data and backed up.
+46. **Earnings dates are estimates or deadlines, never announcements (M07, 4 Nov 2026).** Without a verified, permitted
+    calendar or consensus source, MarketDesk shows past results dates from SEC 8-K Item 2.02 filings, a US next date
+    estimated from the median gap of past results filings (only when it looks quarterly, ±7 days), and for Indian
+    listings the SEBI LODR 33(3) deadline. Earnings "surprises" are not computed. Period changes use SEC quarterly
+    facts (three-month durations; year-to-date never mixed) or annual statements. Filing changes and guidance are
+    deterministic quotes from the filings (Item 1A paragraph diff; guidance sentences with figures), not summaries.
+    Results reminders are an alert rule (EARNINGS) evaluated by the worker, one event per date.
 

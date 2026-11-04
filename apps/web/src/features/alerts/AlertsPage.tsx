@@ -1,5 +1,6 @@
 import { Bell, ExternalLink, Newspaper, Pause, Pencil, Play, Plus, RotateCcw, SkipForward, Trash } from "lucide-react";
 import { useState } from "react";
+import { UpcomingResultsPanel } from "@/features/earnings/EarningsTab";
 import { useDialogs } from "@/app/dialogs";
 import { Panel } from "@/components/ui/Panel";
 import { Button, IconButton } from "@/components/ui/Button";
@@ -85,7 +86,7 @@ function WorkerPanel() {
 
 /** When the alert next becomes active again, in words. */
 export function alertState(a: Alert, now = Date.now()): { label: string; tone: "pos" | "accent" | "neutral" | "info" } {
-  if (a.active) return { label: a.rule === "FILING" ? "Watching" : "Armed", tone: "pos" };
+  if (a.active) return { label: a.rule === "FILING" || a.rule === "EARNINGS" ? "Watching" : "Armed", tone: "pos" };
   if (a.rearm_at) {
     const mins = Math.max(1, Math.round((new Date(a.rearm_at).getTime() - now) / 60000));
     return { label: `Rearms in ${mins < 90 ? `${mins} min` : `${Math.round(mins / 60)} h`}`, tone: "info" };
@@ -96,6 +97,7 @@ export function alertState(a: Alert, now = Date.now()): { label: string; tone: "
 
 function lastObserved(a: Alert, tz?: string) {
   if (a.rule === "FILING") return <span className="text-xs text-fg-3">SEC filings</span>;
+  if (a.rule === "EARNINGS") return <span className="text-xs text-fg-3">Results calendar</span>;
   if (a.rule === "VOLUME" || a.rule === "VOLATILITY")
     return <span className="text-xs text-fg-2">{a.last_observed_market_time ? `Session ${formatSessionDate(a.last_observed_market_time)}` : "No session yet"}</span>;
   return (
@@ -142,7 +144,7 @@ function InboxRow({ item, tz, readOnly }: { item: InboxItem; tz?: string; readOn
           {item.type === "alert" ? "Detected" : "Generated"} <span className="num">{formatInstant(item.at, tz)}</span>
           {item.alert?.observed_market_time && (
             <>
-              {" "}· {item.alert.rule === "VOLUME" || item.alert.rule === "VOLATILITY" ? "session" : item.alert.rule === "FILING" ? "filed" : "market time"}{" "}
+              {" "}· {item.alert.rule === "VOLUME" || item.alert.rule === "VOLATILITY" ? "session" : item.alert.rule === "FILING" ? "filed" : item.alert.rule === "EARNINGS" ? "reminded" : "market time"}{" "}
               <span className="num">
                 {item.alert.rule === "PRICE" || item.alert.rule === "CROSS" ? formatInstant(item.alert.observed_market_time, tz) : formatSessionDate(item.alert.observed_market_time)}
               </span>
@@ -356,7 +358,10 @@ export function AlertsPage() {
           />
         )}
       </Panel>
-      <WorkerPanel />
+      <div className="space-y-4 lg:col-span-4 lg:space-y-5">
+        <WorkerPanel />
+        <UpcomingResultsPanel />
+      </div>
       <InboxPanel readOnly={readOnly} tz={tz} />
       {!readOnly && <InlineNotice className="lg:col-span-12">Only in-app notices are available. Email, Telegram and background push are not configured.</InlineNotice>}
       <ConfirmDialog

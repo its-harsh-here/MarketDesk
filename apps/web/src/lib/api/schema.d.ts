@@ -1359,6 +1359,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/earnings/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Calendar */
+        get: operations["calendar_api_earnings_calendar_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/earnings/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Summary */
+        get: operations["summary_api_earnings__symbol__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/earnings/{symbol}/filing-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Filing Changes */
+        get: operations["filing_changes_api_earnings__symbol__filing_changes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/earnings/{symbol}/guidance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Guidance */
+        get: operations["guidance_api_earnings__symbol__guidance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1454,7 +1522,7 @@ export interface components {
              * @default PRICE
              * @enum {string}
              */
-            rule: "PRICE" | "CROSS" | "VOLUME" | "VOLATILITY" | "FILING";
+            rule: "PRICE" | "CROSS" | "VOLUME" | "VOLATILITY" | "FILING" | "EARNINGS";
             /**
              * Direction
              * @default ABOVE
@@ -1539,6 +1607,8 @@ export interface components {
             lookback?: number | null;
             /** Forms */
             forms?: ("10-K" | "10-Q" | "8-K" | "20-F" | "6-K" | "DEF 14A")[] | null;
+            /** Days Before */
+            days_before?: number | null;
         };
         /** AlertPatch */
         AlertPatch: {
@@ -1563,7 +1633,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "ask" | "results" | "catalysts" | "compare";
+            kind: "ask" | "results" | "catalysts" | "compare" | "brief";
             /** Symbols */
             symbols: string[];
             /**
@@ -5922,6 +5992,121 @@ export interface operations {
                 "application/json": components["schemas"]["StressIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    calendar_api_earnings_calendar_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    summary_api_earnings__symbol__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    filing_changes_api_earnings__symbol__filing_changes_get: {
+        parameters: {
+            query?: {
+                form?: "10-K" | "10-Q" | "20-F";
+            };
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    guidance_api_earnings__symbol__guidance_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

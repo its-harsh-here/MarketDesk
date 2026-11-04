@@ -19,6 +19,7 @@ const TASKS: { value: AiKind; label: string; hint: string }[] = [
   { value: "results", label: "Latest results", hint: "Summarise the latest reported results from the filings and statements." },
   { value: "catalysts", label: "Catalysts", hint: "Possible catalysts and risks visible in the evidence, each marked confirmed, scheduled or possible." },
   { value: "compare", label: "Compare", hint: "Side by side with one or two other listings, using each company's latest fiscal year." },
+  { value: "brief", label: "Bull · base · bear", hint: "Three cases, each with its explicit assumptions and the cited facts for and against them. No price targets." },
   { value: "ask", label: "Ask", hint: "Your own question, answered only from the evidence MarketDesk retrieves." },
 ];
 const KIND_LABEL = { fact: "Fact", calculation: "Calculation", interpretation: "Interpretation" } as const;
@@ -140,6 +141,7 @@ export function AiDialog() {
   const isOpen = state.kind === "ai";
   const symbol = state.kind === "ai" ? state.symbol : "";
   const prefill = state.kind === "ai" ? state.question : undefined;
+  const presetTask = state.kind === "ai" ? state.task : undefined;
   const { data: session } = useSession();
   const status = useAiStatus(isOpen);
   const previous = useAiAnswers(symbol, isOpen);
@@ -164,8 +166,9 @@ export function AiDialog() {
       setPeers([]);
       setQuestion(prefill ?? "");
       if (prefill) setKind("ask");
+      else if (presetTask) setKind(presetTask);
     }
-  }, [isOpen, symbol, prefill]);
+  }, [isOpen, symbol, prefill, presetTask]);
   const st = status.data;
   const readOnly = Boolean(session?.read_only);
   const task = TASKS.find((t) => t.value === kind)!;

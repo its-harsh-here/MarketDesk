@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 
-export type AiKind = "ask" | "results" | "catalysts" | "compare";
+export type AiKind = "ask" | "results" | "catalysts" | "compare" | "brief";
 export type AiStatus = {
   enabled: boolean;
   reason: string | null;

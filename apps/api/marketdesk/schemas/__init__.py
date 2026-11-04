@@ -383,13 +383,14 @@ class ImportCommitOut(Model):
 
 
 # ----------------------------------------------------------------------------- alerts
-RuleName = Literal["PRICE", "CROSS", "VOLUME", "VOLATILITY", "FILING"]
+RuleName = Literal["PRICE", "CROSS", "VOLUME", "VOLATILITY", "FILING", "EARNINGS"]
 HHMM = Annotated[str, Field(pattern=r"^([01][0-9]|2[0-3]):[0-5][0-9]$")]
 
 
 class AlertParams(Model):
     lookback: int | None = Field(default=None, ge=5, le=60)
     forms: list[Literal["10-K", "10-Q", "8-K", "20-F", "6-K", "DEF 14A"]] | None = Field(default=None, max_length=6)
+    days_before: int | None = Field(default=None, ge=0, le=30)  # EARNINGS reminders
 
 
 class AlertIn(Model):

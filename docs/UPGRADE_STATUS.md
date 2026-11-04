@@ -735,6 +735,31 @@ their explained "nothing yet" states; targets and the simulation endpoint respon
 | Playwright | 19 journeys pass (new: valuation lab — sourced defaults, rejected terminal growth, sensitivity table, saved scenario with AI button, bank refused; stress test preset) |
 | Visual QA | Valuation and stress test at 1440 and 390 px inspected; added readable amounts beside raw inputs ("= ₹1,888.60 Cr"), hid peer names on phones |
 
+**M11 live verification (after deploying 7449a73, 4 Nov 2026).** Production migrated to 0010 (rehearsed first).
+Valuation inputs for the watchlist stocks returned their defaults with sources (shares implied from market cap and
+price; growth from revenue growth); the financial-services stock (IFCI.NS) was correctly refused a generic DCF. Base free
+cash flow showed "not reported" because statements cached before M11 lacked the new cash-flow lines; the statements
+cache key was versioned in the next commit so they are fetched again at once.
+
+## M07 — Earnings and filing analysis (4 Nov 2026)
+- **Calendar** (`services/earnings.py`): past results dates from SEC 8-K Item 2.02; next date estimated from the
+  cadence of past results filings (US, ±7 days, only when quarterly-like) or the SEBI LODR 33(3) deadline (India);
+  never presented as announced; no consensus figures. Universe view (watchlists, holdings, lists, peers, alerts).
+- **Results reminders:** alert rule EARNINGS (0–30 days before; once per date; inbox), evaluated by the worker.
+- **Reported changes:** YoY and QoQ from SEC quarterly facts (three-month durations), FY from annual facts or the
+  provider's statements; margins in pp; restated values marked; links to filings.
+- **Filing changes:** Item 1A paragraphs added/removed/reworded (≥ 60% similarity) between the latest two 10-K/10-Q,
+  quoted. **Guidance:** quoted guidance/outlook sentences with figures from recent results releases.
+- **AI brief:** new research task "brief" (bull/base/bear with explicit assumptions, cited; no targets).
+- **No schema change.**
+
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 17 | 268 passed, 3 skipped / 270 passed, 1 skipped (M07: 8 — cadence estimates, SEBI deadlines incl. year end, QoQ/YoY with restatements and no substitute periods, quoted risk-factor diff, guidance extraction, API on sample data, reminder fires once, brief task) |
+| tsc, eslint, vitest | clean; 32 |
+| Playwright | 20 journeys pass (new: earnings — deadline label and SEBI rule, fiscal-year changes, reminder alert, brief preset, upcoming results) |
+| Visual QA | Earnings tab at 1440 and 390 px inspected (no overflow) |
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -742,4 +767,4 @@ their explained "nothing yet" states; targets and the simulation endpoint respon
 - Portfolio has INR and USD accounts; returns (M09) use daily closes, benchmarks are price indices, and cash earns no interest.
 
 ## Next concrete action
-Phase 11 — **M07 Earnings + filing changes** (see `docs/UPGRADE_PLAN.md`). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
+Phase 12 — **M04 Streaming dashboard** (needs the owner's Alpaca key/secret and feed choice) or **M12 Macro + sector** (see `docs/UPGRADE_PLAN.md`). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.

@@ -568,3 +568,34 @@ test("valuation lab: DCF from sourced defaults, invalid assumption rejected, sen
   await expect(stress.getByRole("table", { name: /Effect of the shocks/ })).toBeVisible({ timeout: 30_000 });
   await expect(stress.getByText(/not a forecast/)).toBeVisible();
 });
+
+test("earnings: deadline (never an announced date), fiscal-year changes, reminder alert, brief task; upcoming results", async ({ page }) => {
+  await page.goto("/instrument/SX%3AAURORA?tab=earnings");
+  await ready(page);
+  const cal = page.getByRole("region", { name: "Results calendar" });
+  await expect(cal.getByText("deadline", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(cal.getByText(/SEBI LODR Regulation 33\(3\)/)).toBeVisible();
+  await expect(cal.getByText(/No consensus estimates are used/)).toBeVisible();
+  const chg = page.getByRole("region", { name: "Reported changes" });
+  await expect(chg.getByRole("radio", { name: "Fiscal year" })).toHaveAttribute("aria-checked", "true");
+  await expect(chg.getByRole("rowheader", { name: "Revenue" })).toBeVisible();
+  await page.getByRole("button", { name: "Compare latest two" }).click();
+  await expect(page.getByText(/SEC filings \(US registrants/)).toBeVisible();
+
+  await cal.getByRole("button", { name: "Remind me" }).click();
+  const dlg = page.getByRole("dialog", { name: "Create alert" });
+  await dlg.getByLabel("Condition").selectOption("EARNINGS");
+  await dlg.getByLabel("Days before").fill("7");
+  await dlg.getByRole("button", { name: "Create alert" }).click();
+  await expect(page.getByText("Alert armed for SX:AURORA.")).toBeVisible();
+
+  await cal.getByRole("button", { name: "Bull · base · bear brief" }).click();
+  const ai = page.getByRole("dialog", { name: "Research SX:AURORA" });
+  await expect(ai.getByRole("radio", { name: "Bull · base · bear" })).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("Escape");
+
+  await page.goto("/alerts");
+  const up = page.getByRole("region", { name: "Upcoming results" });
+  await expect(up.getByRole("link", { name: "SX:AURORA" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Results reminder 7 day(s) before the next results date")).toBeVisible();
+});

@@ -63,6 +63,8 @@ def describe(a: Alert) -> str:
         return f"Daily move ≥ {rules.plain(a.target_price)} sd of prior {p.get('lookback', 20)} sessions"
     if a.rule == "FILING":
         return f"New SEC filing: {', '.join(p.get('forms') or rules.FILING_FORMS)}"
+    if a.rule == "EARNINGS":
+        return f"Results reminder {p.get('days_before', 3)} day(s) before the next results date"
     return f"Price {'at or above' if a.direction == 'ABOVE' else 'at or below'} {rules.price_text(a.target_price)}"
 
 
@@ -145,6 +147,12 @@ def _validate(payload: dict, inst: Instrument | None) -> dict:
             raise _bad("params.lookback", "Comparison window must be 5 to 60 sessions.")
         params["lookback"] = lookback
         payload["direction"] = "ABOVE"
+    elif rule == "EARNINGS":
+        days = int((payload.get("params") or {}).get("days_before") or 3)
+        if not 0 <= days <= 30:
+            raise _bad("params.days_before", "Remind 0 to 30 days before the date.")
+        params["days_before"] = days
+        payload["direction"], target = "ABOVE", Decimal("0")
     else:  # FILING
         if inst is not None and inst.country != "US":
             raise _bad("rule", "Filing alerts use SEC filings and are available for US listings only.")
@@ -528,6 +536,28 @@ def evaluate_filings(db: Session, alert: Alert, filings: list[dict]) -> list[Ale
     return out
 
 
+def evaluate_earnings(db: Session, alert: Alert, cal: dict, today: date) -> AlertEvent | None:
+    """One reminder per (alert, next results date) once today is within `days_before` of it."""
+    nxt = cal.get("next") or {}
+    if not alert.active or alert.rule != "EARNINGS" or not nxt.get("date"):
+        alert.last_skip_reason = None if nxt.get("date") else f"No next results date: {cal.get('note') or 'unknown'}"
+        alert.last_evaluated_at = datetime.now(UTC)
+        db.commit()
+        return None
+    due = date.fromisoformat(nxt["date"])
+    days = int((alert.params or {}).get("days_before", 3))
+    alert.last_evaluated_at, alert.last_skip_reason = datetime.now(UTC), None
+    if not due - timedelta(days=days) <= today <= due:
+        db.commit()
+        return None
+    kind = "deadline for results" if nxt.get("basis") == "deadline" else "estimated results date"
+    text = f"{alert.instrument.symbol}: {kind} {due.isoformat()} ({days} day(s) reminder). {nxt.get('explanation', '')}"
+    ev = _fire(db, alert, key=f"{alert.id}:earnings:{due.isoformat()}", provider="calendar", explanation=text,
+               observed_time=datetime.now(UTC), link=None, deactivate=False)
+    db.commit()
+    return ev
+
+
 # --------------------------------------------------------------------------- worker cycle
 async def run_evaluation_cycle(db: Session, market: MarketDataService, research=None) -> dict:
     """Maintenance, then each active rule against new valid data. Errors in one rule never stop the others."""
@@ -596,4 +626,17 @@ async def run_evaluation_cycle(db: Session, market: MarketDataService, research=
             continue
         summary["evaluated"] += 1
         summary["triggered"] += len(evaluate_filings(db, a, env["data"]))
+
+    from marketdesk.services.earnings import calendar_for
+
+    today = datetime.now(UTC).date()
+    for a in [a for a in alerts if a.rule == "EARNINGS"]:
+        try:
+            cal = await calendar_for(db, market, research, a.instrument)
+        except Exception as exc:  # one listing must not stop the others
+            a.last_skip_reason = f"Not evaluated: {type(exc).__name__}"
+            db.commit()
+            continue
+        summary["evaluated"] += 1
+        summary["triggered"] += int(evaluate_earnings(db, a, cal, today) is not None)
     return summary

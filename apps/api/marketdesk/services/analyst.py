@@ -39,7 +39,7 @@ from marketdesk.providers.xai import XaiClient, XaiError, usage_cost_usd
 from marketdesk.services.market import MarketDataService
 
 log = logging.getLogger("marketdesk.analyst")
-KINDS = ("ask", "results", "catalysts", "compare")
+KINDS = ("ask", "results", "catalysts", "compare", "brief")
 CERTAINTIES = ("confirmed", "scheduled", "possible")
 CHARS_PER_TOKEN = 3.4  # JSON evidence measured at ~3.5 characters per token on gpt-oss (4 Nov 2026); slightly lower
 USABLE = {"sample", "available", "cached", "stale"}
@@ -89,6 +89,12 @@ TASKS = {
         "List possible upcoming catalysts or risks visible in the evidence (scheduled filings or events, trends in the "
         "reported figures, items named in filings). Mark each with certainty: confirmed (already happened), scheduled "
         "(a known date) or possible (inferred), and cite the evidence. Do not predict prices."
+    ),
+    "brief": (
+        "Write a research brief with exactly three sections titled 'Bull case', 'Base case' and 'Bear case'. In each, "
+        "state the explicit assumptions the case depends on (as interpretation points) and the reported facts that "
+        "support or contradict them (fact or calculation points, cited). Do not assign probabilities, price targets "
+        "or recommendations."
     ),
     "compare": (
         "Compare the listings using the aligned figures in the comparison source. State each company's period end; "
@@ -377,7 +383,7 @@ async def _listing(ev: Evidence, db, market, research, inst: Instrument, kind: s
         summary["cik"] = env.get("cik")
     if with_release:
         release = next((x for x in filings if x["form"] in ("8-K", "6-K") and "2.02" in (x.get("items") or [])), None)
-        if release is None and kind == "results":
+        if release is None and kind in ("results", "brief"):
             release = next((x for x in filings if x["form"] == "6-K"), None)
         if release is not None:
             try:
@@ -834,7 +840,9 @@ class AnalystService:
             summaries = []
             for inst in insts:
                 summaries.append(
-                    await _listing(ev, db, market, research, inst, answer.kind, answer.kind in ("results", "ask"))
+                    await _listing(
+                        ev, db, market, research, inst, answer.kind, answer.kind in ("results", "ask", "brief")
+                    )
                 )
             if answer.kind == "compare":
                 _comparison(ev, summaries)

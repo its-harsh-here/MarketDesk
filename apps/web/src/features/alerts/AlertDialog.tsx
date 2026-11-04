@@ -20,6 +20,7 @@ export const CONDITIONS = [
   { value: "VOLUME", label: "Unusual volume (completed session)" },
   { value: "VOLATILITY", label: "Unusual daily move (completed session)" },
   { value: "FILING", label: "New SEC filing (US listings)" },
+  { value: "EARNINGS", label: "Results reminder (estimated date or deadline)" },
 ] as const;
 type Condition = (typeof CONDITIONS)[number]["value"];
 
@@ -41,6 +42,7 @@ const schema = z
     level: z.string(),
     lookback: z.string(),
     forms: z.array(z.string()),
+    days: z.string(),
     cooldown: z.string(),
     quiet_start: z.string(),
     quiet_end: z.string(),
@@ -59,6 +61,7 @@ const schema = z
       if (!Number.isInteger(lb) || lb < 5 || lb > 60) ctx.addIssue({ code: "custom", path: ["lookback"], message: "Use 5 to 60 sessions." });
     }
     if (rule === "FILING" && v.forms.length === 0) ctx.addIssue({ code: "custom", path: ["forms"], message: "Choose at least one form." });
+    if (rule === "EARNINGS" && (!/^\d{1,2}$/.test(v.days) || Number(v.days) > 30)) ctx.addIssue({ code: "custom", path: ["days"], message: "Use 0 to 30 days." });
     const qs = v.quiet_start, qe = v.quiet_end;
     if (qs || qe) {
       if (!HHMM.test(qs) || !HHMM.test(qe)) ctx.addIssue({ code: "custom", path: ["quiet_start"], message: "Give both a start and an end time, or neither." });
@@ -84,7 +87,7 @@ export function AlertDialog() {
   const { create, update } = useAlertMutations();
   const toast = useToast();
   const [serverError, setServerError] = useState<string | null>(null);
-  const defaults: Values = { symbol: "", condition: "PRICE:ABOVE", level: "", lookback: "20", forms: ["10-K", "10-Q", "8-K"], cooldown: "", quiet_start: "", quiet_end: "", note: "" };
+  const defaults: Values = { symbol: "", condition: "PRICE:ABOVE", level: "", lookback: "20", forms: ["10-K", "10-Q", "8-K"], days: "3", cooldown: "", quiet_start: "", quiet_end: "", note: "" };
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: defaults });
   const { register, handleSubmit, control, reset, formState, setError, watch } = form;
   const condition = watch("condition");
@@ -98,9 +101,10 @@ export function AlertDialog() {
           ? {
               symbol: a.symbol,
               condition: conditionOf(a),
-              level: a.rule === "FILING" ? "" : String(Number(a.target_price)),
+              level: a.rule === "FILING" || a.rule === "EARNINGS" ? "" : String(Number(a.target_price)),
               lookback: String((a.params as { lookback?: number }).lookback ?? 20),
               forms: (a.params as { forms?: string[] }).forms ?? [],
+              days: String((a.params as { days_before?: number }).days_before ?? 3),
               cooldown: a.cooldown_minutes ? String(a.cooldown_minutes) : "",
               quiet_start: a.quiet_start ?? "",
               quiet_end: a.quiet_end ?? "",
@@ -127,15 +131,16 @@ export function AlertDialog() {
       if (editing) {
         await update.mutateAsync({
           id: editing.id,
-          patch: { ...common, ...(r === "FILING" ? {} : { target_price: v.level }), ...(r === "PRICE" || r === "CROSS" ? { direction } : {}) },
+          patch: { ...common, ...(r === "FILING" || r === "EARNINGS" ? {} : { target_price: v.level }), ...(r === "PRICE" || r === "CROSS" ? { direction } : {}) },
         });
       } else {
         const body: AlertInput = {
           symbol: v.symbol,
           rule: r,
           direction,
-          target_price: r === "FILING" ? null : v.level,
-          params: r === "VOLUME" || r === "VOLATILITY" ? { lookback: Number(v.lookback) } : r === "FILING" ? { forms: v.forms } : null,
+          target_price: r === "FILING" || r === "EARNINGS" ? null : v.level,
+          params:
+            r === "VOLUME" || r === "VOLATILITY" ? { lookback: Number(v.lookback) } : r === "FILING" ? { forms: v.forms } : r === "EARNINGS" ? { days_before: Number(v.days) } : null,
           ...common,
         };
         await create.mutateAsync(body);
@@ -158,6 +163,7 @@ export function AlertDialog() {
     VOLUME: "Compares a finished session's volume with the average of the sessions before it. A session still trading is never compared with full days.",
     VOLATILITY: "Compares a finished session's close-to-close move with the standard deviation of the previous sessions' daily moves.",
     FILING: "One notice per new SEC filing of the chosen forms (US-registered issuers; needs SEC access configured on the server). Stays active.",
+    EARNINGS: "One notice per results date, the chosen number of days before it. US: estimated from the cadence of past SEC results filings; India: the SEBI deadline. Never an announced date. Stays active.",
   };
 
   return (
@@ -223,7 +229,12 @@ export function AlertDialog() {
             {e.forms && <p id="forms-err" role="alert" className="mt-1 text-xs text-neg">{e.forms.message}</p>}
           </fieldset>
         )}
-        {rule !== "FILING" && (
+        {rule === "EARNINGS" && (
+          <Field label="Days before" required error={e.days?.message} hint="0 = on the day">
+            {({ id, describedBy, invalid }) => <Input id={id} inputMode="numeric" className="num" aria-describedby={describedBy} aria-invalid={invalid} {...register("days")} />}
+          </Field>
+        )}
+        {rule !== "FILING" && rule !== "EARNINGS" && (
           <Field label="After it fires" hint="Rearming starts a new arm; the same observation or session never fires twice.">
             {({ id, describedBy }) => (
               <Select id={id} aria-describedby={describedBy} {...register("cooldown")}>
