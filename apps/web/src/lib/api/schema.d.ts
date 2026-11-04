@@ -1255,6 +1255,110 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/valuation/{symbol}/inputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Inputs */
+        get: operations["inputs_api_valuation__symbol__inputs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valuation/{symbol}/dcf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dcf */
+        post: operations["dcf_api_valuation__symbol__dcf_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valuation/{symbol}/multiples": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Multiples */
+        get: operations["multiples_api_valuation__symbol__multiples_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valuation/{symbol}/scenarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Scenarios */
+        get: operations["list_scenarios_api_valuation__symbol__scenarios_get"];
+        put?: never;
+        /** Create Scenario */
+        post: operations["create_scenario_api_valuation__symbol__scenarios_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valuation/scenarios/{sid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Scenario */
+        put: operations["update_scenario_api_valuation_scenarios__sid__put"];
+        post?: never;
+        /** Delete Scenario */
+        delete: operations["delete_scenario_api_valuation_scenarios__sid__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/stress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stress */
+        post: operations["stress_api_portfolio_stress_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1604,6 +1708,25 @@ export interface components {
             message?: string | null;
             /** Error Kind */
             error_kind?: string | null;
+        };
+        /** DcfIn */
+        DcfIn: {
+            /** Inputs */
+            inputs: {
+                [key: string]: unknown;
+            };
+            /**
+             * Rows Axis
+             * @default discount_pct
+             * @enum {string}
+             */
+            rows_axis: "discount_pct" | "terminal_growth_pct" | "growth_pct";
+            /**
+             * Cols Axis
+             * @default terminal_growth_pct
+             * @enum {string}
+             */
+            cols_axis: "discount_pct" | "terminal_growth_pct" | "growth_pct";
         };
         /** DeliveryOut */
         DeliveryOut: {
@@ -2411,6 +2534,26 @@ export interface components {
                 [key: string]: string;
             } | null;
         };
+        /** ScenarioIn */
+        ScenarioIn: {
+            /** Name */
+            name: string;
+            /**
+             * Case
+             * @default custom
+             * @enum {string}
+             */
+            case: "bear" | "base" | "bull" | "custom";
+            /** Inputs */
+            inputs: {
+                [key: string]: unknown;
+            };
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+        };
         /** SchemaOut */
         SchemaOut: {
             /** Current */
@@ -2570,6 +2713,27 @@ export interface components {
             data_status?: string | null;
             /** Reference Session */
             reference_session?: string | null;
+        };
+        /** StressIn */
+        StressIn: {
+            /**
+             * Account
+             * @default ALL
+             * @enum {string}
+             */
+            account: "INR" | "USD" | "ALL";
+            /** Market Shocks */
+            market_shocks?: {
+                [key: string]: number | string;
+            };
+            /** Symbol Shocks */
+            symbol_shocks?: {
+                [key: string]: number | string;
+            };
+            /** Fx Shocks */
+            fx_shocks?: {
+                [key: string]: number | string;
+            };
         };
         /** TargetIn */
         TargetIn: {
@@ -5496,6 +5660,266 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RebalanceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    inputs_api_valuation__symbol__inputs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dcf_api_valuation__symbol__dcf_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DcfIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    multiples_api_valuation__symbol__multiples_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_scenarios_api_valuation__symbol__scenarios_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_scenario_api_valuation__symbol__scenarios_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScenarioIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_scenario_api_valuation_scenarios__sid__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScenarioIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_scenario_api_valuation_scenarios__sid__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stress_api_portfolio_stress_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StressIn"];
             };
         };
         responses: {

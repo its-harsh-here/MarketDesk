@@ -289,6 +289,10 @@ def annual_statements(instruments: list[dict]) -> dict:
                 "net_income": int(round(net * scale * (1 - 0.02 * k), -5)),
                 "total_debt": int(round(eq_k * de, -5)) if eq_k and de is not None else None,
                 "total_equity": int(round(eq_k, -5)) if eq_k else None,
+                # cash conversion and reinvestment vary by company; capex is a positive amount spent
+                "operating_cash_flow": int(round(net * scale * (1.15 + 0.05 * (len(short) % 3)), -5)),
+                "capex": int(round(abs(net) * scale * (0.35 + 0.05 * (len(short) % 4)), -5)),
+                "cash": int(round(revenue * scale * 0.12, -5)),
             })
         out[inst["symbol"]] = years
     return {

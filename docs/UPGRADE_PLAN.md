@@ -47,7 +47,9 @@ earlier as soon as their credentials exist.
   checks in `docs/UPGRADE_STATUS.md`.
 - Phase 8 (M09): ✅ implemented, tested (hand-checked vectors; migration rehearsed on a production copy) and
   deployed; live checks in `docs/UPGRADE_STATUS.md`.
-- Phase 9 (M11): next.
+- Phase 9 (M11): ✅ implemented, tested (hand-checked vectors; migration rehearsed on a production copy) and
+  deployed; live checks in `docs/UPGRADE_STATUS.md`.
+- Phase 11 (M07): next (M03 was done earlier).
 
 ## After the final check
 The owner asked (4 Nov 2026) for a follow-on roadmap toward a terminal-style view with every piece of information about

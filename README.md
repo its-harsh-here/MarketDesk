@@ -269,6 +269,24 @@ Portfolio → **Rebalance**: target weights per holding (saved), then a **simula
 shares and an assumed fee; the proposed share counts are editable and recalculate on the page. Nothing is submitted
 or recorded.
 
+## Valuation lab
+
+Instrument → **Valuation** (every output labelled hypothetical — not a fair value, forecast or recommendation):
+- **DCF (equity, two stages):** free cash flow ≈ operating cash flow − capital expenditure (stated), grown for 1–15
+  years, Gordon terminal value, discounted at a cost of equity. Defaults come with their source (latest fiscal year
+  from the provider's statements; shares implied from market cap ÷ price; growth from revenue growth, limited to 0–15%;
+  rates are labelled assumptions). Invalid inputs are rejected on the field (terminal growth must be ≥ 0.5 points below
+  the discount rate; non-positive cash flow; out-of-range rates). Not applied to banks, lenders and insurers.
+- **Sensitivity:** a 5 × 5 grid of value per share over any two of discount rate, terminal growth and forecast growth,
+  shaded against the last price.
+- **Peer multiples:** implied price ranges (min, quartiles, median, max) from the peer group's P/E and P/B × the
+  company's own per-share figures.
+- **Scenarios:** save bear/base/bull/custom assumption sets with notes; "Ask AI" opens a cited research question about
+  them (Groq/xAI, M03).
+
+Portfolio → Performance & risk → **Stress test:** instant price shocks by market (India, US) and a USD/INR shock applied
+to today's holdings and cash, with presets; a deterministic what-if, not a forecast.
+
 ## Screener and peers
 
 **Screener** (G F) screens a *named, bounded universe* — all watchlists, one watchlist, current holdings, or a pasted

@@ -247,6 +247,23 @@ class Briefing(Base):
     read_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
 
+class ValuationScenario(Base):
+    """A saved set of DCF assumptions for an instrument (bear/base/bull/custom) with the owner's notes."""
+
+    __tablename__ = "valuation_scenarios"
+    __table_args__ = (UniqueConstraint("instrument_id", "name", name="uq_valuation_scenario_name"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    instrument_id: Mapped[int] = mapped_column(
+        ForeignKey("instruments.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(40), nullable=False)
+    case: Mapped[str] = mapped_column(String(8), nullable=False)  # bear | base | bull | custom
+    inputs: Mapped[dict] = mapped_column(JSON, nullable=False)
+    notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
 class AllocationTarget(Base):
     """The owner's target weight for a holding in one currency account (used only for rebalance simulations)."""
 

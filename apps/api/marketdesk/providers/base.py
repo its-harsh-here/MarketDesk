@@ -118,6 +118,9 @@ class AnnualPeriod:
     net_income: Decimal | None
     total_debt: Decimal | None
     total_equity: Decimal | None
+    operating_cash_flow: Decimal | None = None
+    capex: Decimal | None = None  # capital expenditure as a positive amount spent
+    cash: Decimal | None = None  # cash and equivalents (with short-term investments where reported together)
 
 
 @dataclass(frozen=True)

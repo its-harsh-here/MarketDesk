@@ -7,21 +7,30 @@
         "revenue": 149888900000,
         "net_income": 26980000000,
         "total_debt": 246240000000,
-        "total_equity": 182400000000
+        "total_equity": 182400000000,
+        "operating_cash_flow": 31027000000,
+        "capex": 12141000000,
+        "cash": 17986700000
       },
       {
         "period_end": "2025-03-31",
         "revenue": 140083100000,
         "net_income": 24710700000,
         "total_debt": 229003200000,
-        "total_equity": 169632000000
+        "total_equity": 169632000000,
+        "operating_cash_flow": 28997200000,
+        "capex": 11346700000,
+        "cash": 16810000000
       },
       {
         "period_end": "2024-03-31",
         "revenue": 130918800000,
         "net_income": 22622800000,
         "total_debt": 212973000000,
-        "total_equity": 157757800000
+        "total_equity": 157757800000,
+        "operating_cash_flow": 27100200000,
+        "capex": 10604400000,
+        "cash": 15710300000
       }
     ],
     "SX:BANYAN": [
@@ -30,21 +39,30 @@
         "revenue": 283583300000,
         "net_income": 17015000000,
         "total_debt": 44772000000,
-        "total_equity": 106600000000
+        "total_equity": 106600000000,
+        "operating_cash_flow": 19567200000,
+        "capex": 7656700000,
+        "cash": 34030000000
       },
       {
         "period_end": "2025-03-31",
         "revenue": 248757300000,
         "net_income": 14626900000,
         "total_debt": 41638000000,
-        "total_equity": 99138000000
+        "total_equity": 99138000000,
+        "operating_cash_flow": 17164300000,
+        "capex": 6716400000,
+        "cash": 29850900000
       },
       {
         "period_end": "2024-03-31",
         "revenue": 218208200000,
         "net_income": 12568800000,
         "total_debt": 38723300000,
-        "total_equity": 92198300000
+        "total_equity": 92198300000,
+        "operating_cash_flow": 15056400000,
+        "capex": 5891600000,
+        "cash": 26185000000
       }
     ],
     "SX:COBALT": [
@@ -53,21 +71,30 @@
         "revenue": 389500000000,
         "net_income": 31160000000,
         "total_debt": 241490000000,
-        "total_equity": 254200000000
+        "total_equity": 254200000000,
+        "operating_cash_flow": 35834000000,
+        "capex": 14022000000,
+        "cash": 46740000000
       },
       {
         "period_end": "2025-03-31",
         "revenue": 350900900000,
         "net_income": 27510600000,
         "total_debt": 224585700000,
-        "total_equity": 236406000000
+        "total_equity": 236406000000,
+        "operating_cash_flow": 32282900000,
+        "capex": 12632400000,
+        "cash": 42108100000
       },
       {
         "period_end": "2024-03-31",
         "revenue": 316126900000,
         "net_income": 24278500000,
         "total_debt": 208864700000,
-        "total_equity": 219857600000
+        "total_equity": 219857600000,
+        "operating_cash_flow": 29083700000,
+        "capex": 11380600000,
+        "cash": 37935200000
       }
     ],
     "SX:DELTAFIN": [
@@ -76,21 +103,30 @@
         "revenue": 194857100000,
         "net_income": 40920000000,
         "total_debt": 1220160000000,
-        "total_equity": 254200000000
+        "total_equity": 254200000000,
+        "operating_cash_flow": 51150000000,
+        "capex": 14322000000,
+        "cash": 23382900000
       },
       {
         "period_end": "2025-03-31",
         "revenue": 167980300000,
         "net_income": 34570300000,
         "total_debt": 1134748800000,
-        "total_equity": 236406000000
+        "total_equity": 236406000000,
+        "operating_cash_flow": 44094800000,
+        "capex": 12346600000,
+        "cash": 20157600000
       },
       {
         "period_end": "2024-03-31",
         "revenue": 144810600000,
         "net_income": 29193800000,
         "total_debt": 1055316400000,
-        "total_equity": 219857600000
+        "total_equity": 219857600000,
+        "operating_cash_flow": 38012800000,
+        "capex": 10643600000,
+        "cash": 17377300000
       }
     ],
     "SX:ELARA": [
@@ -99,21 +135,30 @@
         "revenue": 120352900000,
         "net_income": 20460000000,
         "total_debt": 21384000000,
-        "total_equity": 178200000000
+        "total_equity": 178200000000,
+        "operating_cash_flow": 25575000000,
+        "capex": 8184000000,
+        "cash": 14442400000
       },
       {
         "period_end": "2025-03-31",
         "revenue": 110415500000,
         "net_income": 18395200000,
         "total_debt": 19887100000,
-        "total_equity": 165726000000
+        "total_equity": 165726000000,
+        "operating_cash_flow": 23463300000,
+        "capex": 7508300000,
+        "cash": 13249900000
       },
       {
         "period_end": "2024-03-31",
         "revenue": 101298700000,
         "net_income": 16531900000,
         "total_debt": 18495000000,
-        "total_equity": 154125200000
+        "total_equity": 154125200000,
+        "operating_cash_flow": 21526000000,
+        "capex": 6888300000,
+        "cash": 12155800000
       }
     ],
     "SX:FERRUM": [
@@ -122,21 +167,30 @@
         "revenue": 676000000000,
         "net_income": 47320000000,
         "total_debt": 402688000000,
-        "total_equity": 457600000000
+        "total_equity": 457600000000,
+        "operating_cash_flow": 54418000000,
+        "capex": 21294000000,
+        "cash": 81120000000
       },
       {
         "period_end": "2025-03-31",
         "revenue": 704166700000,
         "net_income": 48305800000,
         "total_debt": 374499800000,
-        "total_equity": 425568000000
+        "total_equity": 425568000000,
+        "operating_cash_flow": 56685400000,
+        "capex": 22181200000,
+        "cash": 84500000000
       },
       {
         "period_end": "2024-03-31",
         "revenue": 733506900000,
         "net_income": 49291700000,
         "total_debt": 348284900000,
-        "total_equity": 395778200000
+        "total_equity": 395778200000,
+        "operating_cash_flow": 59047300000,
+        "capex": 23105500000,
+        "cash": 88020800000
       }
     ],
     "SX:GLASSWING": [
@@ -145,21 +199,30 @@
         "revenue": 140421100000,
         "net_income": 26680000000,
         "total_debt": 5945000000,
-        "total_equity": 118900000000
+        "total_equity": 118900000000,
+        "operating_cash_flow": 30682000000,
+        "capex": 10672000000,
+        "cash": 16850500000
       },
       {
         "period_end": "2025-03-31",
         "revenue": 125375900000,
         "net_income": 23345000000,
         "total_debt": 5528800000,
-        "total_equity": 110577000000
+        "total_equity": 110577000000,
+        "operating_cash_flow": 27394600000,
+        "capex": 9528600000,
+        "cash": 15045100000
       },
       {
         "period_end": "2024-03-31",
         "revenue": 111942800000,
         "net_income": 20418400000,
         "total_debt": 5141800000,
-        "total_equity": 102836600000
+        "total_equity": 102836600000,
+        "operating_cash_flow": 24459500000,
+        "capex": 8507700000,
+        "cash": 13433100000
       }
     ],
     "SX:HALCYON": [
@@ -168,21 +231,30 @@
         "revenue": 4174500000,
         "net_income": 459200000,
         "total_debt": 847900000,
-        "total_equity": 3854000000
+        "total_equity": 3854000000,
+        "operating_cash_flow": 551000000,
+        "capex": 229600000,
+        "cash": 500900000
       },
       {
         "period_end": "2024-12-31",
         "revenue": 3186700000,
         "net_income": 343500000,
         "total_debt": 788500000,
-        "total_equity": 3584200000
+        "total_equity": 3584200000,
+        "operating_cash_flow": 420600000,
+        "capex": 175300000,
+        "cash": 382400000
       },
       {
         "period_end": "2023-12-31",
         "revenue": 2432600000,
         "net_income": 256900000,
         "total_debt": 733300000,
-        "total_equity": 3333300000
+        "total_equity": 3333300000,
+        "operating_cash_flow": 321100000,
+        "capex": 133800000,
+        "cash": 291900000
       }
     ],
     "SX:IRONLEAF": [
@@ -191,21 +263,30 @@
         "revenue": 113760000000,
         "net_income": 11376000000,
         "total_debt": 28512000000,
-        "total_equity": 95040000000
+        "total_equity": 95040000000,
+        "operating_cash_flow": 14220000000,
+        "capex": 3981600000,
+        "cash": 13651200000
       },
       {
         "period_end": "2025-03-31",
         "revenue": 108342900000,
         "net_income": 10617600000,
         "total_debt": 26516200000,
-        "total_equity": 88387200000
+        "total_equity": 88387200000,
+        "operating_cash_flow": 13542900000,
+        "capex": 3792000000,
+        "cash": 13001100000
       },
       {
         "period_end": "2024-03-31",
         "revenue": 103183700000,
         "net_income": 9905600000,
         "total_debt": 24660000000,
-        "total_equity": 82200100000
+        "total_equity": 82200100000,
+        "operating_cash_flow": 12898000000,
+        "capex": 3611400000,
+        "cash": 12382000000
       }
     ],
     "SX:KESTREL": [
@@ -214,21 +295,30 @@
         "revenue": 173571400000,
         "net_income": 12150000000,
         "total_debt": 65880000000,
-        "total_equity": 108000000000
+        "total_equity": 108000000000,
+        "operating_cash_flow": 14580000000,
+        "capex": 6075000000,
+        "cash": 20828600000
       },
       {
         "period_end": "2025-03-31",
         "revenue": 153603000000,
         "net_income": 10537200000,
         "total_debt": 61268400000,
-        "total_equity": 100440000000
+        "total_equity": 100440000000,
+        "operating_cash_flow": 12902700000,
+        "capex": 5376100000,
+        "cash": 18432400000
       },
       {
         "period_end": "2024-03-31",
         "revenue": 135931900000,
         "net_income": 9134600000,
         "total_debt": 56979600000,
-        "total_equity": 93409200000
+        "total_equity": 93409200000,
+        "operating_cash_flow": 11418300000,
+        "capex": 4757600000,
+        "cash": 16311800000
       }
     ],
     "SX:LUMEN": [
@@ -237,21 +327,30 @@
         "revenue": 116923100000,
         "net_income": 15200000000,
         "total_debt": 82992000000,
-        "total_equity": 172900000000
+        "total_equity": 172900000000,
+        "operating_cash_flow": 19000000000,
+        "capex": 6080000000,
+        "cash": 14030800000
       },
       {
         "period_end": "2025-03-31",
         "revenue": 110304800000,
         "net_income": 14052800000,
         "total_debt": 77182600000,
-        "total_equity": 160797000000
+        "total_equity": 160797000000,
+        "operating_cash_flow": 17924500000,
+        "capex": 5735800000,
+        "cash": 13236600000
       },
       {
         "period_end": "2024-03-31",
         "revenue": 104061100000,
         "net_income": 12986800000,
         "total_debt": 71779800000,
-        "total_equity": 149541200000
+        "total_equity": 149541200000,
+        "operating_cash_flow": 16909900000,
+        "capex": 5411200000,
+        "cash": 12487300000
       }
     ],
     "SX:MERIDIAN": [
@@ -260,21 +359,30 @@
         "revenue": 152000000000,
         "net_income": 13680000000,
         "total_debt": 42180000000,
-        "total_equity": 114000000000
+        "total_equity": 114000000000,
+        "operating_cash_flow": 17100000000,
+        "capex": 4788000000,
+        "cash": 18240000000
       },
       {
         "period_end": "2025-03-31",
         "revenue": 138181800000,
         "net_income": 12187600000,
         "total_debt": 39227400000,
-        "total_equity": 106020000000
+        "total_equity": 106020000000,
+        "operating_cash_flow": 15545500000,
+        "capex": 4352700000,
+        "cash": 16581800000
       },
       {
         "period_end": "2024-03-31",
         "revenue": 125619800000,
         "net_income": 10853600000,
         "total_debt": 36481500000,
-        "total_equity": 98598600000
+        "total_equity": 98598600000,
+        "operating_cash_flow": 14132200000,
+        "capex": 3957000000,
+        "cash": 15074400000
       }
     ],
     "SX:NIMBUS": [
@@ -283,21 +391,30 @@
         "revenue": 18200000000,
         "net_income": -2184000000,
         "total_debt": null,
-        "total_equity": null
+        "total_equity": null,
+        "operating_cash_flow": -2511600000,
+        "capex": 982800000,
+        "cash": 2184000000
       },
       {
         "period_end": "2025-03-31",
         "revenue": 13188400000,
         "net_income": -1551000000,
         "total_debt": null,
-        "total_equity": null
+        "total_equity": null,
+        "operating_cash_flow": -1820000000,
+        "capex": 712200000,
+        "cash": 1582600000
       },
       {
         "period_end": "2024-03-31",
         "revenue": 9556800000,
         "net_income": -1100900000,
         "total_debt": null,
-        "total_equity": null
+        "total_equity": null,
+        "operating_cash_flow": -1318800000,
+        "capex": 516100000,
+        "cash": 1146800000
       }
     ],
     "SX:ORCHID": [
@@ -306,21 +423,30 @@
         "revenue": 62333300000,
         "net_income": 7480000000,
         "total_debt": 112200000000,
-        "total_equity": 102000000000
+        "total_equity": 102000000000,
+        "operating_cash_flow": 8602000000,
+        "capex": 3366000000,
+        "cash": 7480000000
       },
       {
         "period_end": "2025-03-31",
         "revenue": 52824900000,
         "net_income": 6212200000,
         "total_debt": 104346000000,
-        "total_equity": 94860000000
+        "total_equity": 94860000000,
+        "operating_cash_flow": 7289800000,
+        "capex": 2852500000,
+        "cash": 6339000000
       },
       {
         "period_end": "2024-03-31",
         "revenue": 44766800000,
         "net_income": 5157100000,
         "total_debt": 97041800000,
-        "total_equity": 88219800000
+        "total_equity": 88219800000,
+        "operating_cash_flow": 6177800000,
+        "capex": 2417400000,
+        "cash": 5372000000
       }
     ],
     "SX:PEREGRINE": [
@@ -329,21 +455,30 @@
         "revenue": 770000000000,
         "net_income": 184800000000,
         "total_debt": 9676800000000,
-        "total_equity": 1344000000000
+        "total_equity": 1344000000000,
+        "operating_cash_flow": 212520000000,
+        "capex": 73920000000,
+        "cash": 92400000000
       },
       {
         "period_end": "2025-03-31",
         "revenue": 687500000000,
         "net_income": 161700000000,
         "total_debt": 8999424000000,
-        "total_equity": 1249920000000
+        "total_equity": 1249920000000,
+        "operating_cash_flow": 189750000000,
+        "capex": 66000000000,
+        "cash": 82500000000
       },
       {
         "period_end": "2024-03-31",
         "revenue": 613839300000,
         "net_income": 141428600000,
         "total_debt": 8369464300000,
-        "total_equity": 1162425600000
+        "total_equity": 1162425600000,
+        "operating_cash_flow": 169419600000,
+        "capex": 58928600000,
+        "cash": 73660700000
       }
     ],
     "SX:QUILL": [
@@ -352,21 +487,30 @@
         "revenue": 45500000000,
         "net_income": 1820000000,
         "total_debt": 25480000000,
-        "total_equity": 36400000000
+        "total_equity": 36400000000,
+        "operating_cash_flow": 2275000000,
+        "capex": 728000000,
+        "cash": 5460000000
       },
       {
         "period_end": "2025-03-31",
         "revenue": 46428600000,
         "net_income": 1820000000,
         "total_debt": 23696400000,
-        "total_equity": 33852000000
+        "total_equity": 33852000000,
+        "operating_cash_flow": 2321400000,
+        "capex": 742900000,
+        "cash": 5571400000
       },
       {
         "period_end": "2024-03-31",
         "revenue": 47376100000,
         "net_income": 1819200000,
         "total_debt": 22037700000,
-        "total_equity": 31482400000
+        "total_equity": 31482400000,
+        "operating_cash_flow": 2368800000,
+        "capex": 758000000,
+        "cash": 5685100000
       }
     ]
   }

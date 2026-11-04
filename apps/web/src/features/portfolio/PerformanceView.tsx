@@ -10,6 +10,7 @@ import { errorMessage } from "@/lib/api/client";
 import { DASH, formatLargeMoney, formatMoney, formatNumber, formatPercent, formatSessionDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { useBenchmarks } from "@/features/market/api";
+import { StressPanel } from "./StressPanel";
 import { useCorrelations, useExposure, usePerformance, type Bucket, type Performance, type PerfAccount } from "./riskApi";
 
 function cssColor(value: string) {
@@ -60,6 +61,7 @@ export function PerformanceView({ account }: { account: PerfAccount }) {
       </Panel>
       <ExposurePanel account={account} />
       <CorrelationPanel account={account} benchmark={benchmark} />
+      <StressPanel account={account} />
     </div>
   );
 }

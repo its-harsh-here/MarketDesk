@@ -707,6 +707,34 @@ The owner's key turned out to be a Groq key and the owner chose Groq's free tier
 | Playwright | 18 journeys pass (new: performance & risk with table alternative and methods, exposure by sector, correlation table, targets → simulation → edited shares, ledger unchanged) |
 | Visual QA | Performance, exposure, correlation and rebalance at 1440 and 390 px inspected; fixed tiny "₹0.01 Cr" amounts (whole rupees below a crore), inline benchmark picker, shorter fee label |
 
+**M09 live verification (after deploying 23caf84, 4 Nov 2026).** Production migrated to 0009 on deploy (rehearsed
+first). The owner's ledger has no transactions yet, so performance (INR, USD, all), exposure and correlations return
+their explained "nothing yet" states; targets and the simulation endpoint respond (empty, "no orders are placed").
+
+## M11 — Valuation lab (4 Nov 2026)
+- **DCF** (`services/valuation_math.py`, pure): equity two-stage DCF with Gordon terminal value; inputs validated
+  with field-level reasons (r 1–40%, g −50–100%, g_T −5–10% and ≥ 0.5 pp below r, N 1–15, FCF > 0, shares > 0);
+  outputs: per-year FCF, discount factors, PVs, terminal value and its share, equity value, value per share, vs price.
+- **Defaults with sources** (`services/valuation.py`): FCF = OCF − capex of the latest fiscal year (annual statements
+  now include operating cash flow, capex and cash — Yahoo cash-flow statement, deterministic sample values); shares
+  implied from market cap ÷ price; growth from revenue growth limited to 0–15%; rates labelled assumptions; a
+  negative latest FCF is flagged. Not applied to financial-services companies (explained; peer P/B offered instead).
+- **Sensitivity** 5 × 5 over two of discount rate, terminal growth, forecast growth; invalid cells "n/a" with reason.
+- **Peer multiples:** P/E and P/B ranges (min, quartiles, median, max) × own EPS/BVPS from the M06 peer group.
+- **Scenarios** (migration 0010 `valuation_scenarios`): bear/base/bull/custom with notes; load, update, delete; "Ask
+  AI" opens the research dialog with a prefilled, cited question about the assumptions.
+- **Stress test** (Portfolio → Performance & risk): market and USD/INR shocks with presets on current holdings and
+  cash; per-holding effect; consistent with the overview total.
+- **Schema:** 0010 rehearsed on a production copy (0009 backup): restored, migrated, owner-data fingerprints identical.
+
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 17 | 260 passed, 3 skipped / 262 passed, 1 skipped (M11: 21 — DCF hand vector, 9 rejected assumptions, parsing, sensitivity centre/invalid cells/monotonicity, multiple ranges, stress vector, pre-M11 cache entries, defaults with sources and bank refusal, DCF run, multiples via the peer group, scenarios CRUD, stress vs overview, backups) |
+| Migrations match models (SQLite, PostgreSQL); downgrade 0010→0009 and upgrade | pass |
+| tsc, eslint, vitest | clean; 32 |
+| Playwright | 19 journeys pass (new: valuation lab — sourced defaults, rejected terminal growth, sensitivity table, saved scenario with AI button, bank refused; stress test preset) |
+| Visual QA | Valuation and stress test at 1440 and 390 px inspected; added readable amounts beside raw inputs ("= ₹1,888.60 Cr"), hid peer names on phones |
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -714,4 +742,4 @@ The owner's key turned out to be a Groq key and the owner chose Groq's free tier
 - Portfolio has INR and USD accounts; returns (M09) use daily closes, benchmarks are price indices, and cash earns no interest.
 
 ## Next concrete action
-Phase 9 — **M11 Valuation lab** (see `docs/UPGRADE_PLAN.md`). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
+Phase 11 — **M07 Earnings + filing changes** (see `docs/UPGRADE_PLAN.md`). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.

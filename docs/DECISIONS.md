@@ -210,4 +210,12 @@ Consequential choices, newest last. Routine choices live in code comments.
     daily returns on common dates within a time zone and weekly (Friday) returns across time zones, with minimum
     sample sizes. Benchmarks are price indices (dividends excluded, stated). Rebalancing is a simulation only, with
     targets stored per account (`allocation_targets`, owner data).
+45. **Valuation lab methods (M11, 4 Nov 2026).** Equity DCF on free cash flow approximated as operating cash flow −
+    capex (after interest and tax; assumes no net borrowing), discounted at a cost of equity, so no debt is subtracted;
+    Gordon terminal value; rejected inputs: r outside 1–40%, g outside −50–100%, g_T outside −5–10% or within 0.5 pp of
+    r, N outside 1–15, base FCF ≤ 0, shares ≤ 0. Not applied to financial-services companies. Defaults show their
+    source; cost-of-equity defaults (INR 12%, USD 9%) and terminal growth (4%, 2.5%) are labelled assumptions. Annual
+    statements gained operating cash flow, capex and cash (Yahoo cash-flow statement; cache entries from before stay
+    readable). Peer multiples use the M06 peer group and snapshots. Stress tests apply instantaneous shocks to current
+    marks. Saved scenarios (`valuation_scenarios`) are owner data and backed up.
 

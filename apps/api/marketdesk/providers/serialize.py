@@ -128,7 +128,16 @@ def statements_to(st: AnnualStatements) -> dict:
     return {
         "instrument": ref_to(st.instrument),
         "periods": [
-            [p.period_end.isoformat(), _d(p.revenue), _d(p.net_income), _d(p.total_debt), _d(p.total_equity)]
+            [
+                p.period_end.isoformat(),
+                _d(p.revenue),
+                _d(p.net_income),
+                _d(p.total_debt),
+                _d(p.total_equity),
+                _d(p.operating_cash_flow),
+                _d(p.capex),
+                _d(p.cash),
+            ]
             for p in st.periods
         ],
         "source": st.source,
@@ -137,11 +146,13 @@ def statements_to(st: AnnualStatements) -> dict:
 
 
 def statements_from(d: dict) -> AnnualStatements:
+    def period(p: list) -> AnnualPeriod:
+        extra = [_pd(x) for x in p[5:8]] + [None] * (8 - max(len(p), 5))  # entries cached before M11 have 5 fields
+        return AnnualPeriod(date.fromisoformat(p[0]), _pd(p[1]), _pd(p[2]), _pd(p[3]), _pd(p[4]), *extra[:3])
+
     return AnnualStatements(
         instrument=ref_from(d["instrument"]),
-        periods=[
-            AnnualPeriod(date.fromisoformat(p[0]), _pd(p[1]), _pd(p[2]), _pd(p[3]), _pd(p[4])) for p in d["periods"]
-        ],
+        periods=[period(p) for p in d["periods"]],
         source=d["source"],
         notes=list(d["notes"]),
     )

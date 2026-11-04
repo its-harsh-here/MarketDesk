@@ -139,6 +139,7 @@ export function AiDialog() {
   const { state, close } = useDialogs();
   const isOpen = state.kind === "ai";
   const symbol = state.kind === "ai" ? state.symbol : "";
+  const prefill = state.kind === "ai" ? state.question : undefined;
   const { data: session } = useSession();
   const status = useAiStatus(isOpen);
   const previous = useAiAnswers(symbol, isOpen);
@@ -161,9 +162,10 @@ export function AiDialog() {
       setCurrent(null);
       setError(null);
       setPeers([]);
-      setQuestion("");
+      setQuestion(prefill ?? "");
+      if (prefill) setKind("ask");
     }
-  }, [isOpen, symbol]);
+  }, [isOpen, symbol, prefill]);
   const st = status.data;
   const readOnly = Boolean(session?.read_only);
   const task = TASKS.find((t) => t.value === kind)!;

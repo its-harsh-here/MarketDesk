@@ -273,7 +273,8 @@ class FixtureProvider:
 
         periods = [
             AnnualPeriod(date.fromisoformat(y["period_end"]), dec(y["revenue"]), dec(y["net_income"]),
-                         dec(y["total_debt"]), dec(y["total_equity"]))
+                         dec(y["total_debt"]), dec(y["total_equity"]), dec(y.get("operating_cash_flow")),
+                         dec(y.get("capex")), dec(y.get("cash")))
             for y in self.dataset.statements.get(symbol, [])
             if date.fromisoformat(y["period_end"]) <= cursor
         ]  # fmt: skip

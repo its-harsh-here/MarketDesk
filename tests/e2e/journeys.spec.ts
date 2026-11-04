@@ -533,3 +533,38 @@ test("performance & risk: time-weighted vs money-weighted, table alternative, ex
   // nothing was written to the ledger by the simulation
   expect((await (await page.request.get("/api/portfolio/transactions")).json()).items.length).toBe(txnCount);
 });
+
+test("valuation lab: DCF from sourced defaults, invalid assumption rejected, sensitivity, saved scenario, bank refused; stress test", async ({ page }) => {
+  await page.goto("/instrument/SX%3AAURORA?tab=valuation");
+  await ready(page);
+  await expect(page.getByText(/Hypothetical: these values follow from the assumptions/)).toBeVisible();
+  await expect(page.getByText("Value per share", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/operating cash flow − capital expenditure, fiscal year ending/)).toBeVisible();
+  await expect(page.getByRole("table", { name: /Value per share by Discount rate \(rows\) and Terminal growth/ })).toBeVisible();
+  // terminal growth at the discount rate has no finite value: rejected on the field
+  const tg = page.getByLabel(/Terminal growth \(% a year\)/);
+  const dr = page.getByLabel(/Discount rate \(cost of equity\)/);
+  await dr.fill("5");
+  await tg.fill("5");
+  await page.getByRole("button", { name: "Calculate" }).click();
+  await expect(page.getByText(/at least 0.5 percentage points below the discount rate/).first()).toBeVisible();
+  await dr.fill("12");
+  await tg.fill("4");
+  await page.getByRole("button", { name: "Calculate" }).click();
+  await page.getByRole("button", { name: "Save as scenario" }).click();
+  await page.getByLabel("Name", { exact: true }).fill("E2E base");
+  await page.getByRole("button", { name: "Save scenario" }).click();
+  await expect(page.getByText("Saved “E2E base”.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Ask AI about scenario E2E base" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Peer multiples" })).toBeVisible();
+
+  await page.goto("/instrument/SX%3APEREGRINE?tab=valuation");
+  await expect(page.getByText("Not applied to this company")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/banks, lenders and insurers/)).toBeVisible();
+
+  await page.goto("/portfolio?section=performance");
+  const stress = page.getByRole("region", { name: "Stress test" });
+  await stress.getByRole("button", { name: "India −10%" }).click();
+  await expect(stress.getByRole("table", { name: /Effect of the shocks/ })).toBeVisible({ timeout: 30_000 });
+  await expect(stress.getByText(/not a forecast/)).toBeVisible();
+});

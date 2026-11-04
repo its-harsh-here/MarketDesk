@@ -511,7 +511,11 @@ class YahooProvider:
             t = self._yf.Ticker(symbol)
             income = t.get_income_stmt(freq="yearly")
             balance = t.get_balance_sheet(freq="yearly")
-            return statements_from_frames(symbol, income, balance)
+            try:
+                cashflow = t.get_cash_flow(freq="yearly")
+            except Exception:  # optional: valuation inputs only
+                cashflow = None
+            return statements_from_frames(symbol, income, balance, cashflow)
 
         return self._call(run, "annual statements")
 
@@ -576,15 +580,21 @@ def _frame_row(df: Any, keys: tuple[str, ...]) -> dict[date, Decimal | None]:
     return {}
 
 
-def statements_from_frames(symbol: str, income: Any, balance: Any) -> AnnualStatements:
+def statements_from_frames(symbol: str, income: Any, balance: Any, cashflow: Any = None) -> AnnualStatements:
     revenue = _frame_row(income, ("TotalRevenue", "OperatingRevenue", "Total Revenue"))
     net = _frame_row(income, ("NetIncome", "NetIncomeCommonStockholders", "Net Income"))
     debt = _frame_row(balance, ("TotalDebt", "Total Debt"))
     equity = _frame_row(balance, ("StockholdersEquity", "CommonStockEquity", "Stockholders Equity"))
+    cash = _frame_row(balance, ("CashCashEquivalentsAndShortTermInvestments", "CashAndCashEquivalents"))
+    ocf = _frame_row(cashflow, ("OperatingCashFlow", "CashFlowFromContinuingOperatingActivities"))
+    capex = {k: (abs(v) if v is not None else None) for k, v in _frame_row(cashflow, ("CapitalExpenditure",)).items()}
     ends = sorted(set(revenue) | set(net) | set(debt) | set(equity), reverse=True)[:4]
     if not ends:
         raise ProviderError("missing", "Yahoo returned no annual statements for this symbol.")
-    periods = [AnnualPeriod(e, revenue.get(e), net.get(e), debt.get(e), equity.get(e)) for e in ends]
+    periods = [
+        AnnualPeriod(e, revenue.get(e), net.get(e), debt.get(e), equity.get(e), ocf.get(e), capex.get(e), cash.get(e))
+        for e in ends
+    ]
     notes = ["Total debt and shareholders' equity are Yahoo's balance-sheet lines at each fiscal year end."]
     if not debt:
         notes.append("Yahoo reports no total-debt line for this company.")
