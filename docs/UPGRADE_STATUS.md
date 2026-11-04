@@ -482,6 +482,8 @@ byte-identical. No new environment variables.
 - Also fixed (an M08 leftover seen in the live check): Instrument Detail still said the portfolio was INR-only and
   disabled "Add transaction" for USD listings; it now opens the dialog on the USD account (indices and exchange rates
   stay non-holdable). The browser journey that asserted the old message now checks the new behaviour.
+- Browser check after deploying 295406a: DOX Financials shows the notice above FY2020–FY2024 statements; SMR shows
+  none; the INR-only header text is gone; no page overflow at 390 px; no console errors (read-only check).
 
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
