@@ -267,16 +267,43 @@ _NEXT_HEAD = re.compile(
 )
 
 
+_ZERO_WIDTH = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u2060\ufeff\u00ad"), None)
+_RISK_ANY = re.compile(r"risk\s+factors", re.IGNORECASE)
+
+
+def _section_after(text: str, start: int) -> str:
+    tail = text[start:]
+    stop = _NEXT_HEAD.search(tail)
+    return tail[: stop.start()] if stop else tail[:200_000]
+
+
 def risk_section(text: str) -> str | None:
-    """The longest 'Item 1A. Risk Factors' section (the table of contents entry is short)."""
+    """The longest 'Item 1A. Risk Factors' section (the table of contents entry is short). Falls back to the longest
+    text following any 'Risk Factors' heading when the item number is formatted unusually."""
+    text = text.translate(_ZERO_WIDTH)
     best = None
     for m in _RISK_HEAD.finditer(text):
-        tail = text[m.end() :]
-        stop = _NEXT_HEAD.search(tail)
-        body = tail[: stop.start()] if stop else tail[:200_000]
+        body = _section_after(text, m.end())
         if best is None or len(body) > len(best):
             best = body
+    if not best or len(best) <= 200:
+        for m in _RISK_ANY.finditer(text):
+            body = _section_after(text, m.end())
+            if best is None or len(body) > len(best):
+                best = body
     return best if best and len(best) > 200 else None
+
+
+def risk_diagnostics(text: str) -> dict:
+    t = text.translate(_ZERO_WIDTH)
+    first = _RISK_ANY.search(t)
+    return {
+        "chars": len(t),
+        "item_1a_headings": len(_RISK_HEAD.findall(t)),
+        "risk_factor_mentions": len(_RISK_ANY.findall(t)),
+        "item_1a_mentions": len(re.findall(r"item\s*1a", t, re.IGNORECASE)),
+        "sample": t[max(0, first.start() - 60) : first.start() + 60] if first else t[:120],
+    }
 
 
 def paragraphs(section: str) -> list[str]:
@@ -371,8 +398,14 @@ async def filing_changes(db: Session, research, inst: Instrument, form: str) -> 
             "available": False,
             "reason": "A risk-factor section (Item 1A) was not found in one of the filings.",
             "filings": [
-                {"form": f["form"], "filing_date": f["filing_date"], "url": u}
-                for f, u in ((new_f, new_url), (old_f, old_url))
+                {
+                    "form": f["form"],
+                    "filing_date": f["filing_date"],
+                    "url": u,
+                    "found": bool(sec),
+                    "diagnostics": None if sec else risk_diagnostics(t),
+                }
+                for f, u, t, sec in ((new_f, new_url, new_t, ns), (old_f, old_url, old_t, os_))
             ],
         }
     out = {

@@ -168,3 +168,14 @@ def test_brief_is_an_ai_task(api):
     from marketdesk.services.analyst import TASKS
 
     assert "Bull case" in TASKS["brief"] and "price targets" in TASKS["brief"]
+
+
+def test_risk_section_fallbacks():
+    body = "\n".join(P)
+    zw = f"Item 1​A. Risk Factors\n{body}\nItem 1B. Unresolved Staff Comments"
+    assert er.risk_section(zw) is not None  # zero-width characters inside the heading
+    plain = f"RISK FACTORS\n{body}\nITEM 2. PROPERTIES\nOffices."
+    sec = er.risk_section(plain)
+    assert sec is not None and "Offices" not in sec  # no item number: the longest Risk Factors section
+    d = er.risk_diagnostics("Annual report without the section")
+    assert d["risk_factor_mentions"] == 0 and d["chars"] > 0
