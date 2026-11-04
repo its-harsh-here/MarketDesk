@@ -215,7 +215,8 @@ class MembershipOut(Model):
 
 
 # ----------------------------------------------------------------------------- portfolio
-TxnTypeLit = Literal["DEPOSIT", "WITHDRAWAL", "BUY", "SELL", "DIVIDEND", "SPLIT"]
+TxnTypeLit = Literal["DEPOSIT", "WITHDRAWAL", "BUY", "SELL", "DIVIDEND", "SPLIT", "FX"]
+AccountCcy = Literal["INR", "USD"]
 
 
 class TransactionIn(Model):
@@ -229,7 +230,12 @@ class TransactionIn(Model):
     split_from: Decimal | None = None
     split_to: Decimal | None = None
     split_confirmed: bool = False
-    currency: Literal["INR"] = "INR"
+    currency: AccountCcy = "INR"  # the account; for FX, the account paying
+    counter_currency: AccountCcy | None = None  # FX only: the account receiving
+    counter_amount: Decimal | None = None  # FX only: amount received, in counter_currency
+    fx_rate: Decimal | None = None  # FX only: quoted USD/INR rate, INR per 1 USD, whichever way money moved (optional)
+    fx_source: str | None = Field(default=None, max_length=80)  # FX only: bank/broker/provider of the rate
+    fx_time: datetime | None = None  # FX only: when the rate applied
     notes: str | None = Field(default=None, max_length=500)
 
 
@@ -246,6 +252,12 @@ class TransactionOut(Model):
     split_from: Dec | None = None
     split_to: Dec | None = None
     currency: str
+    counter_currency: str | None = None
+    counter_amount: Dec | None = None
+    fx_rate: Dec | None = None
+    effective_rate: Dec | None = None
+    fx_source: str | None = None
+    fx_time: datetime | None = None
     notes: str | None = None
     source: str
     cash_effect: Dec
@@ -283,8 +295,10 @@ class HoldingOut(Model):
 
 
 class PortfolioSummaryOut(Model):
-    currency: Literal["INR"] = "INR"
+    currency: AccountCcy = "INR"
     has_transactions: bool
+    fx_in: Dec = Decimal("0")
+    fx_out: Dec = Decimal("0")
     cash: Dec
     holdings_value: Dec
     total_equity: Dec | None = None
@@ -304,6 +318,41 @@ class PortfolioSummaryOut(Model):
     holdings: list[HoldingOut]
     accounting_note: str
     valuation_source: str
+
+
+class FxRateOut(Model):
+    pair: str
+    rate: Dec | None = None
+    status: str
+    market_time: datetime | None = None
+    fetched_at: datetime | None = None
+    source: str | None = None
+    symbol: str | None = None
+    message: str | None = None
+
+
+class AccountValueOut(Model):
+    currency: AccountCcy
+    cash: Dec
+    holdings_value: Dec
+    total_equity: Dec | None = None
+    partial_equity: Dec
+    complete: bool
+    stale_marks: list[str]
+    value_in_base: Dec | None = None
+    partial_in_base: Dec | None = None
+    rate: FxRateOut
+
+
+class PortfolioOverviewOut(Model):
+    base_currency: AccountCcy
+    accounts: list[AccountValueOut]
+    complete: bool
+    total_in_base: Dec | None = None
+    partial_in_base: Dec
+    incomplete_reasons: list[str]
+    stale_rates: list[str]
+    note: str
 
 
 class ImportRowOut(Model):

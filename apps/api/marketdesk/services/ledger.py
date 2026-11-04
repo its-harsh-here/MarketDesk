@@ -1,8 +1,9 @@
-"""Pure ledger arithmetic (average-cost convention, long-only INR).
+"""Pure ledger arithmetic (average-cost convention, long-only), one replay per currency account.
 
 Rules
-- Money uses Decimal. INR has 2 decimal places (paise): each cash movement is rounded
-  half-up to paise when it settles. Cost basis and average unit cost keep full precision
+- Each currency (INR, USD) is a separate account with its own cash; amounts are never converted
+  or relabeled inside the ledger. Money uses Decimal with 2 decimal places (paise/cents): each
+  cash movement is rounded half-up to 2 places when it settles. Cost basis and average unit cost keep full precision
   and are only rounded for presentation.
 - BUY:   cash -= round2(qty * price) + fees; basis += round2(qty * price) + fees.
 - SELL:  released basis = basis * qty_sold / qty_held (== qty * average cost);
@@ -11,8 +12,10 @@ Rules
 - SPLIT: qty *= split_to / split_from; basis unchanged (average cost falls). Splits are only
          applied through explicit, confirmed SPLIT transactions, never by adjusting quantities.
 - DIVIDEND: cash += amount; tracked separately from realized trading P&L.
-- Replay order: effective date, then intra-day priority (deposit, split, dividend, trades,
-  withdrawal), then entry sequence. Any intermediate negative cash or oversell is rejected.
+- FX conversion (stored as one FX transaction): in the source account FX_OUT takes amount + fees;
+  in the destination account FX_IN adds the amount received. Both are transfers, not deposits.
+- Replay order: effective date, then intra-day priority (deposit/FX in, split, dividend, trades,
+  withdrawal/FX out), then entry sequence. Any intermediate negative cash or oversell is rejected.
 - Average cost is an analytical convention, not a tax computation.
 """
 
@@ -37,15 +40,20 @@ class TxnType(StrEnum):
     SELL = "SELL"
     DIVIDEND = "DIVIDEND"
     SPLIT = "SPLIT"
+    FX_IN = "FX_IN"  # internal: the receiving side of an FX conversion
+    FX_OUT = "FX_OUT"  # internal: the paying side of an FX conversion
 
 
+CURRENCIES = ("INR", "USD")
 INTRADAY_PRIORITY = {
     TxnType.DEPOSIT: 0,
+    TxnType.FX_IN: 0,
     TxnType.SPLIT: 1,
     TxnType.DIVIDEND: 2,
     TxnType.BUY: 3,
     TxnType.SELL: 3,
     TxnType.WITHDRAWAL: 4,
+    TxnType.FX_OUT: 4,
 }
 
 
@@ -125,6 +133,9 @@ class LedgerState:
     realized_pnl: Decimal = ZERO
     dividends: Decimal = ZERO
     fees: Decimal = ZERO
+    fx_in: Decimal = ZERO  # converted into this account
+    fx_out: Decimal = ZERO  # converted out of this account, excluding conversion fees
+    currency: str = "INR"
     steps: dict[str, StepResult] = field(default_factory=dict)
 
     @property
@@ -155,12 +166,13 @@ def validate_entry(e: LedgerEntry) -> None:
     need(e.fees is not None and e.fees >= 0, "fees", "Fees cannot be negative.")
     check_places(e.fees, "fees", MAX_MONEY_PLACES)
     t = e.type
-    if t in (TxnType.DEPOSIT, TxnType.WITHDRAWAL):
+    if t in (TxnType.DEPOSIT, TxnType.WITHDRAWAL, TxnType.FX_IN, TxnType.FX_OUT):
         need(e.symbol is None, "symbol", f"{t.value} must not reference an instrument.")
         need(e.amount is not None and e.amount > 0, "amount", "Amount must be greater than zero.")
         check_places(e.amount, "amount", MAX_MONEY_PLACES)
         need(e.quantity is None and e.price is None, "quantity", f"{t.value} does not take quantity or price.")
-        need(e.fees == 0, "fees", f"{t.value} does not take fees; record the net amount.")
+        if t != TxnType.FX_OUT:  # conversion fees are charged on the paying side
+            need(e.fees == 0, "fees", f"{t.value} does not take fees; record the net amount.")
     elif t in (TxnType.BUY, TxnType.SELL):
         need(bool(e.symbol), "symbol", "An instrument is required.")
         need(e.quantity is not None and e.quantity > 0, "quantity", "Quantity must be greater than zero.")
@@ -187,9 +199,9 @@ def sort_entries(entries: list[LedgerEntry]) -> list[LedgerEntry]:
     return sorted(entries, key=lambda e: (e.effective_date, INTRADAY_PRIORITY[e.type], e.seq))
 
 
-def replay(entries: list[LedgerEntry]) -> LedgerState:
-    """Replay the full ledger, raising LedgerError at the first invalid row."""
-    state = LedgerState()
+def replay(entries: list[LedgerEntry], currency: str = "INR") -> LedgerState:
+    """Replay one currency account's ledger, raising LedgerError at the first invalid row."""
+    state = LedgerState(currency=currency)
     for e in sort_entries(entries):
         validate_entry(e)
         realized: Decimal | None = None
@@ -208,6 +220,15 @@ def replay(entries: list[LedgerEntry]) -> LedgerState:
             assert e.amount is not None
             state.cash -= e.amount
             state.withdrawals += e.amount
+        elif e.type == TxnType.FX_IN:
+            assert e.amount is not None
+            state.cash += e.amount
+            state.fx_in += e.amount
+        elif e.type == TxnType.FX_OUT:
+            assert e.amount is not None
+            state.cash -= e.amount + e.fees
+            state.fx_out += e.amount
+            state.fees += e.fees
         elif e.type == TxnType.BUY:
             assert pos is not None and e.quantity is not None and e.price is not None
             cost = money(e.quantity * e.price) + e.fees
@@ -268,9 +289,9 @@ def replay(entries: list[LedgerEntry]) -> LedgerState:
         if state.cash < 0:
             raise LedgerError(
                 e.ref,
-                f"{_describe(e)} would make cash negative (INR {money(state.cash)}). "
-                "Record a deposit on or before this date first.",
-                "amount" if e.type == TxnType.WITHDRAWAL else "quantity",
+                f"{_describe(e)} would make {currency} cash negative ({currency} {money(state.cash)}). "
+                f"Record a deposit or conversion into the {currency} account on or before this date first.",
+                "amount" if e.type in (TxnType.WITHDRAWAL, TxnType.FX_OUT) else "quantity",
                 e.effective_date,
             )
         state.steps[e.ref] = StepResult(

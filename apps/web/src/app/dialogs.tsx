@@ -1,11 +1,11 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import type { Alert, JournalEntry, Transaction } from "@/lib/api/client";
+import type { AccountCurrency, Alert, JournalEntry, Transaction } from "@/lib/api/client";
 
 export type DialogState =
   | { kind: "none" }
   | { kind: "palette" }
   | { kind: "shortcuts" }
-  | { kind: "transaction"; editing?: Transaction; symbol?: string; type?: Transaction["type"] }
+  | { kind: "transaction"; editing?: Transaction; symbol?: string; type?: Transaction["type"]; currency?: AccountCurrency }
   | { kind: "import" }
   | { kind: "alert"; editing?: Alert; symbol?: string; price?: string }
   | { kind: "journal"; editing?: JournalEntry; symbol?: string }

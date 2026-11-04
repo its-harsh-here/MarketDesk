@@ -212,6 +212,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/fixture/briefing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fixture Briefing
+         * @description Deterministic test path: write the end-of-session briefing for the current sample session (fixture only).
+         *     Calendar-timed briefings are not generated from the fixed sample dataset.
+         */
+        post: operations["fixture_briefing_api_fixture_briefing_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/fixture/fault": {
         parameters: {
             query?: never;
@@ -559,6 +580,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portfolio/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Overview
+         * @description All accounts in their own currency, plus a display-only conversion to INR at the current valuation rate.
+         */
+        get: operations["overview_api_portfolio_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portfolio/transactions": {
         parameters: {
             query?: never;
@@ -858,6 +899,31 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccountValueOut */
+        AccountValueOut: {
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "INR" | "USD";
+            /** Cash */
+            cash: string;
+            /** Holdings Value */
+            holdings_value: string;
+            /** Total Equity */
+            total_equity?: string | null;
+            /** Partial Equity */
+            partial_equity: string;
+            /** Complete */
+            complete: boolean;
+            /** Stale Marks */
+            stale_marks: string[];
+            /** Value In Base */
+            value_in_base?: string | null;
+            /** Partial In Base */
+            partial_in_base?: string | null;
+            rate: components["schemas"]["FxRateOut"];
+        };
         /** ActionsOut */
         ActionsOut: {
             /** Symbol */
@@ -1239,6 +1305,25 @@ export interface components {
              */
             notes: string[];
         };
+        /** FxRateOut */
+        FxRateOut: {
+            /** Pair */
+            pair: string;
+            /** Rate */
+            rate?: string | null;
+            /** Status */
+            status: string;
+            /** Market Time */
+            market_time?: string | null;
+            /** Fetched At */
+            fetched_at?: string | null;
+            /** Source */
+            source?: string | null;
+            /** Symbol */
+            symbol?: string | null;
+            /** Message */
+            message?: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1545,16 +1630,48 @@ export interface components {
             /** Watchlist Ids */
             watchlist_ids: number[];
         };
+        /** PortfolioOverviewOut */
+        PortfolioOverviewOut: {
+            /**
+             * Base Currency
+             * @enum {string}
+             */
+            base_currency: "INR" | "USD";
+            /** Accounts */
+            accounts: components["schemas"]["AccountValueOut"][];
+            /** Complete */
+            complete: boolean;
+            /** Total In Base */
+            total_in_base?: string | null;
+            /** Partial In Base */
+            partial_in_base: string;
+            /** Incomplete Reasons */
+            incomplete_reasons: string[];
+            /** Stale Rates */
+            stale_rates: string[];
+            /** Note */
+            note: string;
+        };
         /** PortfolioSummaryOut */
         PortfolioSummaryOut: {
             /**
              * Currency
              * @default INR
-             * @constant
+             * @enum {string}
              */
-            currency: "INR";
+            currency: "INR" | "USD";
             /** Has Transactions */
             has_transactions: boolean;
+            /**
+             * Fx In
+             * @default 0
+             */
+            fx_in: string;
+            /**
+             * Fx Out
+             * @default 0
+             */
+            fx_out: string;
             /** Cash */
             cash: string;
             /** Holdings Value */
@@ -1837,7 +1954,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "DEPOSIT" | "WITHDRAWAL" | "BUY" | "SELL" | "DIVIDEND" | "SPLIT";
+            type: "DEPOSIT" | "WITHDRAWAL" | "BUY" | "SELL" | "DIVIDEND" | "SPLIT" | "FX";
             /**
              * Effective Date
              * Format: date
@@ -1868,9 +1985,19 @@ export interface components {
             /**
              * Currency
              * @default INR
-             * @constant
+             * @enum {string}
              */
-            currency: "INR";
+            currency: "INR" | "USD";
+            /** Counter Currency */
+            counter_currency?: ("INR" | "USD") | null;
+            /** Counter Amount */
+            counter_amount?: number | string | null;
+            /** Fx Rate */
+            fx_rate?: number | string | null;
+            /** Fx Source */
+            fx_source?: string | null;
+            /** Fx Time */
+            fx_time?: string | null;
             /** Notes */
             notes?: string | null;
         };
@@ -1882,7 +2009,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "DEPOSIT" | "WITHDRAWAL" | "BUY" | "SELL" | "DIVIDEND" | "SPLIT";
+            type: "DEPOSIT" | "WITHDRAWAL" | "BUY" | "SELL" | "DIVIDEND" | "SPLIT" | "FX";
             /**
              * Effective Date
              * Format: date
@@ -1906,6 +2033,18 @@ export interface components {
             split_to?: string | null;
             /** Currency */
             currency: string;
+            /** Counter Currency */
+            counter_currency?: string | null;
+            /** Counter Amount */
+            counter_amount?: string | null;
+            /** Fx Rate */
+            fx_rate?: string | null;
+            /** Effective Rate */
+            effective_rate?: string | null;
+            /** Fx Source */
+            fx_source?: string | null;
+            /** Fx Time */
+            fx_time?: string | null;
             /** Notes */
             notes?: string | null;
             /** Source */
@@ -2329,6 +2468,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FixtureStateOut"];
+                };
+            };
+        };
+    };
+    fixture_briefing_api_fixture_briefing_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoredBriefingOut"];
                 };
             };
         };
@@ -3023,7 +3182,10 @@ export interface operations {
     };
     summary_api_portfolio_summary_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Currency account */
+                currency?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3039,6 +3201,35 @@ export interface operations {
                     "application/json": components["schemas"]["PortfolioSummaryOut"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overview_api_portfolio_overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioOverviewOut"];
+                };
+            };
         };
     };
     transactions_api_portfolio_transactions_get: {
@@ -3048,6 +3239,7 @@ export interface operations {
                 offset?: number;
                 symbol?: string | null;
                 type?: string | null;
+                currency?: string | null;
             };
             header?: never;
             path?: never;
@@ -3258,7 +3450,10 @@ export interface operations {
     };
     export_holdings_api_portfolio_export_holdings_csv_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Currency account */
+                currency?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3272,6 +3467,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

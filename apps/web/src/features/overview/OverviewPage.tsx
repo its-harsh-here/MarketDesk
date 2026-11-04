@@ -64,7 +64,7 @@ function PortfolioSnapshot({ className }: { className?: string }) {
   const hasHoldings = Boolean(s && s.holdings.length > 0);
   return (
     <Panel
-      title="Portfolio"
+      title="Portfolio · INR account"
       titleId="pf-title"
       className={className}
       actions={

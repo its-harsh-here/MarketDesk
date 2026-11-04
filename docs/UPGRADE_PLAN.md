@@ -37,4 +37,6 @@ earlier as soon as their credentials exist.
 - Phase 3 (M02): ✅ implemented and tested with fixtures; deployed. Live SEC verification waits for `SEC_USER_AGENT` (owner's contact).
 - Phase 4 (M05): ✅ implemented, tested (fixtures + a real-data worker cycle on a production copy) and deployed; live
   checks in `docs/UPGRADE_STATUS.md`. Filing alerts wait for `SEC_USER_AGENT`.
-- Phase 5 (M08): next.
+- Phase 5 (M08): ✅ implemented, tested and deployed; live checks in `docs/UPGRADE_STATUS.md`. Broker CSV mapping
+  presets not built (canonical CSV covers both accounts and FX).
+- Phase 6 (M10): next.

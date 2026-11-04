@@ -11,10 +11,12 @@ import { cn } from "@/lib/cn";
 import { useTransactionMutations } from "./api";
 
 const TEMPLATE = [
-  "date,type,symbol,quantity,price,fees,amount,currency,split_from,split_to,notes",
-  "2026-01-02,DEPOSIT,,,,,10000,INR,,,Initial funding",
-  "2026-01-03,BUY,RELIANCE.NS,10,1250.50,20,,INR,,,",
-  "2026-01-05,SELL,RELIANCE.NS,5,1290,20,,INR,,,",
+  "date,type,symbol,quantity,price,fees,amount,currency,split_from,split_to,counter_currency,counter_amount,fx_rate,fx_source,fx_time,notes",
+  "2026-01-02,DEPOSIT,,,,,100000,INR,,,,,,,,Initial funding",
+  "2026-01-03,BUY,RELIANCE.NS,10,1250.50,20,,INR,,,,,,,,",
+  "2026-01-05,SELL,RELIANCE.NS,5,1290,20,,INR,,,,,,,,",
+  "2026-01-06,FX,,,,150,42000,INR,,,USD,500,84,Your bank,2026-01-06T10:30:00+05:30,Remittance",
+  "2026-01-07,BUY,AAPL,2,230.10,1,,USD,,,,,,,,",
 ].join("\n");
 
 export function ImportDialog() {
@@ -110,7 +112,7 @@ export function ImportDialog() {
         <details className="rounded-[var(--radius-control)] border border-line-subtle bg-canvas/40 px-3 py-2 text-[13px] text-fg-2">
           <summary className="cursor-pointer text-fg">Canonical columns</summary>
           <p className="mt-2 leading-5">
-            <code className="num text-xs text-fg">date,type,symbol,quantity,price,fees,amount,currency,split_from,split_to,notes</code> — dates as YYYY-MM-DD; types DEPOSIT, WITHDRAWAL, BUY, SELL, DIVIDEND or SPLIT; plain numbers without thousands separators; currency INR (blank means INR). Enter trades with their original quantities; a SPLIT row applies a split once. Rows identical to existing transactions (including notes) are treated as duplicates and skipped.
+            <code className="num text-xs text-fg">date,type,symbol,quantity,price,fees,amount,currency,split_from,split_to,notes</code> (plus <code className="num text-xs text-fg">counter_currency,counter_amount,fx_rate,fx_source,fx_time</code> for FX rows) — dates as YYYY-MM-DD; types DEPOSIT, WITHDRAWAL, BUY, SELL, DIVIDEND, SPLIT or FX; plain numbers without thousands separators; currency is the account, INR or USD (blank means INR), and an instrument must trade in its row's currency. Enter trades with their original quantities; a SPLIT row applies a split once. Rows identical to existing transactions (including notes) are treated as duplicates and skipped.
           </p>
         </details>
         {error && <InlineNotice tone="neg"><span role="alert">{error}</span></InlineNotice>}

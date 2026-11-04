@@ -1,5 +1,13 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type ImportPreview, type PortfolioSummary, type Transaction, type TransactionInput } from "@/lib/api/client";
+import {
+  api,
+  type AccountCurrency,
+  type ImportPreview,
+  type PortfolioOverview,
+  type PortfolioSummary,
+  type Transaction,
+  type TransactionInput,
+} from "@/lib/api/client";
 
 export interface TransactionPage {
   items: Transaction[];
@@ -8,17 +16,28 @@ export interface TransactionPage {
   offset: number;
 }
 
-export function usePortfolioSummary(enabled = true) {
+export function usePortfolioSummary(enabled = true, currency: AccountCurrency = "INR") {
   return useQuery({
-    queryKey: ["portfolio", "summary"],
-    queryFn: () => api.get<PortfolioSummary>("/api/portfolio/summary"),
+    queryKey: ["portfolio", "summary", currency],
+    queryFn: () => api.get<PortfolioSummary>("/api/portfolio/summary", { currency }),
     refetchInterval: 60_000,
     placeholderData: keepPreviousData,
     enabled,
   });
 }
 
-export function useTransactions(params: { symbol?: string; type?: string; offset?: number }) {
+/** Every account in its own currency plus a display-only conversion to INR at the current valuation rate. */
+export function usePortfolioOverview(enabled = true) {
+  return useQuery({
+    queryKey: ["portfolio", "overview"],
+    queryFn: () => api.get<PortfolioOverview>("/api/portfolio/overview"),
+    refetchInterval: 60_000,
+    placeholderData: keepPreviousData,
+    enabled,
+  });
+}
+
+export function useTransactions(params: { symbol?: string; type?: string; offset?: number; currency?: AccountCurrency }) {
   return useQuery({
     queryKey: ["portfolio", "txns", params],
     queryFn: () => api.get<TransactionPage>("/api/portfolio/transactions", { limit: 100, ...params }),

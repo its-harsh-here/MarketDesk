@@ -101,7 +101,7 @@ test("ledger: transactions update holdings and cash; invalid trade keeps input a
   await dialog.getByLabel("Quantity").fill("1000");
   await dialog.getByLabel("Price per share").fill("100");
   await dialog.getByRole("button", { name: "Record transaction" }).click();
-  await expect(dialog.getByRole("alert").first()).toContainText("would make cash negative");
+  await expect(dialog.getByRole("alert").first()).toContainText("would make INR cash negative");
   await expect(dialog.getByLabel("Quantity")).toHaveValue("1000");
   // client-side validation is inline and associated with the field
   await dialog.getByLabel("Price per share").fill("-5");
@@ -109,6 +109,40 @@ test("ledger: transactions update holdings and cash; invalid trade keeps input a
   await expect(dialog.getByText("Price must be a plain number")).toBeVisible();
   await dialog.getByRole("button", { name: "Cancel" }).click();
   await expect(summary.getByText("₹8,425.00")).toBeVisible();
+});
+
+test("USD account: an FX conversion funds a US listing; all-accounts view converts at a stated rate", async ({ page }) => {
+  await page.goto("/portfolio");
+  await page.getByRole("button", { name: "Convert currency" }).click();
+  const dialog = page.getByRole("dialog", { name: "Add transaction" });
+  await expect(dialog.getByLabel("Type")).toHaveValue("FX");
+  await dialog.getByLabel("Effective date").fill("2026-01-06");
+  await dialog.getByLabel("Amount converted (INR)").fill("8400");
+  await dialog.getByLabel("Amount received (USD)").fill("100");
+  await dialog.getByLabel("Conversion fees (INR)").fill("25");
+  await dialog.getByLabel("Quoted rate (INR per USD)").fill("84");
+  await expect(dialog.getByText("Effective 84.0000 INR per USD from the amounts.")).toBeVisible();
+  await dialog.getByLabel("Rate source").fill("Sample Bank");
+  await dialog.getByRole("button", { name: "Record transaction" }).click();
+  await expect(page.getByText("Transaction recorded.")).toBeVisible();
+  const summary = page.getByRole("region", { name: "Portfolio summary" });
+  await expect(summary.getByText("Ledger balance · INR")).toBeVisible();
+  await expect(summary.getByText("₹0.00", { exact: true }).first()).toBeVisible(); // 8,425 − 8,400 − 25
+
+  await page.getByRole("radio", { name: "USD account" }).click();
+  await expect(page).toHaveURL(/account=USD/);
+  await expect(summary.getByText("$100.00").first()).toBeVisible();
+  await addTransaction(page, { type: "BUY", date: "2026-01-07", symbol: "SX:HALCYON", qty: "0.5", price: "160" });
+  await expect(page.getByText("Transaction recorded.")).toBeVisible();
+  await expect(summary.getByText("$20.00").first()).toBeVisible(); // cash after the purchase, still in USD
+  await expect(page.getByRole("table", { name: "Holdings" }).getByRole("row", { name: /SX:HALCYON/ })).toBeVisible();
+  await expect(page.getByRole("table", { name: "Transaction ledger" }).getByText("INR → USD")).toBeVisible();
+
+  await page.getByRole("radio", { name: "All accounts" }).click();
+  await expect(page.getByText("All accounts, in INR at current rates")).toBeVisible();
+  await expect(page.getByText(/USD\/INR 91\.3700 · sample/)).toBeVisible();
+  await expect(page.getByText(/no historical rate is applied/)).toBeVisible();
+  await page.getByRole("radio", { name: "INR account" }).click();
 });
 
 test("CSV: preview → import → duplicate upload is rejected", async ({ page }) => {

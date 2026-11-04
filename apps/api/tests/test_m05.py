@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
@@ -359,30 +358,6 @@ def test_fixture_briefing_path_and_no_calendar_briefings_from_samples(api, app):
 
 
 # --------------------------------------------------------------------------- data migration
-_M05_COLUMNS = {
-    "alerts": {"rule", "params", "cooldown_minutes", "rearm_at", "quiet_start", "quiet_end", "last_skip_reason"},
-    "alert_events": {"rule", "explanation", "link", "deliver_after"},
-}
-
-
-def _as_0003(data: dict) -> dict:
-    """Rewrite a current backup as the previous version (schema 0003) would have produced it."""
-    from marketdesk.services.backup import checksum
-
-    old = json.loads(json.dumps(data))
-    old["schema_revision"] = "0003"
-    for table in ("alert_deliveries", "briefings"):
-        old["tables"].pop(table, None)
-    for name, drop in _M05_COLUMNS.items():
-        tab = old["tables"][name]
-        keep = [i for i, c in enumerate(tab["columns"]) if c not in drop]
-        tab["columns"] = [tab["columns"][i] for i in keep]
-        tab["rows"] = [[row[i] for i in keep] for row in tab["rows"]]
-    old["counts"] = {k: len(v["rows"]) for k, v in old["tables"].items()}
-    old["checksum"] = checksum(old["tables"])
-    return old
-
-
 @pytest.mark.parametrize("backend", ["sqlite", "postgresql"])
 def test_pre_m05_backup_with_alerts_restores_and_migrates(tmp_path, backend):
     """Regression: restoring an older backup must not insert columns that only exist in later schema revisions."""
@@ -391,7 +366,7 @@ def test_pre_m05_backup_with_alerts_restores_and_migrates(tmp_path, backend):
     from marketdesk.api.app import create_app
     from marketdesk.cli import restore_with_migrations
     from marketdesk.db import get_engine
-    from tests.conftest import PG_URL, Api, _reset_postgres, make_settings, migrated
+    from tests.conftest import PG_URL, Api, _reset_postgres, as_revision, make_settings, migrated
 
     if backend == "postgresql" and not PG_URL:
         pytest.skip("needs TEST_DATABASE_URL (PostgreSQL)")
@@ -405,7 +380,7 @@ def test_pre_m05_backup_with_alerts_restores_and_migrates(tmp_path, backend):
         with db_session() as db:
             assert asyncio.run(run_evaluation_cycle(db, app.state.market))["triggered"] == 1
         data = api.get("/api/backup/export").json()
-    old = _as_0003(data)
+    old = as_revision(data, "0003", tmp_path / "rev")
     if backend == "postgresql":
         _reset_postgres(PG_URL)
         url = PG_URL

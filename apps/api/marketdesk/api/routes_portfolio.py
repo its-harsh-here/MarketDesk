@@ -14,6 +14,7 @@ from marketdesk.models import LedgerTransaction
 from marketdesk.schemas import (
     ImportCommitOut,
     ImportPreviewOut,
+    PortfolioOverviewOut,
     PortfolioSummaryOut,
     TransactionIn,
     TransactionOut,
@@ -28,14 +29,26 @@ CSV_TYPES = {"text/csv", "application/csv", "application/vnd.ms-excel", "text/pl
 
 
 def _with_state(db: Session, t: LedgerTransaction) -> dict:
-    state, _ = svc.current_state(db)
-    return svc.txn_dict(t, state)
+    states, _ = svc.current_states(db)
+    return svc.txn_dict(t, states)
+
+
+Account = Query(default="INR", pattern="^(INR|USD)$", description="Currency account")
 
 
 @router.get("/summary", response_model=PortfolioSummaryOut, dependencies=[Depends(require_reader)])
 @off_event_loop
-async def summary(db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)):
-    return await svc.portfolio_summary(db, market)
+async def summary(
+    currency: str = Account, db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)
+):
+    return await svc.portfolio_summary(db, market, currency)
+
+
+@router.get("/overview", response_model=PortfolioOverviewOut, dependencies=[Depends(require_reader)])
+@off_event_loop
+async def overview(db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)):
+    """All accounts in their own currency, plus a display-only conversion to INR at the current valuation rate."""
+    return await svc.portfolio_overview(db, market, "INR")
 
 
 @router.get("/transactions", response_model=TransactionPage, dependencies=[Depends(require_reader)])
@@ -43,10 +56,11 @@ def transactions(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     symbol: str | None = Query(default=None, max_length=32),
-    type: str | None = Query(default=None, pattern="^(DEPOSIT|WITHDRAWAL|BUY|SELL|DIVIDEND|SPLIT)$"),  # noqa: A002
+    type: str | None = Query(default=None, pattern="^(DEPOSIT|WITHDRAWAL|BUY|SELL|DIVIDEND|SPLIT|FX)$"),  # noqa: A002
+    currency: str | None = Query(default=None, pattern="^(INR|USD)$"),
     db: Session = Depends(get_db),
 ):
-    return svc.list_transactions(db, limit, offset, symbol.upper() if symbol else None, type)
+    return svc.list_transactions(db, limit, offset, symbol.upper() if symbol else None, type, currency)
 
 
 @router.post("/transactions", response_model=TransactionOut, status_code=201, dependencies=[Depends(require_writer)])
@@ -111,5 +125,8 @@ def export_transactions(db: Session = Depends(get_db)):
 
 @router.get("/export/holdings.csv", dependencies=[Depends(require_reader)])
 @off_event_loop
-async def export_holdings(db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)):
-    return _csv_response(csv_io.export_holdings_csv(await svc.portfolio_summary(db, market)), "holdings")
+async def export_holdings(
+    currency: str = Account, db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)
+):
+    summary = await svc.portfolio_summary(db, market, currency)
+    return _csv_response(csv_io.export_holdings_csv(summary), f"holdings-{currency.lower()}")

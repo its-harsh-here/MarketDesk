@@ -1,7 +1,8 @@
 # MarketDesk
 
 A personal market research terminal for Indian and US listings, built on **real market data** from Yahoo Finance:
-watchlists, instrument charts and fundamentals, an INR portfolio ledger with CSV import/export, sampled alerts (price,
+watchlists, instrument charts and fundamentals, INR and USD portfolio accounts with FX conversions and CSV import/export,
+sampled alerts (price,
 crossing, volume, volatility, SEC filings) with an inbox, an investment journal and rule-based briefings. It runs as a
 FastAPI web process (API + built React SPA on the same origin) plus one alert worker, on SQLite or PostgreSQL.
 
@@ -206,7 +207,6 @@ are different instruments. Market session states (open, closed with the reason, 
 `exchange_calendars` package's published calendars, so holidays, early closes and US daylight-saving changes are
 respected; dates beyond the calendar's data (India: after 2026-12-31) and special sessions such as Muhurat trading are
 shown as unknown. Session states describe the exchange schedule only; quotes keep their own market time and freshness.
-The portfolio remains INR-only until USD accounts arrive (roadmap M08).
 
 ## Company research
 
@@ -219,89 +219,34 @@ that SEC data does not apply. Requires `SEC_USER_AGENT`; data is cached and re-c
 
 ## Accounting rules
 
-The INR ledger supports DEPOSIT, WITHDRAWAL, BUY, SELL, DIVIDEND and explicitly confirmed SPLIT, long-only.
-Decimal arithmetic throughout; amounts settle to paise; average cost keeps full precision and is rounded only for
+The portfolio has two accounts, **INR** and **USD**, each a separate ledger with its own cash, holdings and P&L in its
+own currency. An instrument must trade in its account's currency (US stocks/ETFs in USD, NSE/BSE listings in INR);
+amounts are never converted or relabeled. Each account supports DEPOSIT, WITHDRAWAL, BUY, SELL, DIVIDEND and explicitly
+confirmed SPLIT, long-only. Money moves between accounts only through an explicit **FX conversion**, which records the
+amount paid, the amount received, conversion fees (in the paying currency), the quoted USD/INR rate (INR per USD,
+optional and checked against the amounts), the rate's source and its time. Conversions are transfers, not deposits.
+
+Decimal arithmetic throughout; amounts settle to 2 decimals; average cost keeps full precision and is rounded only for
 display. Buy cost = qty × price + fees; a sell releases qty × average cost; realized P&L = proceeds − fees − released
-basis; splits change quantity, not basis. Every edit replays the whole ledger and is rejected if cash would go
-negative or a sale would exceed holdings at any point. Average cost is an analytical convention, not a tax report.
-Net deposits are not shown as gains, and returns (XIRR/TWR) are deliberately not computed in this release.
+basis; splits change quantity, not basis. Every edit replays both accounts and is rejected if either account's cash
+would go negative or a sale would exceed holdings at any point. Average cost is an analytical convention, not a tax
+report. Net deposits are not shown as gains, and returns (XIRR/TWR) are deliberately not computed in this release.
 
-CSV import uses the canonical columns `date,type,symbol,quantity,price,fees,amount,currency,split_from,split_to,notes`
-(a template is downloadable in the import dialog). Imports are previewed row by row, all-or-nothing, and duplicate rows
-are skipped. Exports neutralise spreadsheet formulas.
+**All accounts** shows each account's value in its own currency and, for display only, in INR at the current valuation
+rate (with its pair, source, market time and status). Without a usable rate, or with an unpriced holding, the
+consolidated total is withheld and the reason is shown. No historical rate is applied, so no consolidated profit or
+return is shown, and a displayed conversion never changes a transaction.
 
-## Alerts, inbox and briefings
-
-Alerts are **sampled**: the worker checks new data every `ALERT_POLL_SECONDS` (default 300). Rule types:
-
-| Rule | Fires when | Data |
-| --- | --- | --- |
-| Price at or above / below | the first sampled quote at or beyond the level | each new quote observation |
-| Crosses above / below | two consecutive sampled quotes lie on opposite sides of the level (the first quote after arming is only a baseline) | each new quote observation |
-| Unusual volume | a session's volume ≥ multiple × the average of the previous 5–60 sessions | completed daily sessions only |
-| Unusual daily move | a session's close-to-close move ≥ multiple × the standard deviation of the previous 5–60 daily moves | completed daily sessions only |
-| New SEC filing (US) | a new filing of the chosen forms appears; links to the document; keeps watching | SEC EDGAR (`SEC_USER_AGENT` required) |
-
-A session still trading (by the exchange calendar) is never compared with full days. Stale, failed or missing data is
-never evaluated, and the reason is shown on the rule. After firing, a rule waits for a manual rearm or rearms itself
-after an optional cooldown (5 minutes to 7 days). Quiet hours (display timezone) hold the in-app notice until the
-window ends; the event itself is still recorded. Event keys and per-channel delivery rows are unique, so cached
-re-reads, retries and worker restarts cannot duplicate events or notices. Only in-app notices exist (no email,
-Telegram or push). Alerts require the server and worker to be running.
-
-The **inbox** (Alerts page and the topbar bell) lists alert events and **briefings** with type/market/unread filters
-and read state. The worker writes a morning briefing before each NSE/BSE and NYSE/Nasdaq session and an
-end-of-session briefing after the close, timed by the exchange calendars and stored once per session: largest
-completed-session moves among your symbols, volume notes, triggered alerts, distance to price levels and due journal
-reviews. It uses fixed templates only: no model, no causes, no recommendations.
-
-## Tests
-
-Automated tests use the synthetic harness so they are deterministic and never depend on Yahoo being up.
-
-| Suite | Command |
-| --- | --- |
-| API (pytest) and lint | `cd apps/api && uv run pytest && uv run ruff check marketdesk tests` |
-| API on PostgreSQL | `TEST_DATABASE_URL=postgresql://USER:PW@HOST/DB uv run pytest` (resets that database's schema) |
-| Web types, lint, unit, build | `cd apps/web && npx tsc -b --noEmit && npx eslint . && npx vitest run && npm run build` |
-| Browser journeys (real API + worker) | after building the web app: `cd tests/e2e && npm ci && npx playwright test` |
-| Visual QA captures (not committed) | `cd tests/e2e && npm run screenshots` → `tests/e2e/test-results/screenshots` |
-| Live Yahoo smoke test | `cd apps/api && uv run python ../../scripts/check_yahoo.py` |
-
-CI (`.github/workflows/ci.yml`) runs these suites and builds the Docker image. Results are recorded in
-`docs/STATUS.md`. API types for the frontend are generated from OpenAPI: `cd apps/web && npm run gen:api`.
-
-## Layout
-
-```
-apps/api     FastAPI app (marketdesk/), Alembic migrations, pytest suite
-apps/web     React + TypeScript SPA (src/app, components, features, lib, styles), Vitest
-tests/e2e    Playwright journeys and visual QA captures
-fixtures     Synthetic test-harness dataset (tests only; refused in production)
-config       Starter NSE watchlist and benchmark indices
-docs         PLAN, STATUS, DECISIONS, screenshots
-```
-
-## Runtime versions
-
-Python 3.13 · FastAPI 0.162.0 · Uvicorn 0.54.0 · SQLAlchemy 2.1.6 · Alembic 1.20.1 · Pydantic 2.14.2 · yfinance 1.7.0 ·
-pandas 3.1.0 · argon2-cffi 25.1.0 · exchange-calendars 4.13.2 · Node 22 · React 19.3.1 · Vite 7.3.7 · TypeScript 5.9.3 · Tailwind CSS 4.3.4 ·
-TanStack Query 5.105.3 · React Router 7.18.5 · React Hook Form 7.91.0 · Zod 4.6.7 · Lightweight Charts 5.2.1 ·
-Vitest 3.2.7 · Playwright 1.63.0. Exact pins are in `apps/api/uv.lock` and the `package-lock.json` files.
-
-## Attribution
-
-- Charts: [TradingView Lightweight Charts™](https://www.tradingview.com/lightweight-charts/) (Apache-2.0), Copyright ©
-  TradingView, Inc. Each chart shows the TradingView attribution logo; Settings → About repeats it.
-- Market data: Yahoo Finance via [yfinance](https://github.com/ranaroussi/yfinance) (Apache-2.0, unofficial).
-- Exchange calendars: [exchange_calendars](https://github.com/gerrymanoim/exchange_calendars) (Apache-2.0).
-- Fonts: Inter and JetBrains Mono (SIL OFL 1.1) bundled through Fontsource. Icons: Lucide (ISC).
-
-No licence has been chosen for MarketDesk's own code; add one before distributing it.
+CSV import uses the canonical columns
+`date,type,symbol,quantity,price,fees,amount,currency,split_from,split_to,counter_currency,counter_amount,fx_rate,fx_source,fx_time,notes`
+(`currency` is the account; the five FX columns apply to FX rows only; files without them still import). A template is
+downloadable in the import dialog. Imports are previewed row by row, all-or-nothing, and duplicate rows are skipped.
+Exports neutralise spreadsheet formulas; holdings export per account.
 
 ## Known limitations
 
 See `docs/STATUS.md` and `docs/UPGRADE_STATUS.md`. In short: alerts are sampled, not tick-by-tick; session states come
 from published calendars (unknown beyond their data);
-portfolio is INR-only and long-only; no XIRR/TWR or historical equity chart; Yahoo coverage and field availability
+portfolio is long-only with INR and USD accounts (no historical FX, so no consolidated returns); no XIRR/TWR or
+historical equity chart; broker-specific CSV mapping presets are not built; Yahoo coverage and field availability
 vary (fields are shown as missing rather than guessed), and Yahoo may rate-limit cloud hosts.

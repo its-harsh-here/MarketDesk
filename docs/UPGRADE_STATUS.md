@@ -21,7 +21,7 @@ Roadmap: `docs/MARKETDESK_ROADMAP.txt`. Older history and decisions: `docs/STATU
 | Database | SQLAlchemy 2.1 + Alembic, one revision `0001_initial_schema`; 15 tables (settings, instruments, watchlists/items, ledger, import batches, alerts/events, quote observations, journal/tags, login attempts, market cache, worker status, unused legacy `auth_sessions`); SQLite WAL or PostgreSQL; `ensure_migrated` at startup under a file lock | PostgreSQL backup/restore is provider-side only (no app-level verified restore) |
 | Market data | `MarketDataProvider` protocol (search, quote, history, fundamentals, corporate actions, validate); `YahooProvider` (yfinance 1.7; derived fundamentals when Yahoo refuses `quoteSummary`); `FixtureProvider` (test harness, refused in production); `MarketDataService` (memory + persisted cache, TTLs, de-duplication, retries, per-endpoint circuit breakers, stale fallback) | No SEC EDGAR, no streaming/Alpaca, no exchange calendars (market status is always "unavailable") |
 | India + US | Any Yahoo symbol can be searched, charted and watchlisted in its native currency (USD shown as $); bare NSE/BSE names get a `.NS`/`.BO` suggestion | No region/currency filters, security-type/symbol-mapping validation, or comparison chart |
-| Portfolio | INR long-only ledger (DEPOSIT, WITHDRAWAL, BUY, SELL, DIVIDEND, confirmed SPLIT), Decimal replay on every edit, average cost, realized/unrealized P&L, CSV preview/import/export with formula-injection defence; non-INR instruments refused with an explanation | No USD accounts or FX events (M08) |
+| Portfolio | INR and USD long-only accounts (DEPOSIT, WITHDRAWAL, BUY, SELL, DIVIDEND, confirmed SPLIT) plus explicit FX conversions; Decimal replay of both accounts on every edit; average cost, realized/unrealized P&L; all-accounts view in INR at a stated current rate (withheld when incomplete); CSV preview/import/export with formula-injection defence | No historical FX or consolidated returns; no broker CSV mapping presets |
 | Alerts + worker | Price, crossing, completed-session volume/volatility and SEC filing rules; cooldown auto-rearm; quiet hours; unique event and delivery keys; unified inbox with scheduled morning/end-of-session briefings (exchange calendars); single worker every `ALERT_POLL_SECONDS` (300 s), started 45 s after the web server at nice 10 in single-container mode | No email/Telegram/push delivery; filing rules need `SEC_USER_AGENT` |
 | Briefing | Rule-based: largest watchlist moves, distance to alert thresholds, recent alert events, journal reviews due | No Grok narrative (optional, M03/M05) |
 | Journal | Thesis, risks, invalidation, tags, review date; plain-text rendering; filters | No versioning/snapshots (M10) |
@@ -407,12 +407,59 @@ No new environment variables. External channels (email/Telegram/push) are not bu
   dialog render at 1440 and 390 px with no page overflow and no console errors (read-only check; nothing written).
 - The pre-deploy backup and the scratch rehearsal database have been deleted.
 
+## Phase 5 — M08 USD portfolios and FX (4 Nov 2026)
+**What changed.**
+- **Accounts:** INR and USD, keyed by the existing `currency` column of each transaction (every existing row was INR
+  and is unchanged). Each account is replayed separately with its own cash, holdings, P&L and fees.
+- **US listings:** buys, sells, dividends and splits of USD instruments are recorded in the USD account; recording an
+  instrument in the other currency's account is refused with the account to use. Indices and FX series cannot be held.
+- **FX conversions** (new transaction type `FX`): one row with two legs — amount + fees leave the paying account, the
+  amount received arrives in the other. It records the quoted USD/INR rate (INR per USD, optional; must agree with the
+  amounts within 2%), the rate's source (required) and time. The effective rate is shown. Conversions are transfers:
+  they are not deposits, withdrawals or gains.
+- **Replay across accounts:** every create, edit, delete and import replays both accounts, so a conversion that would
+  overdraw INR, a USD purchase dated before its funding, or deleting a conversion that funded later purchases is
+  rejected with the offending row.
+- **All accounts view** (`/api/portfolio/overview`): each account's native value, a display-only INR conversion at the
+  current valuation rate (Yahoo `USDINR=X`; a synthetic `SX:USDINR` series in the fixture harness) with pair, source,
+  market time and status, and a total only when every account is fully priced and every rate is usable; otherwise the
+  reasons are listed and only a labelled partial figure is shown. No historical FX, so no consolidated profit or return.
+- **CSV:** `currency` selects the account (INR or USD); FX rows use `counter_currency`, `counter_amount`, `fx_rate`,
+  `fx_source`, `fx_time`. Old files (without the new columns) still import; non-FX fingerprints are unchanged, so
+  duplicate detection of existing rows is unaffected. Holdings export per account.
+- **UI:** an account switcher on Portfolio (INR / USD / All accounts, in the URL), currency-correct figures throughout,
+  a "Convert currency" action and FX fields in the transaction dialog, FX rows in the ledger shown from either side.
+
+**Data migration 0005 (additive).** Adds nullable FX columns and admits `FX` in the type check; existing rows are not
+rewritten.
+- Tests: a 0004 backup with the CLAUDE.md acceptance ledger restores, migrates and reads back identically (summary and
+  every transaction); fingerprints of non-FX rows equal the pre-M08 formula.
+- Rehearsal on a copy of production (backup at 0004 restored into scratch PostgreSQL 17, migrated to 0005): owner-data
+  fingerprint identical.
+
+**Not built in this phase:** broker-specific CSV mapping presets (roadmap item 45 asks for source mapping); the
+canonical format covers both accounts and FX rows. Historical FX (needed for consolidated returns) is out of scope by
+design.
+
+**Checks.**
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 17 | 180 passed, 3 skipped / 182 passed, 1 skipped (M08: 14, incl. FX legs, rate convention and consistency, cross-account replay on create/edit/delete, overview with and without a rate, CSV round trip, migration preservation) |
+| Migration 0005 on a populated SQLite database | existing row byte-identical; type check enforced; down/up clean |
+| Migration 0005 up/down/up and `alembic check` (SQLite and PostgreSQL) | clean |
+| ruff, tsc, ESLint / Vitest | clean / 30 passed |
+| Playwright journeys (fixture harness) | 15 passed (new: FX conversion funds a USD purchase; all-accounts view with the stated rate) |
+| Visual (fixture harness) | Portfolio USD and All accounts at 1440/1024/390 and the FX dialog; no page overflow |
+
+Fixture data: a synthetic `SX:USDINR` series was added by the generator with its own seed; every existing series is
+byte-identical. No new environment variables.
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
 - Yahoo (yfinance) is unofficial; it refuses `quoteSummary` from Render, so some fundamentals are derived and labeled.
-- Portfolio is INR-only; there are no returns metrics (XIRR/TWR) by design.
+- Portfolio has INR and USD accounts; there are no returns metrics (XIRR/TWR) and no historical FX by design.
 
 ## Next concrete action
-Phase 5 — **M08 USD portfolios + FX** (see `docs/UPGRADE_PLAN.md`). Owner inputs still open: `SEC_USER_AGENT`
+Phase 6 — **M10 Decision journal** (see `docs/UPGRADE_PLAN.md`). Owner inputs still open: `SEC_USER_AGENT`
 (SEC data and filing alerts), and later `XAI_API_KEY`/`XAI_MODEL` (M03) and Alpaca key/secret + feed (M04).

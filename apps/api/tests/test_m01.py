@@ -5,7 +5,6 @@ database and restore of a pre-M01 backup."""
 
 from __future__ import annotations
 
-import json
 import types
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -20,12 +19,11 @@ from marketdesk.db import get_engine, session_factory
 from marketdesk.db.migrations import upgrade
 from marketdesk.providers.venues import security_type, venue_for
 from marketdesk.providers.yahoo import YahooProvider, instrument_from_meta
-from marketdesk.services.backup import checksum
 from marketdesk.services.compare import align_and_rebase
 from marketdesk.services.market import MarketDataService
 from marketdesk.services.sessions import session_state
 
-from .conftest import PG_URL, Api, _reset_postgres, make_settings, migrated
+from .conftest import PG_URL, Api, _reset_postgres, as_revision, make_settings, migrated
 
 
 # --------------------------------------------------------------------------- identity
@@ -262,21 +260,7 @@ def test_pre_m01_backup_restores_into_the_current_schema(tmp_path):
             "/api/portfolio/transactions", json={"type": "DEPOSIT", "effective_date": "2026-01-02", "amount": "500.25"}
         )
         data = api.get("/api/backup/export").json()
-    # Rewrite it as the previous version (schema 0001) would have produced it.
-    old = json.loads(json.dumps(data))
-    old["schema_revision"] = "0001"
-    for table in ("instrument_identifiers", "research_checks"):  # tables added after revision 0001
-        old["tables"].pop(table, None)
-    inst = old["tables"]["instruments"]
-    keep = [
-        i
-        for i, col in enumerate(inst["columns"])
-        if col not in ("exchange_code", "mic", "country", "identity_source", "identity_verified_at")
-    ]
-    inst["columns"] = [inst["columns"][i] for i in keep]
-    inst["rows"] = [[row[i] for i in keep] for row in inst["rows"]]
-    old["counts"] = {k: len(v["rows"]) for k, v in old["tables"].items()}
-    old["checksum"] = checksum(old["tables"])
+    old = as_revision(data, "0001", tmp_path / "rev")  # as the previous version (schema 0001) produced it
 
     target = make_settings(
         tmp_path / "dst",

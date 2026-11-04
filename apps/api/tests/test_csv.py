@@ -42,7 +42,7 @@ def test_malformed_rows_are_reported_and_block_import(api):
         '2026-01-03,BUY,SX:AURORA,1,"1,000",0,,INR,\n'
         "2026-01-03,TRANSFER,,,,,5,INR,\n"
         "2026-01-03,BUY,SX:HALCYON,1,10,0,,INR,\n"
-        "2026-01-03,DEPOSIT,,,,,5,USD,\n"
+        "2026-01-03,DEPOSIT,,,,,5,EUR,\n"
     )
     p = upload(api, bad).json()
     assert not p["can_import"] and p["error_rows"] == 6
@@ -51,8 +51,8 @@ def test_malformed_rows_are_reported_and_block_import(api):
     assert "not a number" in msgs[3]
     assert "thousands" in msgs[4]
     assert "type must be" in msgs[5]
-    assert "INR-only" in msgs[6]
-    assert "Only INR" in msgs[7]
+    assert "Record it in the USD account" in msgs[6]  # a USD listing on an INR row
+    assert "currency must be INR or USD" in msgs[7]
 
 
 def test_unknown_columns_and_file_type_rejected(api):

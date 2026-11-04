@@ -110,7 +110,7 @@ class WatchlistItem(Base):
 class LedgerTransaction(Base):
     __tablename__ = "ledger_transactions"
     __table_args__ = (
-        CheckConstraint("type IN ('DEPOSIT','WITHDRAWAL','BUY','SELL','DIVIDEND','SPLIT')", name="ck_txn_type"),
+        CheckConstraint("type IN ('DEPOSIT','WITHDRAWAL','BUY','SELL','DIVIDEND','SPLIT','FX')", name="ck_txn_type"),
         Index("ix_txn_effective", "effective_date", "id"),
     )
 
@@ -124,7 +124,15 @@ class LedgerTransaction(Base):
     amount: Mapped[Decimal | None] = mapped_column(DecimalText)
     split_from: Mapped[Decimal | None] = mapped_column(DecimalText)
     split_to: Mapped[Decimal | None] = mapped_column(DecimalText)
+    # The currency account this row belongs to (INR or USD). Amounts are in this currency; never converted in place.
     currency: Mapped[str] = mapped_column(String(8), default="INR")
+    # FX conversions (type FX, migration 0005): `amount` + `fees` leave this account, `counter_amount` arrives in the
+    # `counter_currency` account. `fx_rate` is the quoted USD/INR rate (INR per 1 USD), with its source and time.
+    counter_currency: Mapped[str | None] = mapped_column(String(8))
+    counter_amount: Mapped[Decimal | None] = mapped_column(DecimalText)
+    fx_rate: Mapped[Decimal | None] = mapped_column(DecimalText)
+    fx_source: Mapped[str | None] = mapped_column(String(80))
+    fx_time: Mapped[datetime | None] = mapped_column(UTCDateTime)
     notes: Mapped[str | None] = mapped_column(Text)
     fingerprint: Mapped[str] = mapped_column(String(64), index=True)
     source: Mapped[str] = mapped_column(String(16), default="manual")  # manual | import | sample

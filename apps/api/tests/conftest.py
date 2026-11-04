@@ -114,3 +114,32 @@ def owner_api(tmp_path):
     s = migrated(make_settings(tmp_path))
     with TestClient(create_app(s)) as client:
         yield Api(client), s
+
+
+def as_revision(data: dict, revision: str, scratch_dir: Path) -> dict:
+    """Rewrite a current backup as the version at `revision` would have produced it: tables and columns that did not
+    exist at that revision are dropped (found by migrating an empty SQLite database to it)."""
+    import json
+
+    from sqlalchemy import create_engine, inspect
+
+    from marketdesk.services.backup import checksum
+
+    scratch_dir.mkdir(parents=True, exist_ok=True)
+    url = f"sqlite:///{scratch_dir}/rev-{revision}.db"
+    upgrade(url, revision)
+    insp = inspect(create_engine(url))
+    present = {t: {c["name"] for c in insp.get_columns(t)} for t in insp.get_table_names()}
+    old = json.loads(json.dumps(data))
+    old["schema_revision"] = revision
+    for name in list(old["tables"]):
+        if name not in present:
+            old["tables"].pop(name)
+            continue
+        tab = old["tables"][name]
+        keep = [i for i, c in enumerate(tab["columns"]) if c in present[name]]
+        tab["columns"] = [tab["columns"][i] for i in keep]
+        tab["rows"] = [[row[i] for i in keep] for row in tab["rows"]]
+    old["counts"] = {k: len(v["rows"]) for k, v in old["tables"].items()}
+    old["checksum"] = checksum(old["tables"])
+    return old

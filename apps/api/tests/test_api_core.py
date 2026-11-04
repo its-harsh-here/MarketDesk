@@ -127,11 +127,14 @@ def test_split_requires_explicit_confirmation(api):
     assert h["quantity"] == "10" and h["cost_basis"] == "500" and h["average_cost"] == "50"
 
 
-def test_non_inr_and_index_cannot_be_held(api):
+def test_usd_listing_never_enters_the_inr_account_and_index_cannot_be_held(api):
     deposit(api)
-    r = trade(api, "BUY", "1", "10", symbol="SX:HALCYON")
-    assert r.status_code == 422 and r.json()["error"]["code"] == "currency_unsupported"
+    r = trade(api, "BUY", "1", "10", symbol="SX:HALCYON")  # a USD listing, recorded against the INR account
+    assert r.status_code == 422 and r.json()["error"]["code"] == "currency_mismatch"
+    assert "Record it in the USD account" in r.json()["error"]["message"]
     r = trade(api, "BUY", "1", "10", symbol="SX:SX50")
+    assert r.status_code == 422 and r.json()["error"]["code"] == "not_holdable"
+    r = trade(api, "BUY", "1", "10", symbol="SX:USDINR")
     assert r.status_code == 422 and r.json()["error"]["code"] == "not_holdable"
 
 

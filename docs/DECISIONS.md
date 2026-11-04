@@ -159,3 +159,11 @@ Consequential choices, newest last. Routine choices live in code comments.
     session date, timed by exchange calendars rather than clock rules, and are not produced from the historical sample
     dataset (a fixture-only endpoint writes one for tests). Backup restore inserts only the columns a backup contains,
     so older backups restore into their own revision and migrate forward.
+39. **M08 accounts and FX.** An account is identified by its currency (INR, USD) using the ledger's existing
+    `currency` column, so no existing row changes and no account table has to be seeded or backed up. An FX conversion
+    is one row with two legs (paying and receiving) so it cannot be half-recorded; its rate is stored in the market
+    convention for the pair (USD/INR, INR per USD) whichever way money moved, is optional, and must agree with the
+    amounts. Conversions are transfers, not contributions. Valuation in a base currency is display-only, uses the
+    current rate with its source and time, is withheld when a rate or a price is missing, and never feeds back into
+    transactions; consolidated returns would need historical FX and are not computed. New fingerprint parts apply only
+    to FX rows so duplicate detection of existing rows is unchanged.

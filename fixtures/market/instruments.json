@@ -838,6 +838,26 @@
       "quote_status": "available",
       "quote_note": null,
       "corporate_actions": []
+    },
+    {
+      "symbol": "SX:USDINR",
+      "name": "Sample USD/INR rate (synthetic)",
+      "exchange": "SAMPLEX-FX",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "kind": "CURRENCY",
+      "sector": null,
+      "industry": null,
+      "shares_outstanding": null,
+      "eps_ttm": null,
+      "book_value_per_share": null,
+      "fiscal": null,
+      "coverage_notes": [
+        "A synthetic exchange rate (INR per USD) for the sample dataset; not a real quotation."
+      ],
+      "quote_status": "available",
+      "quote_note": null,
+      "corporate_actions": []
     }
   ]
 }

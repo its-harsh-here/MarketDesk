@@ -171,6 +171,24 @@ def main() -> None:
     })
     _ = ny
 
+    # Synthetic USD/INR rate (INR per USD) for valuing the sample USD account. Fictitious, like every series here.
+    r = random.Random(f"{SEED}:USDINR")
+    rate, sd = 82.0, 0.045 / math.sqrt(252)
+    for d in all_sessions:
+        close = round(rate * math.exp(0.00008 + r.gauss(0, sd)), 4)
+        open_ = round(rate * math.exp(r.gauss(0, sd * 0.3)), 4)
+        high = round(max(open_, close) * (1 + abs(r.gauss(0, sd * 0.3))), 4)
+        low = round(min(open_, close) * (1 - abs(r.gauss(0, sd * 0.3))), 4)
+        rows.append(("SX:USDINR", d.isoformat(), f"{open_:.4f}", f"{high:.4f}", f"{low:.4f}", f"{close:.4f}", ""))
+        rate = close
+    instruments.append({
+        "symbol": "SX:USDINR", "name": "Sample USD/INR rate (synthetic)", "exchange": "SAMPLEX-FX", "currency": "INR",
+        "timezone": "Asia/Kolkata", "kind": "CURRENCY", "sector": None, "industry": None, "shares_outstanding": None,
+        "eps_ttm": None, "book_value_per_share": None, "fiscal": None,
+        "coverage_notes": ["A synthetic exchange rate (INR per USD) for the sample dataset; not a real quotation."],
+        "quote_status": "available", "quote_note": None, "corporate_actions": [],
+    })
+
     # Equal-weight indices built from component returns.
     def build_index(sym: str, name: str, members: list[str], base: float) -> None:
         level = base

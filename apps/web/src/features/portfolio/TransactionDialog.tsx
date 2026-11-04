@@ -8,13 +8,13 @@ import { ConfirmDialog, Dialog } from "@/components/ui/Dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/Form";
 import { InlineNotice } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
-import { ApiError, errorMessage, type Transaction, type TransactionInput } from "@/lib/api/client";
-import { formatMoney, todayIso } from "@/lib/format";
+import { ApiError, errorMessage, type AccountCurrency, type Transaction, type TransactionInput } from "@/lib/api/client";
+import { formatMoney, formatNumber, todayIso } from "@/lib/format";
 import { usePrefs } from "@/features/settings/api";
 import { SymbolPicker } from "@/features/search/SymbolPicker";
 import { useTransactionMutations } from "./api";
 
-const TYPES = ["DEPOSIT", "WITHDRAWAL", "BUY", "SELL", "DIVIDEND", "SPLIT"] as const;
+const TYPES = ["DEPOSIT", "WITHDRAWAL", "BUY", "SELL", "DIVIDEND", "SPLIT", "FX"] as const;
 type TxType = (typeof TYPES)[number];
 const LABELS: Record<TxType, string> = {
   DEPOSIT: "Deposit cash",
@@ -23,7 +23,10 @@ const LABELS: Record<TxType, string> = {
   SELL: "Sell",
   DIVIDEND: "Dividend received",
   SPLIT: "Stock split (confirmed)",
+  FX: "Convert currency (FX)",
 };
+const ACCOUNTS = ["INR", "USD"] as const;
+const other = (c: AccountCurrency): AccountCurrency => (c === "INR" ? "USD" : "INR");
 
 const dec = (places: number) => new RegExp(`^\\d+(\\.\\d{1,${places}})?$`);
 
@@ -39,11 +42,16 @@ const schema = z
     split_from: z.string(),
     split_to: z.string(),
     split_confirmed: z.boolean(),
+    currency: z.enum(ACCOUNTS),
+    counter_amount: z.string(),
+    fx_rate: z.string(),
+    fx_source: z.string().max(80, "Use at most 80 characters."),
+    fx_time: z.string(),
     notes: z.string().max(500, "Notes are limited to 500 characters."),
   })
   .superRefine((v, ctx) => {
     const req = (field: keyof typeof v, msg: string) => ctx.addIssue({ code: "custom", path: [field], message: msg });
-    const positive = (field: "quantity" | "price" | "amount" | "split_from" | "split_to", places: number, label: string) => {
+    const positive = (field: "quantity" | "price" | "amount" | "split_from" | "split_to" | "counter_amount", places: number, label: string) => {
       const s = v[field].trim();
       if (!s) return req(field, `${label} is required.`);
       if (!dec(places).test(s)) return req(field, `${label} must be a plain number with at most ${places} decimals.`);
@@ -56,6 +64,13 @@ const schema = z
       if (v.fees.trim() && !dec(2).test(v.fees.trim())) req("fees", "Fees must be a plain number with at most 2 decimals.");
     }
     if (v.type === "DEPOSIT" || v.type === "WITHDRAWAL" || v.type === "DIVIDEND") positive("amount", 2, "Amount");
+    if (v.type === "FX") {
+      positive("amount", 2, "Amount converted");
+      positive("counter_amount", 2, "Amount received");
+      if (v.fees.trim() && !dec(2).test(v.fees.trim())) req("fees", "Fees must be a plain number with at most 2 decimals.");
+      if (v.fx_rate.trim() && (!dec(6).test(v.fx_rate.trim()) || Number(v.fx_rate) <= 0)) req("fx_rate", "Use a positive rate with at most 6 decimals.");
+      if (!v.fx_source.trim()) req("fx_source", "Name the source of the rate (for example the bank or broker).");
+    }
     if (v.type === "SPLIT") {
       positive("split_from", 6, "Old shares");
       positive("split_to", 6, "New shares");
@@ -66,7 +81,7 @@ const schema = z
 
 type FormValues = z.infer<typeof schema>;
 
-function defaults(editing?: Transaction, symbol?: string, type?: TxType, tz?: string): FormValues {
+function defaults(editing?: Transaction, symbol?: string, type?: TxType, tz?: string, currency?: AccountCurrency): FormValues {
   return {
     type: (editing?.type as TxType) ?? type ?? "BUY",
     effective_date: editing?.effective_date ?? todayIso(tz),
@@ -78,6 +93,11 @@ function defaults(editing?: Transaction, symbol?: string, type?: TxType, tz?: st
     split_from: editing?.split_from ?? "1",
     split_to: editing?.split_to ?? "2",
     split_confirmed: editing?.type === "SPLIT",
+    currency: (editing?.currency as AccountCurrency | undefined) ?? currency ?? "INR",
+    counter_amount: editing?.counter_amount ?? "",
+    fx_rate: editing?.fx_rate ?? "",
+    fx_source: editing?.fx_source ?? "",
+    fx_time: editing?.fx_time ? editing.fx_time.slice(0, 16) : "",
     notes: editing?.notes ?? "",
   };
 }
@@ -95,11 +115,12 @@ export function TransactionDialog() {
   const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: defaults(), mode: "onTouched" });
   const { register, handleSubmit, control, reset, setError, formState } = form;
   const type = useWatch({ control, name: "type" });
-  const [qty, price, fees] = useWatch({ control, name: ["quantity", "price", "fees"] });
+  const account = useWatch({ control, name: "currency" });
+  const [qty, price, fees, amount, received] = useWatch({ control, name: ["quantity", "price", "fees", "amount", "counter_amount"] });
 
   useEffect(() => {
     if (isOpen && state.kind === "transaction") {
-      reset(defaults(state.editing, state.symbol, state.type as TxType | undefined, prefs?.display_timezone));
+      reset(defaults(state.editing, state.symbol, state.type as TxType | undefined, prefs?.display_timezone, state.currency));
       setServerError(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -113,6 +134,12 @@ export function TransactionDialog() {
     const gross = Math.round(q * p * 100) / 100;
     return type === "BUY" ? -(gross + f) : gross - f;
   }, [qty, price, fees, type]);
+  const effectiveRate = useMemo(() => {
+    const a = Number(amount);
+    const r = Number(received);
+    if (type !== "FX" || !(a > 0 && r > 0)) return null;
+    return account === "INR" ? a / r : r / a; // INR per 1 USD
+  }, [amount, received, account, type]);
 
   const onSubmit = handleSubmit(async (v) => {
     setServerError(null);
@@ -122,12 +149,21 @@ export function TransactionDialog() {
       symbol: ["BUY", "SELL", "DIVIDEND", "SPLIT"].includes(v.type) ? v.symbol.trim() : null,
       quantity: v.type === "BUY" || v.type === "SELL" ? v.quantity.trim() : null,
       price: v.type === "BUY" || v.type === "SELL" ? v.price.trim() : null,
-      fees: v.type === "BUY" || v.type === "SELL" ? v.fees.trim() || "0" : "0",
-      amount: ["DEPOSIT", "WITHDRAWAL", "DIVIDEND"].includes(v.type) ? v.amount.trim() : null,
+      fees: ["BUY", "SELL", "FX"].includes(v.type) ? v.fees.trim() || "0" : "0",
+      amount: ["DEPOSIT", "WITHDRAWAL", "DIVIDEND", "FX"].includes(v.type) ? v.amount.trim() : null,
       split_from: v.type === "SPLIT" ? v.split_from.trim() : null,
       split_to: v.type === "SPLIT" ? v.split_to.trim() : null,
       split_confirmed: v.type === "SPLIT" && v.split_confirmed,
-      currency: "INR",
+      currency: v.currency,
+      ...(v.type === "FX"
+        ? {
+            counter_currency: other(v.currency),
+            counter_amount: v.counter_amount.trim(),
+            fx_rate: v.fx_rate.trim() || null,
+            fx_source: v.fx_source.trim(),
+            fx_time: v.fx_time ? new Date(v.fx_time).toISOString() : null,
+          }
+        : {}),
       notes: v.notes.trim() || null,
     };
     try {
@@ -148,7 +184,9 @@ export function TransactionDialog() {
 
   const e = formState.errors;
   const trade = type === "BUY" || type === "SELL";
-  const cashOnly = type === "DEPOSIT" || type === "WITHDRAWAL";
+  const fx = type === "FX";
+  const cashOnly = type === "DEPOSIT" || type === "WITHDRAWAL" || fx;
+  const ccy = account;
 
   return (
     <>
@@ -156,7 +194,7 @@ export function TransactionDialog() {
         open={isOpen}
         onOpenChange={(o) => !o && close()}
         title={editing ? `Edit transaction #${editing.id}` : "Add transaction"}
-        description="INR ledger. Every change replays the full history; a change that would make cash negative or oversell at any point is rejected."
+        description="Separate INR and USD accounts. Every change replays the full history of both; a change that would make an account's cash negative or oversell at any point is rejected. Amounts are never converted except by an explicit FX conversion."
         size="md"
         footer={
           <>
@@ -187,11 +225,20 @@ export function TransactionDialog() {
               </Select>
             )}
           </Field>
+          <Field label={fx ? "Convert from account" : "Account"} required error={e.currency?.message} hint={fx ? `Into the ${other(ccy)} account.` : "Amounts are in this account's currency."}>
+            {({ id, describedBy }) => (
+              <Select id={id} aria-describedby={describedBy} {...register("currency")}>
+                {ACCOUNTS.map((c) => (
+                  <option key={c} value={c}>{c} account</option>
+                ))}
+              </Select>
+            )}
+          </Field>
           <Field label="Effective date" required error={e.effective_date?.message} hint="Trade or settlement date (exchange calendar date).">
             {({ id, describedBy, invalid }) => <Input id={id} type="date" aria-describedby={describedBy} aria-invalid={invalid} {...register("effective_date")} />}
           </Field>
           {!cashOnly && (
-            <Field label="Instrument" required error={e.symbol?.message} className="sm:col-span-2" hint="INR instruments only in this release.">
+            <Field label="Instrument" required error={e.symbol?.message} className="sm:col-span-2" hint={`Must trade in ${ccy}; a listing in the other currency belongs in that account.`}>
               {({ id, describedBy, invalid }) => (
                 <Controller control={control} name="symbol" render={({ field }) => (
                   <SymbolPicker id={id} describedBy={describedBy} invalid={invalid} value={field.value} onChange={(s) => field.onChange(s)} />
@@ -204,22 +251,41 @@ export function TransactionDialog() {
               <Field label="Quantity" required error={e.quantity?.message}>
                 {({ id, describedBy, invalid }) => <Input id={id} inputMode="decimal" className="num" aria-describedby={describedBy} aria-invalid={invalid} {...register("quantity")} />}
               </Field>
-              <Field label="Price per share (INR)" required error={e.price?.message}>
+              <Field label={`Price per share (${ccy})`} required error={e.price?.message}>
                 {({ id, describedBy, invalid }) => <Input id={id} inputMode="decimal" className="num" aria-describedby={describedBy} aria-invalid={invalid} {...register("price")} />}
               </Field>
-              <Field label="Fees and charges (INR)" error={e.fees?.message} hint="Brokerage, taxes and charges for this trade.">
+              <Field label={`Fees and charges (${ccy})`} error={e.fees?.message} hint="Brokerage, taxes and charges for this trade.">
                 {({ id, describedBy, invalid }) => <Input id={id} inputMode="decimal" className="num" placeholder="0.00" aria-describedby={describedBy} aria-invalid={invalid} {...register("fees")} />}
               </Field>
               <div className="flex flex-col justify-end rounded-[var(--radius-control)] border border-line-subtle bg-canvas/50 px-3 py-2 text-[13px]">
                 <span className="text-xs text-fg-3">Estimated cash effect</span>
-                <span className="num text-fg">{estimate === null ? "—" : formatMoney(estimate)}</span>
+                <span className="num text-fg">{estimate === null ? "—" : formatMoney(estimate, ccy)}</span>
               </div>
             </>
           )}
           {(cashOnly || type === "DIVIDEND") && (
-            <Field label={type === "DIVIDEND" ? "Amount received (net, INR)" : "Amount (INR)"} required error={e.amount?.message}>
+            <Field label={fx ? `Amount converted (${ccy})` : type === "DIVIDEND" ? `Amount received (net, ${ccy})` : `Amount (${ccy})`} required error={e.amount?.message}>
               {({ id, describedBy, invalid }) => <Input id={id} inputMode="decimal" className="num" aria-describedby={describedBy} aria-invalid={invalid} {...register("amount")} />}
             </Field>
+          )}
+          {fx && (
+            <>
+              <Field label={`Amount received (${other(ccy)})`} required error={e.counter_amount?.message}>
+                {({ id, describedBy, invalid }) => <Input id={id} inputMode="decimal" className="num" aria-describedby={describedBy} aria-invalid={invalid} {...register("counter_amount")} />}
+              </Field>
+              <Field label={`Conversion fees (${ccy})`} error={e.fees?.message} hint="Charged on top of the amount converted.">
+                {({ id, describedBy, invalid }) => <Input id={id} inputMode="decimal" className="num" placeholder="0.00" aria-describedby={describedBy} aria-invalid={invalid} {...register("fees")} />}
+              </Field>
+              <Field label="Quoted rate (INR per USD)" error={e.fx_rate?.message} hint={effectiveRate ? `Effective ${formatNumber(effectiveRate, 4)} INR per USD from the amounts.` : "Optional; checked against the amounts."}>
+                {({ id, describedBy, invalid }) => <Input id={id} inputMode="decimal" className="num" aria-describedby={describedBy} aria-invalid={invalid} {...register("fx_rate")} />}
+              </Field>
+              <Field label="Rate source" required error={e.fx_source?.message} hint="Bank, broker or provider.">
+                {({ id, describedBy, invalid }) => <Input id={id} aria-describedby={describedBy} aria-invalid={invalid} {...register("fx_source")} />}
+              </Field>
+              <Field label="Rate time" error={e.fx_time?.message} hint="When the rate applied (your local time). Optional.">
+                {({ id, describedBy, invalid }) => <Input id={id} type="datetime-local" className="num" aria-describedby={describedBy} aria-invalid={invalid} {...register("fx_time")} />}
+              </Field>
+            </>
           )}
           {type === "SPLIT" && (
             <>
