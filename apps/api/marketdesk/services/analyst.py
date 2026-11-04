@@ -40,6 +40,7 @@ from marketdesk.services.market import MarketDataService
 
 log = logging.getLogger("marketdesk.analyst")
 KINDS = ("ask", "results", "catalysts", "compare")
+CERTAINTIES = ("confirmed", "scheduled", "possible")
 USABLE = {"sample", "available", "cached", "stale"}
 STALE_JOB = timedelta(minutes=15)
 _BUDGET_LOCK = threading.Lock()
@@ -500,10 +501,52 @@ def _figure_found(value: float, tol: float, is_pct: bool, nums: list[float]) -> 
     return False
 
 
+def _clip(raw: dict) -> tuple[dict, list[dict]]:
+    """Bring an over-long answer within the stored limits (some providers do not enforce lengths): long text is cut
+    and marked, extra items dropped. Returns the clipped answer and flags describing what was cut."""
+    flags: list[dict] = []
+
+    def cut(v, n: int) -> str:
+        v = "" if v is None else str(v)
+        return v if len(v) <= n else v[: n - 1].rstrip() + "…"
+
+    out = {
+        "headline": cut(raw.get("headline"), 300),
+        "uncertainties": [cut(x, 300) for x in (raw.get("uncertainties") or [])][:8],
+        "gaps": [cut(x, 300) for x in (raw.get("gaps") or [])][:6],
+        "sections": [],
+    }
+    sections = raw.get("sections") if isinstance(raw.get("sections"), list) else []
+    if len(sections) > 6:
+        flags.append({"section": 6, "point": 0, "issue": f"{len(sections) - 6} extra section(s) dropped."})
+    for si, sec in enumerate(sections[:6]):
+        sec = sec if isinstance(sec, dict) else {}
+        pts = sec.get("points") if isinstance(sec.get("points"), list) else []
+        if len(pts) > 8:
+            flags.append({"section": si, "point": 8, "issue": f"{len(pts) - 8} extra point(s) dropped."})
+        clean = []
+        for pi, pt in enumerate(pts[:8]):
+            pt = pt if isinstance(pt, dict) else {"text": str(pt)}
+            text = str(pt.get("text") or "")
+            if len(text) > 600:
+                flags.append({"section": si, "point": pi, "issue": "Long point shortened to 600 characters."})
+            srcs = pt.get("sources") if isinstance(pt.get("sources"), list) else []
+            clean.append({
+                "text": cut(text, 600),
+                "kind": str(pt.get("kind") or "interpretation"),
+                "sources": [str(x) for x in srcs][:6],
+                "certainty": pt.get("certainty") if pt.get("certainty") in CERTAINTIES else None,
+            })  # fmt: skip
+        out["sections"].append({"title": cut(sec.get("title"), 120), "points": clean})
+    return out, flags
+
+
 def validate_answer(raw: dict, sources: dict[str, dict]) -> tuple[dict, list[dict]]:
     """Check the model's answer against the evidence. Returns the answer (with per-point checks) and flags."""
-    ans = _Answer.model_validate(raw).model_dump()
-    flags: list[dict] = []
+    clipped, flags = _clip(raw)
+    if not any(sec["points"] for sec in clipped["sections"]):
+        raise XaiError("malformed", "The model's answer had no usable points, so it was discarded.")
+    ans = _Answer.model_validate(clipped).model_dump()
     for si, sec in enumerate(ans["sections"]):
         for pi, pt in enumerate(sec["points"]):
             where = {"section": si, "point": pi}
@@ -844,8 +887,11 @@ class AnalystService:
             self._fail(db, answer, err.message, err.kind)
         except AppError as err:
             self._fail(db, answer, err.message)
-        except ValidationError:
-            self._fail(db, answer, "The model's answer did not match the required structure, so it was discarded.")
+        except ValidationError as err:
+            where = ", ".join(".".join(str(x) for x in e["loc"]) for e in err.errors()[:3])
+            self._fail(
+                db, answer, f"The model's answer did not match the required structure ({where}), so it was discarded."
+            )
         except Exception as exc:  # never leave a job running; never leak internals
             log.exception("analyst job failed")
             self._fail(db, answer, f"Research failed ({type(exc).__name__}).")

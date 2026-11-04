@@ -226,3 +226,23 @@ def test_groq_client_http_behaviour(monkeypatch):
     with pytest.raises(XaiError) as err:
         client.chat({"messages": []})
     assert err.value.kind == "rate_limited" and "about 45 seconds" in err.value.message
+
+
+def test_over_long_answers_are_clipped_and_flagged_not_discarded(groq):
+    api, _, install = groq
+    long = json.dumps(
+        {
+            "headline": "H" * 400,
+            "sections": [{"title": "T", "points": [
+                {"text": "SX:AURORA last traded at 169.80 INR. " + "x" * 700, "kind": "fact", "sources": ["S1"],
+                 "certainty": None}] * 9}],
+            "uncertainties": ["u"] * 10,
+            "gaps": [],
+        }
+    )  # fmt: skip
+    install([completion(long)])
+    a = ask(api)
+    assert a["status"] == "done"
+    assert len(a["output"]["headline"]) == 300 and len(a["output"]["sections"][0]["points"]) == 8
+    issues = [f["issue"] for f in a["flags"]]
+    assert "1 extra point(s) dropped." in issues and "Long point shortened to 600 characters." in issues

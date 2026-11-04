@@ -231,7 +231,7 @@ def test_stale_running_jobs_are_failed_and_counted(ai):
         ([XaiError("rate_limited", "xAI rate limit or credit limit reached (HTTP 429).", 429)], "credit limit"),
         ([resp({"type": "message", "content": [{"type": "output_text", "text": "not json"}]})], "required JSON"),
         ([resp(message({"headline": "x"}), status="incomplete")], "ran out of output tokens"),
-        ([resp(message({"sections": "nope"}))], "did not match the required structure"),
+        ([resp(message({"sections": "nope"}))], "no usable points"),
     ],
 )
 def test_failures_are_recorded_and_explained(ai, script, error):
