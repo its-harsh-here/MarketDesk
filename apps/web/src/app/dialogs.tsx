@@ -9,6 +9,7 @@ export type DialogState =
   | { kind: "import" }
   | { kind: "alert"; editing?: Alert; symbol?: string; price?: string }
   | { kind: "journal"; editing?: JournalEntry; symbol?: string }
+  | { kind: "journal-detail"; id: number; section?: "history" | "evidence" | "reviews" }
   | { kind: "add-symbol"; watchlistId: number }
   | { kind: "new-watchlist" };
 

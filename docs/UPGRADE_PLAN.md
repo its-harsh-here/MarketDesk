@@ -39,4 +39,6 @@ earlier as soon as their credentials exist.
   checks in `docs/UPGRADE_STATUS.md`. Filing alerts wait for `SEC_USER_AGENT`.
 - Phase 5 (M08): ✅ implemented, tested and deployed; live checks in `docs/UPGRADE_STATUS.md`. Broker CSV mapping
   presets not built (canonical CSV covers both accounts and FX).
-- Phase 6 (M10): next.
+- Phase 6 (M10): ✅ implemented, tested and deployed; live checks in `docs/UPGRADE_STATUS.md`. Grok counterargument
+  waits for M03.
+- Phase 7 (M06): next.

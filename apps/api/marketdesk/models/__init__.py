@@ -272,6 +272,11 @@ class JournalEntry(Base):
     risks: Mapped[str] = mapped_column(Text, default="")
     invalidation: Mapped[str] = mapped_column(Text, default="")
     review_date: Mapped[date | None] = mapped_column(Date, index=True)
+    # M10 (migration 0006): the owner's own structured decision, and the current thesis version number.
+    decision: Mapped[str | None] = mapped_column(String(12))  # WATCH | BUY | ADD | HOLD | TRIM | SELL | AVOID
+    conviction: Mapped[int | None] = mapped_column(Integer)  # 1 (low) .. 5 (high)
+    horizon: Mapped[str | None] = mapped_column(String(40))
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
 
@@ -279,6 +284,37 @@ class JournalEntry(Base):
     tags: Mapped[list[JournalTag]] = relationship(
         back_populates="entry", cascade="all, delete-orphan", lazy="selectin", order_by="JournalTag.tag"
     )
+
+
+class JournalVersion(Base):
+    """An immutable thesis version with the evidence observed when it was written. Never updated after insert."""
+
+    __tablename__ = "journal_versions"
+    __table_args__ = (UniqueConstraint("entry_id", "version", name="uq_journal_version"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    entry_id: Mapped[int] = mapped_column(ForeignKey("journal_entries.id", ondelete="CASCADE"), index=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
+    change_note: Mapped[str | None] = mapped_column(String(500))
+    content: Mapped[dict] = mapped_column(JSON, nullable=False)  # title, thesis, risks, invalidation, decision, ...
+    evidence: Mapped[dict | None] = mapped_column(JSON)  # price, fundamentals, filings as observed at created_at
+
+
+class JournalReview(Base):
+    """A completed review of an entry: the outcome, notes and the evidence at review time. Never updated."""
+
+    __tablename__ = "journal_reviews"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    entry_id: Mapped[int] = mapped_column(ForeignKey("journal_entries.id", ondelete="CASCADE"), index=True)
+    reviewed_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
+    outcome: Mapped[str] = mapped_column(String(16), nullable=False)  # intact | weakened | invalidated | closed
+    notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    version: Mapped[int] = mapped_column(Integer, nullable=False)  # the thesis version that was reviewed
+    scheduled_for: Mapped[date | None] = mapped_column(Date)  # the review date that was due
+    next_review_date: Mapped[date | None] = mapped_column(Date)
+    evidence: Mapped[dict | None] = mapped_column(JSON)
 
 
 class JournalTag(Base):

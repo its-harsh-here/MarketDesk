@@ -24,7 +24,7 @@ Roadmap: `docs/MARKETDESK_ROADMAP.txt`. Older history and decisions: `docs/STATU
 | Portfolio | INR and USD long-only accounts (DEPOSIT, WITHDRAWAL, BUY, SELL, DIVIDEND, confirmed SPLIT) plus explicit FX conversions; Decimal replay of both accounts on every edit; average cost, realized/unrealized P&L; all-accounts view in INR at a stated current rate (withheld when incomplete); CSV preview/import/export with formula-injection defence | No historical FX or consolidated returns; no broker CSV mapping presets |
 | Alerts + worker | Price, crossing, completed-session volume/volatility and SEC filing rules; cooldown auto-rearm; quiet hours; unique event and delivery keys; unified inbox with scheduled morning/end-of-session briefings (exchange calendars); single worker every `ALERT_POLL_SECONDS` (300 s), started 45 s after the web server at nice 10 in single-container mode | No email/Telegram/push delivery; filing rules need `SEC_USER_AGENT` |
 | Briefing | Rule-based: largest watchlist moves, distance to alert thresholds, recent alert events, journal reviews due | No Grok narrative (optional, M03/M05) |
-| Journal | Thesis, risks, invalidation, tags, review date; plain-text rendering; filters | No versioning/snapshots (M10) |
+| Journal | Thesis, risks, invalidation, decision, conviction, horizon, tags; immutable versions with change notes and evidence snapshots; then-vs-now comparison; review queue and history; plain-text rendering; filters | No Grok counterargument (needs M03) |
 | Settings/diagnostics | Theme, density, default watchlist, timezone, data status (provider health, storage, DB round trip, created-at, worker), backup guidance, attribution; `Server-Timing` header on `/api` responses | — |
 | AI | None. No xAI/Grok code or keys | M03 |
 
@@ -485,6 +485,47 @@ byte-identical. No new environment variables.
 - Browser check after deploying 295406a: DOX Financials shows the notice above FY2020–FY2024 statements; SMR shows
   none; the INR-only header text is gone; no page overflow at 390 px; no console errors (read-only check).
 
+## Phase 6 — M10 Decision journal (4 Nov 2026)
+**What changed.**
+- **Structured thesis:** decision (WATCH/BUY/ADD/HOLD/TRIM/SELL/AVOID, labelled "your decision"), conviction 1–5 and
+  horizon, alongside the existing thesis, risks, invalidation, tags and review date.
+- **Immutable versions:** `journal_versions` holds each version's content and evidence; rows are never updated. An edit
+  that changes any thesis field (title, date, thesis, risks, invalidation, decision, conviction, horizon) requires a
+  change note and creates the next version; tags and the review date change in place. A note's instrument cannot
+  change. Concurrent edits racing for the same version number get a 409.
+- **Evidence snapshots:** at create, each new version and each review: quote (value, currency, market time, session,
+  status), fundamentals (P/E, market cap, dividend yield, P/B with status), and up to five recent SEC filings for US
+  listings (status recorded when not applicable or not configured). Capture failures are recorded, never block saving.
+- **Compare** (`GET /api/journal/{id}/compare?version=N`): the stored snapshot beside today's data, fetched and not
+  stored; price change in the instrument's currency (dividends not included), filings since, and splits since the
+  snapshot (which withhold the price change).
+- **Reviews:** `GET /api/journal?due=true` is the queue; `POST /api/journal/{id}/reviews` records outcome
+  (intact/weakened/invalidated/closed), notes, the reviewed version, the date it was due, evidence and the next review
+  date (must be after today), and moves the queue.
+- **UI:** review queue on Journal; cards show your decision, conviction, horizon and version; a History / Evidence /
+  Reviews view with a line diff between any two versions (removed and added lines marked in text, not only colour).
+- **Form controls fix:** an explicit width (`w-40`, …) on Input/Select/Textarea now wins over the default full width
+  (the class helper does not merge conflicting utilities); the Journal filters and the new version pickers sit inline.
+  The Portfolio "Transactions" header wraps its filters on phones.
+- **Not built:** the cited Grok counterargument (roadmap item 54) waits for M03 and `XAI_API_KEY`.
+
+**Data migration 0006 (additive).** New entry columns (version defaults to 1) and tables `journal_versions` and
+`journal_reviews`. Each existing note gets version 1 with its current text, marked "recorded before versioning" with no
+evidence (none was captured at the time); entry rows are not rewritten (tested).
+- Rehearsal on a copy of production (backup at 0005 into scratch PostgreSQL 17, migrated to 0006): owner-data
+  fingerprint identical. Production has no journal notes yet.
+
+**Checks.**
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 17 | 187 passed, 3 skipped / 189 passed, 1 skipped (M10: 6 — version-one evidence, explicit edits and immutability across a market move, compare incl. split withholding, review queue/history/validation, field validation, migration backfill) |
+| Migration 0006 up/down/up and `alembic check` (SQLite and PostgreSQL) | clean |
+| ruff, tsc, ESLint / Vitest | clean / 32 passed (new: line diff) |
+| Playwright journeys (fixture harness) | 15 passed (journal journey now: edit refused without a change note → v2 → diff → evidence then/now → review recorded) |
+| Visual (fixture harness) | Journal with review queue, History diff, Evidence, Reviews at 1440 and 390; Portfolio filters at 390; no page overflow |
+
+No new environment variables.
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -492,4 +533,4 @@ byte-identical. No new environment variables.
 - Portfolio has INR and USD accounts; there are no returns metrics (XIRR/TWR) and no historical FX by design.
 
 ## Next concrete action
-Phase 6 — **M10 Decision journal** (see `docs/UPGRADE_PLAN.md`). Owner inputs still open: `XAI_API_KEY`/`XAI_MODEL` (M03) and Alpaca key/secret + feed (M04).
+Phase 7 — **M06 Screener + peers** (see `docs/UPGRADE_PLAN.md`). Owner inputs still open: `XAI_API_KEY`/`XAI_MODEL` (M03) and Alpaca key/secret + feed (M04).

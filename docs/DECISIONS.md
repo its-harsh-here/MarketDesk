@@ -167,3 +167,11 @@ Consequential choices, newest last. Routine choices live in code comments.
     current rate with its source and time, is withheld when a rate or a price is missing, and never feeds back into
     transactions; consolidated returns would need historical FX and are not computed. New fingerprint parts apply only
     to FX rows so duplicate detection of existing rows is unchanged.
+40. **M10 decision journal.** The journal entry row is the current view; history lives in append-only
+    `journal_versions` and `journal_reviews` tables that the API never updates. Only thesis fields are versioned, so
+    re-tagging or rescheduling a review does not demand a change note, while any change to what was believed does. The
+    instrument is fixed for the life of a note because every snapshot refers to it. Evidence is captured server-side
+    from the same providers the app uses (quote, fundamentals, SEC filings) with their statuses, so a snapshot shows
+    what was known and how fresh it was; comparisons fetch "now" without storing it. Existing notes are backfilled as
+    version 1 explicitly marked as having no evidence rather than being given today's data. The optional Grok
+    counterargument is deferred to M03 (needs a key).

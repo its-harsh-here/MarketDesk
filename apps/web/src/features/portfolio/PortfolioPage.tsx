@@ -380,6 +380,7 @@ export function PortfolioPage() {
         title="Transactions"
         titleId="txn-title"
         bodyClassName="p-0"
+        wrapHeader
         meta={txns.data ? `${txns.data.total} total` : undefined}
         actions={
           <div className="flex gap-2">

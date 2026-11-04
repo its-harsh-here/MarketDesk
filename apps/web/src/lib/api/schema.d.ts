@@ -884,12 +884,53 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Detail
+         * @description The entry with every immutable version (and its evidence) and the review history.
+         */
+        get: operations["detail_api_journal__eid__get"];
         /** Update */
         put: operations["update_api_journal__eid__put"];
         post?: never;
         /** Delete */
         delete: operations["delete_api_journal__eid__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/journal/{eid}/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare
+         * @description A version's stored evidence beside today's data (fetched now, never stored over the snapshot).
+         */
+        get: operations["compare_api_journal__eid__compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/journal/{eid}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review */
+        post: operations["review_api_journal__eid__reviews_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1506,6 +1547,90 @@ export interface components {
              */
             identity_verified: boolean;
         };
+        /** JournalCompareOut */
+        JournalCompareOut: {
+            /** Version */
+            version: number;
+            /**
+             * Version Created At
+             * Format: date-time
+             */
+            version_created_at: string;
+            /** Then */
+            then: {
+                [key: string]: unknown;
+            };
+            /** Now */
+            now: {
+                [key: string]: unknown;
+            };
+            /** Price Change Pct */
+            price_change_pct?: string | null;
+            /** Price Note */
+            price_note: string;
+            /** Splits Since */
+            splits_since: {
+                [key: string]: unknown;
+            }[];
+            /** Filings Since */
+            filings_since: {
+                [key: string]: unknown;
+            }[];
+            /** Days Elapsed */
+            days_elapsed: number;
+        };
+        /** JournalDetailOut */
+        JournalDetailOut: {
+            /** Id */
+            id: number;
+            /** Symbol */
+            symbol: string;
+            instrument: components["schemas"]["InstrumentOut"];
+            /**
+             * Entry Date
+             * Format: date
+             */
+            entry_date: string;
+            /** Title */
+            title: string;
+            /** Thesis */
+            thesis: string;
+            /** Risks */
+            risks: string;
+            /** Invalidation */
+            invalidation: string;
+            /** Decision */
+            decision?: string | null;
+            /** Conviction */
+            conviction?: number | null;
+            /** Horizon */
+            horizon?: string | null;
+            /**
+             * Version
+             * @default 1
+             */
+            version: number;
+            /** Tags */
+            tags: string[];
+            /** Review Date */
+            review_date?: string | null;
+            /** Review Due */
+            review_due: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Versions */
+            versions: components["schemas"]["JournalVersionOut"][];
+            /** Reviews */
+            reviews: components["schemas"]["JournalReviewOut"][];
+        };
         /** JournalIn */
         JournalIn: {
             /** Symbol */
@@ -1536,6 +1661,14 @@ export interface components {
             tags?: string[];
             /** Review Date */
             review_date?: string | null;
+            /** Decision */
+            decision?: ("WATCH" | "BUY" | "ADD" | "HOLD" | "TRIM" | "SELL" | "AVOID") | null;
+            /** Conviction */
+            conviction?: number | null;
+            /** Horizon */
+            horizon?: string | null;
+            /** Change Note */
+            change_note?: string | null;
         };
         /** JournalOut */
         JournalOut: {
@@ -1557,6 +1690,17 @@ export interface components {
             risks: string;
             /** Invalidation */
             invalidation: string;
+            /** Decision */
+            decision?: string | null;
+            /** Conviction */
+            conviction?: number | null;
+            /** Horizon */
+            horizon?: string | null;
+            /**
+             * Version
+             * @default 1
+             */
+            version: number;
             /** Tags */
             tags: string[];
             /** Review Date */
@@ -1584,6 +1728,65 @@ export interface components {
             tags: string[];
             /** Symbols */
             symbols: string[];
+        };
+        /** JournalReviewIn */
+        JournalReviewIn: {
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "intact" | "weakened" | "invalidated" | "closed";
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            /** Next Review Date */
+            next_review_date?: string | null;
+        };
+        /** JournalReviewOut */
+        JournalReviewOut: {
+            /** Id */
+            id: number;
+            /**
+             * Reviewed At
+             * Format: date-time
+             */
+            reviewed_at: string;
+            /** Outcome */
+            outcome: string;
+            /** Notes */
+            notes: string;
+            /** Version */
+            version: number;
+            /** Scheduled For */
+            scheduled_for?: string | null;
+            /** Next Review Date */
+            next_review_date?: string | null;
+            /** Evidence */
+            evidence?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** JournalVersionOut */
+        JournalVersionOut: {
+            /** Version */
+            version: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Change Note */
+            change_note?: string | null;
+            /** Content */
+            content: {
+                [key: string]: unknown;
+            };
+            /** Evidence */
+            evidence?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** LoginIn */
         LoginIn: {
@@ -3804,6 +4007,8 @@ export interface operations {
                 symbol?: string | null;
                 tag?: string | null;
                 q?: string | null;
+                /** @description Only entries whose review date has arrived (the review queue) */
+                due?: boolean;
                 limit?: number;
                 offset?: number;
             };
@@ -3853,6 +4058,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JournalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detail_api_journal__eid__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                eid: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalDetailOut"];
                 };
             };
             /** @description Validation Error */
@@ -3918,6 +4154,74 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_api_journal__eid__compare_get: {
+        parameters: {
+            query?: {
+                version?: number;
+            };
+            header?: never;
+            path: {
+                eid: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalCompareOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_api_journal__eid__reviews_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                eid: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JournalReviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalReviewOut"];
+                };
             };
             /** @description Validation Error */
             422: {

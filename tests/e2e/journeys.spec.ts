@@ -244,7 +244,27 @@ test("journal: create, edit and filter a note", async ({ page }) => {
   dialog = page.getByRole("dialog", { name: "Edit journal note" });
   await dialog.getByLabel("Title").fill("E2E thesis v2");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
+  // a thesis edit must say what changed; the original version is kept
+  await expect(dialog.getByText("Say what changed and why")).toBeVisible();
+  await dialog.getByLabel(/What changed and why/).fill("Renamed after the results call.");
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("New version saved; earlier versions are unchanged.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "E2E thesis v2" })).toBeVisible();
+
+  // history: both versions, with the change shown as removed/added lines; evidence: the stored snapshot
+  await page.getByRole("button", { name: "History, evidence and reviews for E2E thesis v2" }).click();
+  const detail = page.getByRole("dialog", { name: /SX:ELARA · E2E thesis v2/ });
+  await expect(detail.getByText("Renamed after the results call.")).toBeVisible();
+  await expect(detail.getByText("Removed: ", { exact: false }).first()).toBeAttached();
+  await detail.getByRole("radio", { name: "Evidence" }).click();
+  await expect(detail.getByText("Then (v1, stored)")).toBeVisible();
+  await expect(detail.getByText("Now (fetched for comparison, not stored)")).toBeVisible();
+  await detail.getByRole("radio", { name: /Reviews/ }).click();
+  await detail.getByLabel("Outcome").selectOption("weakened");
+  await detail.getByLabel("Review notes").fill("Margins slipped.");
+  await detail.getByRole("button", { name: "Complete review" }).click();
+  await expect(detail.getByRole("list", { name: "Review history" }).getByText("Margins slipped.")).toBeVisible();
+  await detail.getByRole("button", { name: "Close", exact: true }).click();
 
   await page.getByLabel("Filter by tag").selectOption("pharma");
   await expect(page).toHaveURL(/tag=pharma/);

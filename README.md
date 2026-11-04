@@ -3,7 +3,7 @@
 A personal market research terminal for Indian and US listings, built on **real market data** from Yahoo Finance:
 watchlists, instrument charts and fundamentals, INR and USD portfolio accounts with FX conversions and CSV import/export,
 sampled alerts (price,
-crossing, volume, volatility, SEC filings) with an inbox, an investment journal and rule-based briefings. It runs as a
+crossing, volume, volatility, SEC filings) with an inbox, a versioned decision journal and rule-based briefings. It runs as a
 FastAPI web process (API + built React SPA on the same origin) plus one alert worker, on SQLite or PostgreSQL.
 
 It is a research and record-keeping tool. It does not place orders, connect to a broker, or make recommendations.
@@ -165,7 +165,7 @@ If Docker Hub rate-limits pulls, set `PYTHON_IMAGE=mirror.gcr.io/library/python:
 **Database-agnostic backups (SQLite or PostgreSQL, works on Render Free without a shell):**
 - Download: **Settings → Export and backup → Full backup (JSON)**, or `python -m marketdesk.cli export-data FILE.json`.
   It is one consistent snapshot of settings, instruments, watchlists, ledger transactions and import batches, alerts
-  with their observations, events and deliveries, stored briefings, and the journal (caches, login attempts and worker heartbeats are left out).
+  with their observations, events and deliveries, stored briefings, and the journal with its versions and reviews (caches, login attempts and worker heartbeats are left out).
   The file is private; it carries a SHA-256 checksum and the schema revision.
 - Restore into an **empty** database (for example a new Neon branch/database or a fresh SQLite file), from any
   machine with the repository: `cd apps/api && DATABASE_URL='postgresql://…new-db…' uv run marketdesk import-data FILE.json --yes`.

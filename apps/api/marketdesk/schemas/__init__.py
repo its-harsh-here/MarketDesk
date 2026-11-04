@@ -529,6 +529,10 @@ class JournalIn(Model):
     invalidation: str = Field(default="", max_length=10_000)
     tags: list[str] = Field(default_factory=list, max_length=12)
     review_date: date | None = None
+    decision: Literal["WATCH", "BUY", "ADD", "HOLD", "TRIM", "SELL", "AVOID"] | None = None
+    conviction: int | None = Field(default=None, ge=1, le=5)
+    horizon: str | None = Field(default=None, max_length=40)
+    change_note: str | None = Field(default=None, max_length=500)  # required when an edit changes the thesis
 
 
 class JournalOut(Model):
@@ -540,11 +544,57 @@ class JournalOut(Model):
     thesis: str
     risks: str
     invalidation: str
+    decision: str | None = None
+    conviction: int | None = None
+    horizon: str | None = None
+    version: int = 1
     tags: list[str]
     review_date: date | None = None
     review_due: bool
     created_at: datetime
     updated_at: datetime
+
+
+class JournalVersionOut(Model):
+    version: int
+    created_at: datetime
+    change_note: str | None = None
+    content: dict
+    evidence: dict | None = None
+
+
+class JournalReviewIn(Model):
+    outcome: Literal["intact", "weakened", "invalidated", "closed"]
+    notes: str = Field(default="", max_length=10_000)
+    next_review_date: date | None = None
+
+
+class JournalReviewOut(Model):
+    id: int
+    reviewed_at: datetime
+    outcome: str
+    notes: str
+    version: int
+    scheduled_for: date | None = None
+    next_review_date: date | None = None
+    evidence: dict | None = None
+
+
+class JournalDetailOut(JournalOut):
+    versions: list[JournalVersionOut]
+    reviews: list[JournalReviewOut]
+
+
+class JournalCompareOut(Model):
+    version: int
+    version_created_at: datetime
+    then: dict
+    now: dict
+    price_change_pct: Dec | None = None
+    price_note: str
+    splits_since: list[dict]
+    filings_since: list[dict]
+    days_elapsed: int
 
 
 class JournalPage(Model):

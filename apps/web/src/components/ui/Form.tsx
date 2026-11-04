@@ -1,8 +1,11 @@
 import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
+/** Full width unless the caller sets its own width (`w-40`, …): `cn` does not merge conflicting utilities. */
+const width = (className?: string) => (/(^|\s)w-/.test(className ?? "") ? "" : "w-full");
+
 const control =
-  "w-full rounded-[var(--radius-control)] border border-line bg-elevated px-3 text-sm text-fg placeholder:text-fg-3 transition-colors duration-150 hover:border-fg-3/60 focus:border-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus)] disabled:opacity-60 aria-[invalid=true]:border-neg";
+  "rounded-[var(--radius-control)] border border-line bg-elevated px-3 text-sm text-fg placeholder:text-fg-3 transition-colors duration-150 hover:border-fg-3/60 focus:border-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus)] disabled:opacity-60 aria-[invalid=true]:border-neg";
 
 /** Label + control + hint + error, with aria-describedby wiring. */
 export function Field({
@@ -46,17 +49,17 @@ export function Field({
 }
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...rest }, ref) {
-  return <input ref={ref} className={cn(control, "h-9 max-md:h-11", className)} {...rest} />;
+  return <input ref={ref} className={cn(control, width(className), "h-9 max-md:h-11", className)} {...rest} />;
 });
 
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(function Select({ className, children, ...rest }, ref) {
   return (
-    <select ref={ref} className={cn(control, "h-9 cursor-pointer pr-8 max-md:h-11", className)} {...rest}>
+    <select ref={ref} className={cn(control, width(className), "h-9 cursor-pointer pr-8 max-md:h-11", className)} {...rest}>
       {children}
     </select>
   );
 });
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea({ className, ...rest }, ref) {
-  return <textarea ref={ref} className={cn(control, "min-h-24 py-2 leading-5", className)} {...rest} />;
+  return <textarea ref={ref} className={cn(control, width(className), "min-h-24 py-2 leading-5", className)} {...rest} />;
 });

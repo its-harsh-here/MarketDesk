@@ -1,4 +1,4 @@
-import { BookOpen, Pencil, Plus, Search, X } from "lucide-react";
+import { BookOpen, CalendarCheck, History, Pencil, Plus, Search, X } from "lucide-react";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useDialogs } from "@/app/dialogs";
@@ -25,6 +25,28 @@ function Section({ label, text }: { label: string; text: string }) {
   );
 }
 
+function ReviewQueue({ readOnly }: { readOnly: boolean }) {
+  const due = useJournal({ due: true }, 20);
+  const { open } = useDialogs();
+  if (!due.data?.items.length) return null;
+  return (
+    <Panel title="Review queue" titleId="review-q" meta={`${due.data.total} due`}>
+      <ul className="divide-y divide-line-subtle" aria-label="Notes due for review">
+        {due.data.items.map((e) => (
+          <li key={e.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-[13px]">
+            <span className="num font-semibold text-fg">{e.symbol}</span>
+            <span className="min-w-0 flex-1 truncate text-fg-2">{e.title}</span>
+            <span className="text-xs text-fg-3">due {formatSessionDate(e.review_date)}</span>
+            <Button size="sm" variant={readOnly ? "ghost" : "primary"} icon={<CalendarCheck className="size-3.5" aria-hidden />} onClick={() => open({ kind: "journal-detail", id: e.id, section: "reviews" })}>
+              {readOnly ? "View" : "Review"}
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
 function EntryCard({ e, readOnly }: { e: JournalEntry; readOnly: boolean }) {
   const { open } = useDialogs();
   return (
@@ -41,7 +63,17 @@ function EntryCard({ e, readOnly }: { e: JournalEntry; readOnly: boolean }) {
             )}
           </div>
           <h3 id={`je-${e.id}`} className="mt-1 text-[15px] font-semibold text-fg">{e.title}</h3>
+          {(e.decision || e.conviction || e.horizon) && (
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-fg-2">
+              {e.decision && <Pill tone="info" className="py-0">Your decision: {e.decision.charAt(0) + e.decision.slice(1).toLowerCase()}</Pill>}
+              {e.conviction && <span>Conviction {e.conviction}/5</span>}
+              {e.horizon && <span>Horizon {e.horizon}</span>}
+            </p>
+          )}
         </div>
+        <Button size="sm" variant="ghost" icon={<History className="size-3.5" aria-hidden />} onClick={() => open({ kind: "journal-detail", id: e.id })} aria-label={`History, evidence and reviews for ${e.title}`}>
+          v{e.version}
+        </Button>
         {!readOnly && (
           <IconButton size="sm" label={`Edit note ${e.title}`} onClick={() => open({ kind: "journal", editing: e })}>
             <Pencil className="size-3.5" aria-hidden />
@@ -60,7 +92,7 @@ function EntryCard({ e, readOnly }: { e: JournalEntry; readOnly: boolean }) {
           ))}
         </ul>
       )}
-      <p className="mt-3 text-[11px] text-fg-3">Your note · not investment advice</p>
+      <p className="mt-3 text-[11px] text-fg-3">Your note · version {e.version} · not investment advice</p>
     </article>
   );
 }
@@ -85,6 +117,7 @@ export function JournalPage() {
 
   return (
     <div className="space-y-4 p-4 md:p-6">
+      <ReviewQueue readOnly={readOnly} />
       <Panel
         title="Journal"
         titleId="journal-h"
