@@ -1,0 +1,373 @@
+{
+  "note": "Fictitious annual statements for the synthetic sample companies (see scripts/generate_fixtures.py).",
+  "statements": {
+    "SX:AURORA": [
+      {
+        "period_end": "2026-03-31",
+        "revenue": 149888900000,
+        "net_income": 26980000000,
+        "total_debt": 246240000000,
+        "total_equity": 182400000000
+      },
+      {
+        "period_end": "2025-03-31",
+        "revenue": 140083100000,
+        "net_income": 24710700000,
+        "total_debt": 229003200000,
+        "total_equity": 169632000000
+      },
+      {
+        "period_end": "2024-03-31",
+        "revenue": 130918800000,
+        "net_income": 22622800000,
+        "total_debt": 212973000000,
+        "total_equity": 157757800000
+      }
+    ],
+    "SX:BANYAN": [
+      {
+        "period_end": "2026-03-31",
+        "revenue": 283583300000,
+        "net_income": 17015000000,
+        "total_debt": 44772000000,
+        "total_equity": 106600000000
+      },
+      {
+        "period_end": "2025-03-31",
+        "revenue": 248757300000,
+        "net_income": 14626900000,
+        "total_debt": 41638000000,
+        "total_equity": 99138000000
+      },
+      {
+        "period_end": "2024-03-31",
+        "revenue": 218208200000,
+        "net_income": 12568800000,
+        "total_debt": 38723300000,
+        "total_equity": 92198300000
+      }
+    ],
+    "SX:COBALT": [
+      {
+        "period_end": "2026-03-31",
+        "revenue": 389500000000,
+        "net_income": 31160000000,
+        "total_debt": 241490000000,
+        "total_equity": 254200000000
+      },
+      {
+        "period_end": "2025-03-31",
+        "revenue": 350900900000,
+        "net_income": 27510600000,
+        "total_debt": 224585700000,
+        "total_equity": 236406000000
+      },
+      {
+        "period_end": "2024-03-31",
+        "revenue": 316126900000,
+        "net_income": 24278500000,
+        "total_debt": 208864700000,
+        "total_equity": 219857600000
+      }
+    ],
+    "SX:DELTAFIN": [
+      {
+        "period_end": "2026-03-31",
+        "revenue": 194857100000,
+        "net_income": 40920000000,
+        "total_debt": 1220160000000,
+        "total_equity": 254200000000
+      },
+      {
+        "period_end": "2025-03-31",
+        "revenue": 167980300000,
+        "net_income": 34570300000,
+        "total_debt": 1134748800000,
+        "total_equity": 236406000000
+      },
+      {
+        "period_end": "2024-03-31",
+        "revenue": 144810600000,
+        "net_income": 29193800000,
+        "total_debt": 1055316400000,
+        "total_equity": 219857600000
+      }
+    ],
+    "SX:ELARA": [
+      {
+        "period_end": "2026-03-31",
+        "revenue": 120352900000,
+        "net_income": 20460000000,
+        "total_debt": 21384000000,
+        "total_equity": 178200000000
+      },
+      {
+        "period_end": "2025-03-31",
+        "revenue": 110415500000,
+        "net_income": 18395200000,
+        "total_debt": 19887100000,
+        "total_equity": 165726000000
+      },
+      {
+        "period_end": "2024-03-31",
+        "revenue": 101298700000,
+        "net_income": 16531900000,
+        "total_debt": 18495000000,
+        "total_equity": 154125200000
+      }
+    ],
+    "SX:FERRUM": [
+      {
+        "period_end": "2026-03-31",
+        "revenue": 676000000000,
+        "net_income": 47320000000,
+        "total_debt": 402688000000,
+        "total_equity": 457600000000
+      },
+      {
+        "period_end": "2025-03-31",
+        "revenue": 704166700000,
+        "net_income": 48305800000,
+        "total_debt": 374499800000,
+        "total_equity": 425568000000
+      },
+      {
+        "period_end": "2024-03-31",
+        "revenue": 733506900000,
+        "net_income": 49291700000,
+        "total_debt": 348284900000,
+        "total_equity": 395778200000
+      }
+    ],
+    "SX:GLASSWING": [
+      {
+        "period_end": "2026-03-31",
+        "revenue": 140421100000,
+        "net_income": 26680000000,
+        "total_debt": 5945000000,
+        "total_equity": 118900000000
+      },
+      {
+        "period_end": "2025-03-31",
+        "revenue": 125375900000,
+        "net_income": 23345000000,
+        "total_debt": 5528800000,
+        "total_equity": 110577000000
+      },
+      {
+        "period_end": "2024-03-31",
+        "revenue": 111942800000,
+        "net_income": 20418400000,
+        "total_debt": 5141800000,
+        "total_equity": 102836600000
+      }
+    ],
+    "SX:HALCYON": [
+      {
+        "period_end": "2025-12-31",
+        "revenue": 4174500000,
+        "net_income": 459200000,
+        "total_debt": 847900000,
+        "total_equity": 3854000000
+      },
+      {
+        "period_end": "2024-12-31",
+        "revenue": 3186700000,
+        "net_income": 343500000,
+        "total_debt": 788500000,
+        "total_equity": 3584200000
+      },
+      {
+        "period_end": "2023-12-31",
+        "revenue": 2432600000,
+        "net_income": 256900000,
+        "total_debt": 733300000,
+        "total_equity": 3333300000
+      }
+    ],
+    "SX:IRONLEAF": [
+      {
+        "period_end": "2026-03-31",
+        "revenue": 113760000000,
+        "net_income": 11376000000,
+        "total_debt": 28512000000,
+        "total_equity": 95040000000
+      },
+      {
+        "period_end": "2025-03-31",
+        "revenue": 108342900000,
+        "net_income": 10617600000,
+        "total_debt": 26516200000,
+        "total_equity": 88387200000
+      },
+      {
+        "period_end": "2024-03-31",
+        "revenue": 103183700000,
+        "net_income": 9905600000,
+        "total_debt": 24660000000,
+        "total_equity": 82200100000
+      }
+    ],
+    "SX:KESTREL": [
+      {
+        "period_end": "2026-03-31",
+        "revenue": 173571400000,
+        "net_income": 12150000000,
+        "total_debt": 65880000000,
+        "total_equity": 108000000000
+      },
+      {
+        "period_end": "2025-03-31",
+        "revenue": 153603000000,
+        "net_income": 10537200000,
+        "total_debt": 61268400000,
+        "total_equity": 100440000000
+      },
+      {
+        "period_end": "2024-03-31",
+        "revenue": 135931900000,
+        "net_income": 9134600000,
+        "total_debt": 56979600000,
+        "total_equity": 93409200000
+      }
+    ],
+    "SX:LUMEN": [
+      {
+        "period_end": "2026-03-31",
+        "revenue": 116923100000,
+        "net_income": 15200000000,
+        "total_debt": 82992000000,
+        "total_equity": 172900000000
+      },
+      {
+        "period_end": "2025-03-31",
+        "revenue": 110304800000,
+        "net_income": 14052800000,
+        "total_debt": 77182600000,
+        "total_equity": 160797000000
+      },
+      {
+        "period_end": "2024-03-31",
+        "revenue": 104061100000,
+        "net_income": 12986800000,
+        "total_debt": 71779800000,
+        "total_equity": 149541200000
+      }
+    ],
+    "SX:MERIDIAN": [
+      {
+        "period_end": "2026-03-31",
+        "revenue": 152000000000,
+        "net_income": 13680000000,
+        "total_debt": 42180000000,
+        "total_equity": 114000000000
+      },
+      {
+        "period_end": "2025-03-31",
+        "revenue": 138181800000,
+        "net_income": 12187600000,
+        "total_debt": 39227400000,
+        "total_equity": 106020000000
+      },
+      {
+        "period_end": "2024-03-31",
+        "revenue": 125619800000,
+        "net_income": 10853600000,
+        "total_debt": 36481500000,
+        "total_equity": 98598600000
+      }
+    ],
+    "SX:NIMBUS": [
+      {
+        "period_end": "2026-03-31",
+        "revenue": 18200000000,
+        "net_income": -2184000000,
+        "total_debt": null,
+        "total_equity": null
+      },
+      {
+        "period_end": "2025-03-31",
+        "revenue": 13188400000,
+        "net_income": -1551000000,
+        "total_debt": null,
+        "total_equity": null
+      },
+      {
+        "period_end": "2024-03-31",
+        "revenue": 9556800000,
+        "net_income": -1100900000,
+        "total_debt": null,
+        "total_equity": null
+      }
+    ],
+    "SX:ORCHID": [
+      {
+        "period_end": "2026-03-31",
+        "revenue": 62333300000,
+        "net_income": 7480000000,
+        "total_debt": 112200000000,
+        "total_equity": 102000000000
+      },
+      {
+        "period_end": "2025-03-31",
+        "revenue": 52824900000,
+        "net_income": 6212200000,
+        "total_debt": 104346000000,
+        "total_equity": 94860000000
+      },
+      {
+        "period_end": "2024-03-31",
+        "revenue": 44766800000,
+        "net_income": 5157100000,
+        "total_debt": 97041800000,
+        "total_equity": 88219800000
+      }
+    ],
+    "SX:PEREGRINE": [
+      {
+        "period_end": "2026-03-31",
+        "revenue": 770000000000,
+        "net_income": 184800000000,
+        "total_debt": 9676800000000,
+        "total_equity": 1344000000000
+      },
+      {
+        "period_end": "2025-03-31",
+        "revenue": 687500000000,
+        "net_income": 161700000000,
+        "total_debt": 8999424000000,
+        "total_equity": 1249920000000
+      },
+      {
+        "period_end": "2024-03-31",
+        "revenue": 613839300000,
+        "net_income": 141428600000,
+        "total_debt": 8369464300000,
+        "total_equity": 1162425600000
+      }
+    ],
+    "SX:QUILL": [
+      {
+        "period_end": "2026-03-31",
+        "revenue": 45500000000,
+        "net_income": 1820000000,
+        "total_debt": 25480000000,
+        "total_equity": 36400000000
+      },
+      {
+        "period_end": "2025-03-31",
+        "revenue": 46428600000,
+        "net_income": 1820000000,
+        "total_debt": 23696400000,
+        "total_equity": 33852000000
+      },
+      {
+        "period_end": "2024-03-31",
+        "revenue": 47376100000,
+        "net_income": 1819200000,
+        "total_debt": 22037700000,
+        "total_equity": 31482400000
+      }
+    ]
+  }
+}

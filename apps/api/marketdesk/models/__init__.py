@@ -247,6 +247,52 @@ class Briefing(Base):
     read_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
 
+class ScreenUniverse(Base):
+    """A named, user-declared list of symbols the screener may use (bounded; never "the whole market")."""
+
+    __tablename__ = "screen_universes"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(60), nullable=False, unique=True)
+    symbols: Mapped[list] = mapped_column(JSON, nullable=False)  # provider symbols, in the order given
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class SavedScreen(Base):
+    __tablename__ = "saved_screens"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(80), nullable=False, unique=True)
+    universe: Mapped[dict] = mapped_column(JSON, nullable=False)  # {"kind": "watchlist", "id": 3} etc.
+    filters: Mapped[list] = mapped_column(JSON, nullable=False)
+    sort: Mapped[dict | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class PeerSet(Base):
+    """The owner's chosen peers for an instrument (at most five symbols)."""
+
+    __tablename__ = "peer_sets"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    instrument_id: Mapped[int] = mapped_column(
+        ForeignKey("instruments.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    peers: Mapped[list] = mapped_column(JSON, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class ScreenMetric(Base):
+    """The normalized screening snapshot of one instrument: every metric with its value (or null and why), unit,
+    source and as-of date. Screens read only these rows; refreshing them is a separate, bounded job."""
+
+    __tablename__ = "screen_metrics"
+    instrument_id: Mapped[int] = mapped_column(ForeignKey("instruments.id", ondelete="CASCADE"), primary_key=True)
+    provider: Mapped[str] = mapped_column(String(16), nullable=False)
+    computed_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, index=True)
+    values: Mapped[dict] = mapped_column(JSON, nullable=False)
+    errors: Mapped[dict | None] = mapped_column(JSON)  # input kind -> sanitized reason
+
+
 class AiAnswer(Base):
     """A Grok research answer with the evidence it was given, validation flags, model and usage. Kept for reuse."""
 

@@ -58,6 +58,21 @@ async def _briefings(market) -> dict:
         return {"error": type(exc).__name__}
 
 
+async def _screener_snapshots(market) -> dict:
+    """A few stale screening snapshots per cycle (watchlists, holdings, lists, peers), so screens stay current."""
+    from marketdesk.services.screener import refresh_instruments, tracked_instruments
+
+    s = market.settings
+    try:
+        with db_session() as db:
+            insts = tracked_instruments(db, market.source, s.screener_max_universe)
+            return await refresh_instruments(db, market, insts, hours=s.screener_snapshot_hours,
+                                             limit=s.screener_refresh_per_cycle)  # fmt: skip
+    except Exception as exc:  # never let snapshot refresh break the alert worker
+        log.warning("screener refresh failed: %s", type(exc).__name__)
+        return {"error": type(exc).__name__}
+
+
 async def run_cycle(market, research=None) -> dict:
     from marketdesk.services.research import ResearchService
 
@@ -74,6 +89,7 @@ async def run_cycle(market, research=None) -> dict:
             row.last_error = f"Evaluation failed ({type(exc).__name__})."
         summary["research"] = await _refresh_research(market)
         summary["briefings"] = await _briefings(market)
+        summary["screener"] = await _screener_snapshots(market)
         skipped = summary.get("skipped") or []
         if skipped and not row.last_error:
             row.last_error = f"{len(skipped)} symbol(s) skipped: provider data was stale or unavailable."

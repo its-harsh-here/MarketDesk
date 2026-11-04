@@ -432,3 +432,64 @@ test("research tabs: keyboard navigation, URL state, and an explicit reason when
   await expect(page.getByRole("heading", { name: "Price history" })).toBeVisible();
   await expect(page).not.toHaveURL(/tab=/);
 });
+
+test("screener: named list → load data → filter (missing never passes) → save → watchlist; heatmap; peers", async ({ page }) => {
+  await page.goto("/screener");
+  await ready(page);
+  const csrf = (await (await page.request.get("/api/auth/session")).json()).csrf_token;
+  await page.request.post("/api/watchlists", { data: { name: "Screen picks" }, headers: { "x-csrf-token": csrf } });
+  await page.getByRole("button", { name: "Manage lists" }).click();
+  const lists = page.getByRole("dialog", { name: "Screening lists" });
+  await lists.getByRole("button", { name: "New list" }).click();
+  await lists.getByLabel("Name").fill("E2E screen");
+  await lists.getByLabel("Symbols").fill("AURORA, SX:BANYAN GLASSWING NIMBUS HALCYON BOGUS");
+  await lists.getByRole("button", { name: "Save list" }).click();
+  await expect(lists.getByText(/BOGUS/)).toBeVisible(); // skipped with the provider's reason, the rest saved
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("combobox", { name: "Universe" })).toHaveValue(/^list:/);
+
+  const results = page.getByRole("region", { name: "Results" });
+  // The worker may already have loaded the new list's members; either way the button fetches what is missing/old.
+  await results.getByRole("button", { name: /^(Load|Refresh) data$/ }).click();
+  const table = results.getByRole("table", { name: /Screen results for List · E2E screen/ });
+  await expect(table.getByRole("row", { name: /SX:NIMBUS/ })).toBeVisible({ timeout: 30_000 });
+
+  // P/E ≤ 20: NIMBUS has negative earnings, so no P/E — excluded and counted, never a pass
+  await page.getByRole("combobox", { name: "Add a filter" }).selectOption("pe_ratio");
+  await page.getByLabel("P/E (trailing) condition").selectOption("lte");
+  await page.getByLabel("P/E (trailing) value").fill("20");
+  await expect(table.getByRole("row", { name: /SX:NIMBUS/ })).toHaveCount(0);
+  await expect(page.getByRole("list", { name: "Active filters" }).getByText(/without data \(excluded\)/)).toBeVisible();
+  await expect(table.getByRole("row", { name: /SX:AURORA/ })).toBeVisible();
+
+  // save the screen; it reopens from the URL
+  await page.getByRole("button", { name: "Save this screen" }).click();
+  await page.getByLabel("Name for this screen").fill("Cheap names");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved “Cheap names”.")).toBeVisible();
+  await expect(page).toHaveURL(/screen=\d+/);
+  await page.reload();
+  await expect(page.getByLabel("P/E (trailing) value")).toHaveValue("20");
+
+  // preview, then add a result to a watchlist
+  await table.getByRole("row", { name: /SX:AURORA/ }).click();
+  const preview = page.getByRole("dialog", { name: /SX:AURORA/ });
+  await expect(preview.getByText("Return on equity (FY)")).toBeVisible();
+  await expect(preview.getByText(/fiscal year ending 31 Mar 2026/).first()).toBeVisible();
+  await page.keyboard.press("Escape");
+  await table.getByRole("checkbox", { name: "Select SX:AURORA" }).check();
+  await results.getByRole("button", { name: /Add 1 to watchlist/ }).click();
+  await expect(page.getByText(/1 added to|already there/)).toBeVisible();
+
+  // heatmap over the same declared universe
+  await page.getByRole("radio", { name: "Sector heatmap" }).click();
+  const heat = page.getByRole("region", { name: "Sector heatmap" });
+  await expect(heat.getByRole("list", { name: /Sectors by 1D change/ }).getByText("Technology")).toBeVisible();
+  await expect(heat.getByText(/equally weighted/)).toBeVisible();
+
+  // peers: suggestions from loaded instruments in the same sector, editable
+  await page.goto("/instrument/SX%3AGLASSWING?tab=peers");
+  const peers = page.getByRole("region", { name: "Peers" });
+  await expect(peers.getByRole("columnheader", { name: /SX:NIMBUS/ })).toBeVisible({ timeout: 20_000 });
+  await expect(peers.getByText("Same sector (Technology)").first()).toBeVisible();
+});

@@ -31,6 +31,7 @@ from marketdesk.asyncbridge import run_on_home_loop
 from marketdesk.config import Settings
 from marketdesk.models import MarketCacheEntry
 from marketdesk.providers.base import (
+    AnnualStatements,
     CorporateAction,
     Fundamentals,
     HistoryRange,
@@ -48,6 +49,7 @@ CIRCUIT_GROUPS = {
     "history": "prices",
     "actions": "prices",
     "fundamentals": "fundamentals",
+    "statements": "fundamentals",
     "search": "search",
 }
 Status = Literal["sample", "available", "cached", "stale", "missing", "unsupported", "unavailable"]
@@ -157,6 +159,7 @@ class MarketDataService:
             "history": settings.history_ttl_seconds,
             "fundamentals": settings.fundamentals_ttl_seconds,
             "actions": settings.fundamentals_ttl_seconds,
+            "statements": settings.fundamentals_ttl_seconds,
             "search": settings.search_ttl_seconds,
         }
 
@@ -181,6 +184,9 @@ class MarketDataService:
 
     async def fundamentals(self, symbol: str) -> Result[Fundamentals]:
         return await self._get("fundamentals", symbol, lambda: self.provider.fundamentals(symbol))
+
+    async def statements(self, symbol: str) -> Result[AnnualStatements]:
+        return await self._get("statements", symbol, lambda: self.provider.annual_statements(symbol))
 
     async def actions(self, symbol: str) -> Result[list[CorporateAction]]:
         return await self._get("actions", symbol, lambda: self.provider.corporate_actions(symbol))

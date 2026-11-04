@@ -109,6 +109,26 @@ class Fundamentals:
 
 
 @dataclass(frozen=True)
+class AnnualPeriod:
+    """One fiscal year from the provider's annual statements. Values are in the statement currency (often not
+    reported by the endpoint), so only ratios between values of the same statement set are used downstream."""
+
+    period_end: date
+    revenue: Decimal | None
+    net_income: Decimal | None
+    total_debt: Decimal | None
+    total_equity: Decimal | None
+
+
+@dataclass(frozen=True)
+class AnnualStatements:
+    instrument: InstrumentRef
+    periods: list[AnnualPeriod]  # newest first
+    source: str  # e.g. "Yahoo annual statements"
+    notes: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class CorporateAction:
     action_date: date
     kind: Literal["DIVIDEND", "SPLIT"]
@@ -129,6 +149,8 @@ class MarketDataProvider(Protocol):
     def fundamentals(self, symbol: str) -> Fundamentals: ...
 
     def corporate_actions(self, symbol: str) -> list[CorporateAction]: ...
+
+    def annual_statements(self, symbol: str) -> AnnualStatements: ...
 
     def validate_symbol(self, symbol: str) -> str: ...
 

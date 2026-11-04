@@ -53,6 +53,11 @@ class Settings(BaseSettings):
     quote_ttl_seconds: int = 300
     history_ttl_seconds: int = 3600
     fundamentals_ttl_seconds: int = 86400
+    # Screener (M06): universes are bounded; snapshots older than this are refreshed (worker: a few per cycle).
+    screener_max_universe: int = 150
+    screener_snapshot_hours: int = 24
+    screener_refresh_per_cycle: int = 6
+    screener_refresh_batch: int = 60
     search_ttl_seconds: int = 86400
     provider_timeout_seconds: float = 15.0
     provider_max_concurrency: int = 4

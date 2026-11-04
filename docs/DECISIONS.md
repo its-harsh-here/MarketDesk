@@ -191,3 +191,13 @@ Consequential choices, newest last. Routine choices live in code comments.
     answer because Groq does not combine structured output with tool use, evidence trimmed deterministically (source
     ids unchanged) so a request stays under the free tier's 8,000 tokens per minute, and a daily token allowance below
     its 200,000 tokens per day. Free-tier usage is recorded with tokens and $0 cost.
+43. **Screener reads a stored snapshot of a declared universe (M06, 4 Nov 2026).** A universe is a watchlist, all
+    watchlists, current holdings or a pasted list (≤ 150 symbols, each verified with the provider); indices and
+    currencies are left out and listed. Each member's snapshot (`screen_metrics`, rebuildable, excluded from backups)
+    holds every metric as a decimal string or null with the reason, its as-of date and input provenance; screens never
+    call the provider. Statement ratios use Yahoo's annual statements (`get_income_stmt`/`get_balance_sheet`, which work
+    from cloud servers) and only ratios within one statement set, because the endpoint does not report the statement
+    currency. Debt/equity is withheld for financial-services companies. Currency filters compare other-currency listings
+    at the current USD/INR rate (stated), never by relabelling. Peer suggestions come only from instruments the owner
+    already tracks (same industry, then sector, nearest market cap); chosen peer groups are owner data and backed up.
+

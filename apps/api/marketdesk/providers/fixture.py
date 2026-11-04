@@ -21,6 +21,8 @@ from zoneinfo import ZoneInfo
 from dateutil.relativedelta import relativedelta
 
 from marketdesk.providers.base import (
+    AnnualPeriod,
+    AnnualStatements,
     CorporateAction,
     DailyBar,
     Fundamentals,
@@ -51,6 +53,7 @@ class FixtureDataset:
     replay: list[date]
     benchmarks: list[str]
     starter_watchlist: list[str]
+    statements: dict[str, list[dict]]
 
     def session_dates(self) -> list[date]:
         return [self.base_date, *self.replay]
@@ -76,6 +79,8 @@ def load_dataset(fixtures_dir: str) -> FixtureDataset:
             )
     for series in bars.values():
         series.sort(key=lambda b: b.session_date)
+    fin_path = root / "financials.json"
+    statements = json.loads(fin_path.read_text())["statements"] if fin_path.exists() else {}
     ds = meta["dataset"]
     return FixtureDataset(
         meta=ds,
@@ -85,6 +90,7 @@ def load_dataset(fixtures_dir: str) -> FixtureDataset:
         replay=[date.fromisoformat(d) for d in ds["replay_sessions"]],
         benchmarks=meta["benchmarks"],
         starter_watchlist=meta["starter_watchlist"],
+        statements=statements,
     )
 
 
@@ -256,6 +262,24 @@ class FixtureProvider:
             most_recent_quarter=date.fromisoformat(fiscal["most_recent_quarter"]) if fiscal else None,
             notes=notes,
         )
+
+    def annual_statements(self, symbol: str) -> AnnualStatements:
+        self._check_fault()
+        symbol = self.validate_symbol(symbol)
+        cursor = self.cursor_date()
+
+        def dec(v) -> Decimal | None:
+            return None if v is None else Decimal(str(v))
+
+        periods = [
+            AnnualPeriod(date.fromisoformat(y["period_end"]), dec(y["revenue"]), dec(y["net_income"]),
+                         dec(y["total_debt"]), dec(y["total_equity"]))
+            for y in self.dataset.statements.get(symbol, [])
+            if date.fromisoformat(y["period_end"]) <= cursor
+        ]  # fmt: skip
+        if not periods:
+            raise ProviderError("missing", "The sample dataset has no annual statements for this instrument.")
+        return AnnualStatements(self._ref(symbol), periods, "Sample annual statements (fictitious)", [])
 
     def corporate_actions(self, symbol: str) -> list[CorporateAction]:
         self._check_fault()

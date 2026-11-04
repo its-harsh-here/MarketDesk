@@ -1,20 +1,6 @@
 import * as DM from "@radix-ui/react-dropdown-menu";
 import * as RD from "@radix-ui/react-dialog";
-import {
-  Bell,
-  BookOpen,
-  Briefcase,
-  Ellipsis,
-  Keyboard,
-  LayoutDashboard,
-  ListChecks,
-  LogOut,
-  Moon,
-  Search,
-  Settings,
-  Sun,
-  UserRound,
-} from "lucide-react";
+import { Bell, BookOpen, Briefcase, Ellipsis, Funnel, Keyboard, LayoutDashboard, ListChecks, LogOut, Moon, Search, Settings, Sun, UserRound } from "lucide-react";
 import { useRef, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -36,6 +22,7 @@ import { cn } from "@/lib/cn";
 const NAV = [
   { to: "/", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/watchlists", label: "Watchlists", icon: ListChecks },
+  { to: "/screener", label: "Screener", icon: Funnel },
   { to: "/portfolio", label: "Portfolio", icon: Briefcase },
   { to: "/alerts", label: "Alerts", icon: Bell },
   { to: "/journal", label: "Journal", icon: BookOpen },
@@ -330,7 +317,7 @@ function SessionPills() {
 }
 
 function BottomNav() {
-  const items = NAV.slice(0, 3);
+  const items = NAV.filter((n) => ["/", "/watchlists", "/portfolio"].includes(n.to));
   return (
     <nav aria-label="Primary" className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-line-subtle bg-sidebar/95 backdrop-blur-sm md:hidden">
       <ul className="grid grid-cols-4">
@@ -353,12 +340,13 @@ function BottomNav() {
 function MoreSheet() {
   const closeRef = useRef<HTMLButtonElement>(null);
   const loc = useLocation();
-  const active = ["/alerts", "/journal", "/settings"].some((p) => loc.pathname.startsWith(p));
+  const active = ["/screener", "/alerts", "/journal", "/settings"].some((p) => loc.pathname.startsWith(p));
   const { data: prefs } = usePrefs();
   const patch = usePatchPrefs();
   const { data: session } = useSession();
   const { open } = useDialogs();
   const links: { to: string; label: string; icon: ReactNode }[] = [
+    { to: "/screener", label: "Screener", icon: <Funnel className="size-5" aria-hidden /> },
     { to: "/alerts", label: "Alerts", icon: <Bell className="size-5" aria-hidden /> },
     { to: "/journal", label: "Journal", icon: <BookOpen className="size-5" aria-hidden /> },
     { to: "/settings", label: "Settings", icon: <Settings className="size-5" aria-hidden /> },
@@ -442,7 +430,7 @@ export function Shell() {
     } else if (e.key.toLowerCase() === "g") {
       gPending.current = window.setTimeout(() => (gPending.current = null), 900);
     } else if (gPending.current) {
-      const map: Record<string, string> = { o: "/", w: "/watchlists", p: "/portfolio", a: "/alerts", j: "/journal", s: "/settings" };
+      const map: Record<string, string> = { o: "/", w: "/watchlists", f: "/screener", p: "/portfolio", a: "/alerts", j: "/journal", s: "/settings" };
       const to = map[e.key.toLowerCase()];
       window.clearTimeout(gPending.current);
       gPending.current = null;

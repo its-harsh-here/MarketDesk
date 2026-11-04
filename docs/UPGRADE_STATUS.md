@@ -630,6 +630,43 @@ The owner's key turned out to be a Groq key and the owner chose Groq's free tier
 - CI: the browser journey for the USD account was flaky (two "Transaction recorded." toasts on screen at once); the
   journey now dismisses the first one. All 16 journeys pass locally.
 
+## M06 — Screener and peers (4 Nov 2026)
+- **Universe:** all watchlists, one watchlist, current holdings, or a pasted list (verified symbols, ≤ 150; skipped
+  symbols listed with the provider's reason). Indices and currencies are left out and named. Every result states the
+  universe, its member count, how many have data, and the oldest snapshot.
+- **Snapshot:** `screen_metrics` holds, per instrument, 17 metrics (price/returns, 52-week distance, 20-session volume and
+  traded value, market cap, P/E, P/B, dividend yield, FY revenue growth, net margin, ROE, debt/equity, 1Y volatility)
+  as decimal strings or null with the reason, each with its as-of date, plus the status/source/fetch time of each
+  input. Built through the cached market service by "Load data" (≤ 60 per request, one job at a time) and by the
+  worker (6 stale per cycle across watchlists, holdings, lists and peer groups). Screens never call the provider.
+- **Annual statements:** new provider method (Yahoo `get_income_stmt`/`get_balance_sheet`; fixture
+  `fixtures/market/financials.json`, generated deterministically) cached 24 h; only ratios within one statement set
+  are used because the endpoint does not report the statement currency. Debt/equity is withheld for financial-services
+  companies; negative equity makes ROE and debt/equity "not meaningful".
+- **Filters:** ≥ / ≤ / between on any metric, plus market, sector, industry, currency, exchange. Missing values never
+  pass; each filter reports passed / failed / no data. Currency amounts take a unit (₹ Cr/lakh, $ B/M) and compare
+  other-currency listings at the stated USD/INR rate. Sorting keeps missing values last.
+- **Saved screens** (name, universe, filters, sort; opened from the URL), **CSV export** (formula-safe cells, universe
+  footer), **add selected results to a watchlist**, **preview** with every metric's period, formula and inputs.
+- **Sector heatmap:** 1D/1M/3M/1Y, equal or market-cap weighted (INR at the stated rate; falls back to equal weights,
+  with a notice, when no rate is available for a mixed universe), member table as the text alternative.
+- **Peers** (Instrument → Peers): up to five chosen peers (verified, no self, no indices) or suggestions from tracked
+  instruments in the same industry, then sector, nearest market cap; side-by-side table with snapshot age; reset to
+  suggestions.
+- **Schema:** migration 0008 adds `screen_universes`, `saved_screens`, `peer_sets` (owner data, in backups) and
+  `screen_metrics` (rebuildable, excluded from backups). Rehearsed on a copy of production (schema 0007 backup):
+  restored, migrated to 0008, owner-data fingerprints identical.
+- **Also fixed:** the test suite now removes real AI/SEC credentials from its environment (a developer's `GROK_API`
+  made one test fail and could have reached a real provider).
+
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 17 | 229 passed, 3 skipped / 231 passed, 1 skipped (M06: 10 — snapshot values, units and reasons; leverage/profitability edge cases; missing never passes; currency comparison; Yahoo statement frames; full screen flow incl. export; saved screens and lists; heatmap weighting; peers; holdings universe and worker refresh; backups) |
+| ruff, tsc, eslint, vitest | clean; 32 frontend tests |
+| Migrations match models (SQLite, PostgreSQL); downgrade 0008→0007 and upgrade | pass |
+| Playwright | 17 journeys pass (new: named list → load data → P/E filter excludes a negative-earnings company with the count shown → save → reopen → preview → add to watchlist → heatmap → peers) |
+| Visual QA | Screener, heatmap and peers at 1440, 1024 and 390 px inspected; fixed wrapping market caps, stacked filters below 1280 px, wrapped toolbar at 390 px, full-contrast heatmap values. `docs/screenshots/screener-1440.png`, `peers-1440.png`, `heatmap-390.png` |
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -637,4 +674,4 @@ The owner's key turned out to be a Groq key and the owner chose Groq's free tier
 - Portfolio has INR and USD accounts; there are no returns metrics (XIRR/TWR) and no historical FX by design.
 
 ## Next concrete action
-Phase 7 — **M06 Screener + peers** (see `docs/UPGRADE_PLAN.md`). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
+Phase 8 — **M09 Performance + risk** (see `docs/UPGRADE_PLAN.md`). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.

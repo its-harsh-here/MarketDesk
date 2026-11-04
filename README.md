@@ -91,6 +91,7 @@ cookies and survive restarts on their own.
 | `SEC_MAX_REQUESTS_PER_SECOND`, `RESEARCH_REFRESH_HOURS` | no | SEC request budget (default 5/s; SEC allows 10) and the daily re-check interval. |
 | `GROK_API` (or `GROQ_API_KEY` / `XAI_API_KEY`) | for AI research | A Groq key (`gsk_…`, free tier) or an xAI key (`xai-…`, paid); server-side only. The prefix picks the provider (`AI_PROVIDER=groq|xai` overrides). Without a key the "Ask AI" panel explains that AI is off; nothing else changes. |
 | `AI_MODEL`, `GROK_ENABLED`, `AI_DAILY_TOKENS`, `AI_REQUEST_TOKENS`, `AI_DAILY_BUDGET_USD`, `AI_DAILY_REQUESTS`, `AI_MAX_OUTPUT_TOKENS`, `AI_MAX_TOOL_CALLS`, `AI_REUSE_HOURS` | no | Model (defaults `openai/gpt-oss-120b` on Groq, `grok-4.3` on xAI), off switch, and limits: Groq 150,000 tokens/day and 7,300 per request; xAI $0.50/day and 3 filing lookups; 30 answers/day, 1,800 output tokens, 24 h reuse. |
+| `SCREENER_MAX_UNIVERSE`, `SCREENER_SNAPSHOT_HOURS`, `SCREENER_REFRESH_PER_CYCLE`, `SCREENER_REFRESH_BATCH` | no | Screener bounds: members per universe (150), snapshot age before refresh (24 h), snapshots the worker refreshes per cycle (6) and per "Load data" (60). |
 
 - **Start command:** none — the image's default `python -m marketdesk.serve` runs the web server and, 45 s after it
   answers, the alert worker in the same container. Leave Render's *Start Command* empty.
@@ -244,6 +245,26 @@ CSV import uses the canonical columns
 (`currency` is the account; the five FX columns apply to FX rows only; files without them still import). A template is
 downloadable in the import dialog. Imports are previewed row by row, all-or-nothing, and duplicate rows are skipped.
 Exports neutralise spreadsheet formulas; holdings export per account.
+
+## Screener and peers
+
+**Screener** (G F) screens a *named, bounded universe* — all watchlists, one watchlist, current holdings, or a pasted
+list of up to 150 symbols — never "the whole market"; every result names its universe and how many members have data.
+- **Snapshot, then screen:** "Load data" (and the worker, a few per cycle) stores each member's normalized snapshot:
+  quote, one-year price history, fundamentals and annual statements, each metric with its unit, as-of date and source,
+  or null with the reason. Screens, peers and the heatmap read only these snapshots; nothing is fetched to screen.
+- **Metrics:** price and 1M/3M/6M/1Y returns (price only), distance from the 52-week high, 20-session average volume
+  and traded value, market cap, P/E, P/B, dividend yield, fiscal-year revenue growth, net margin, ROE, debt/equity
+  (not computed for banks and lenders) and one-year annualized volatility. Formulas are shown on hover and in the
+  preview. Statement ratios come from the provider's annual statements (Yahoo for real symbols).
+- **Filters never pass missing values:** each filter shows how many members passed, failed or had no data. Amounts in
+  another currency are compared at the current USD/INR rate, which is shown.
+- **Saved screens** (filters, sort and universe), **CSV export** (formula-safe cells), **add results to a watchlist**,
+  and a **preview** of every metric with its period and inputs.
+- **Sector heatmap** of 1D/1M/3M/1Y change for the same universe, equal- or market-cap-weighted (method stated, a
+  table of members as the text alternative).
+- **Peers** (Instrument → Peers): up to five peers you choose, or suggestions from loaded instruments in the same
+  industry, then sector, closest in market cap; compared side by side on the same snapshot.
 
 ## Decision journal
 

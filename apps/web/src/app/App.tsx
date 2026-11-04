@@ -15,6 +15,7 @@ import { ImportDialog } from "@/features/portfolio/ImportDialog";
 import { AlertsPage } from "@/features/alerts/AlertsPage";
 import { AlertDialog } from "@/features/alerts/AlertDialog";
 import { JournalPage } from "@/features/journal/JournalPage";
+import { ScreenerPage } from "@/features/screener/ScreenerPage";
 import { JournalDialog } from "@/features/journal/JournalDialog";
 import { JournalDetailDialog } from "@/features/journal/JournalDetailDialog";
 import { AiDialog } from "@/features/ai/AiDialog";
@@ -126,6 +127,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <OverviewPage /> },
           { path: "watchlists", element: <WatchlistsPage /> },
+          { path: "screener", element: <ScreenerPage /> },
           { path: "instrument/:symbol", element: <InstrumentPage /> },
           { path: "portfolio", element: <PortfolioPage /> },
           { path: "alerts", element: <AlertsPage /> },

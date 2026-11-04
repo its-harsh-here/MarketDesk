@@ -43,4 +43,6 @@ earlier as soon as their credentials exist.
   waits for M03.
 - M03 (moved forward when the owner added `GROK_API`): ✅ implemented; runs on Groq's free tier (owner decision) or
   xAI; tested with fake clients and a fake endpoint in the browser journeys; live check in `docs/UPGRADE_STATUS.md`.
-- Phase 7 (M06): next.
+- Phase 7 (M06): ✅ implemented, tested (fixtures; migration rehearsed on a production copy) and deployed; live
+  checks in `docs/UPGRADE_STATUS.md`.
+- Phase 8 (M09): next.

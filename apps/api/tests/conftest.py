@@ -11,6 +11,17 @@ from marketdesk.config import REPO_ROOT, Settings
 from marketdesk.db.migrations import upgrade
 from marketdesk.services.auth import hash_password
 
+# Real credentials in the developer's environment must never reach a test (or a real provider from one).
+_REAL_SECRETS = ("GROK_API", "GROQ_API_KEY", "XAI_API_KEY", "AI_PROVIDER", "AI_MODEL", "SEC_USER_AGENT")
+
+
+@pytest.fixture(autouse=True)
+def _no_real_secrets(monkeypatch):
+    for name in _REAL_SECRETS:
+        monkeypatch.delenv(name, raising=False)
+        monkeypatch.delenv(name.lower(), raising=False)
+
+
 OWNER_PW = "correct horse battery staple"
 OWNER_HASH = hash_password(OWNER_PW)
 

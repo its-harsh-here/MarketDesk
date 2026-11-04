@@ -7,6 +7,8 @@ from decimal import Decimal
 from typing import Any
 
 from marketdesk.providers.base import (
+    AnnualPeriod,
+    AnnualStatements,
     CorporateAction,
     DailyBar,
     Fundamentals,
@@ -122,6 +124,29 @@ def fundamentals_from(d: dict) -> Fundamentals:
     )
 
 
+def statements_to(st: AnnualStatements) -> dict:
+    return {
+        "instrument": ref_to(st.instrument),
+        "periods": [
+            [p.period_end.isoformat(), _d(p.revenue), _d(p.net_income), _d(p.total_debt), _d(p.total_equity)]
+            for p in st.periods
+        ],
+        "source": st.source,
+        "notes": list(st.notes),
+    }
+
+
+def statements_from(d: dict) -> AnnualStatements:
+    return AnnualStatements(
+        instrument=ref_from(d["instrument"]),
+        periods=[
+            AnnualPeriod(date.fromisoformat(p[0]), _pd(p[1]), _pd(p[2]), _pd(p[3]), _pd(p[4])) for p in d["periods"]
+        ],
+        source=d["source"],
+        notes=list(d["notes"]),
+    )
+
+
 def actions_to(actions: list[CorporateAction]) -> list:
     return [[a.action_date.isoformat(), a.kind, _d(a.value), a.description] for a in actions]
 
@@ -142,6 +167,7 @@ CODECS = {
     "quote": (quote_to, quote_from),
     "history": (history_to, history_from),
     "fundamentals": (fundamentals_to, fundamentals_from),
+    "statements": (statements_to, statements_from),
     "actions": (actions_to, actions_from),
     "search": (search_to, search_from),
 }

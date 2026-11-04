@@ -30,7 +30,7 @@ from marketdesk.models import Base
 FORMAT = "marketdesk-backup"
 VERSION = 1
 # Rebuildable or security-sensitive tables that are not part of the owner's data.
-EXCLUDED_TABLES = {"market_cache", "login_attempts", "auth_sessions", "worker_status"}
+EXCLUDED_TABLES = {"market_cache", "screen_metrics", "login_attempts", "auth_sessions", "worker_status"}
 # Per-database metadata that must describe the database it lives in, not the one the backup came from.
 EXCLUDED_SETTINGS = {"database_created_at"}
 

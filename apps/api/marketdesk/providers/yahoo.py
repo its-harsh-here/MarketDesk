@@ -19,6 +19,8 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from marketdesk.providers.base import (
+    AnnualPeriod,
+    AnnualStatements,
     CorporateAction,
     DailyBar,
     Fundamentals,
@@ -499,6 +501,20 @@ class YahooProvider:
             notes=notes,
         )
 
+    def annual_statements(self, symbol: str) -> AnnualStatements:
+        """Up to four fiscal years of revenue, net income, total debt and shareholders' equity (Yahoo's
+        fundamentals timeseries, which works for cloud servers). The statement currency is not reported by this
+        endpoint, so callers use only ratios between these values."""
+        symbol = self.validate_symbol(symbol)
+
+        def run():
+            t = self._yf.Ticker(symbol)
+            income = t.get_income_stmt(freq="yearly")
+            balance = t.get_balance_sheet(freq="yearly")
+            return statements_from_frames(symbol, income, balance)
+
+        return self._call(run, "annual statements")
+
     def corporate_actions(self, symbol: str) -> list[CorporateAction]:
         symbol = self.validate_symbol(symbol)
 
@@ -543,6 +559,39 @@ def _describe(exc: BaseException) -> str:
     return f"HTTP {status}" if status else type(exc).__name__
 
 
+def _frame_row(df: Any, keys: tuple[str, ...]) -> dict[date, Decimal | None]:
+    """{period_end: value} for the first row key present in a yfinance statement frame (index = line items)."""
+    if df is None or getattr(df, "empty", True):
+        return {}
+    for key in keys:
+        if key in df.index:
+            row = df.loc[key]
+            out: dict[date, Decimal | None] = {}
+            for col in df.columns:
+                try:
+                    out[_session_date(col)] = _dec(row[col])
+                except ValueError:
+                    continue
+            return out
+    return {}
+
+
+def statements_from_frames(symbol: str, income: Any, balance: Any) -> AnnualStatements:
+    revenue = _frame_row(income, ("TotalRevenue", "OperatingRevenue", "Total Revenue"))
+    net = _frame_row(income, ("NetIncome", "NetIncomeCommonStockholders", "Net Income"))
+    debt = _frame_row(balance, ("TotalDebt", "Total Debt"))
+    equity = _frame_row(balance, ("StockholdersEquity", "CommonStockEquity", "Stockholders Equity"))
+    ends = sorted(set(revenue) | set(net) | set(debt) | set(equity), reverse=True)[:4]
+    if not ends:
+        raise ProviderError("missing", "Yahoo returned no annual statements for this symbol.")
+    periods = [AnnualPeriod(e, revenue.get(e), net.get(e), debt.get(e), equity.get(e)) for e in ends]
+    notes = ["Total debt and shareholders' equity are Yahoo's balance-sheet lines at each fiscal year end."]
+    if not debt:
+        notes.append("Yahoo reports no total-debt line for this company.")
+    ref = InstrumentRef(symbol, None, None, None, None, None)
+    return AnnualStatements(instrument=ref, periods=periods, source="Yahoo annual statements", notes=notes)
+
+
 def fundamentals_from_info(symbol: str, info: dict) -> Fundamentals:
     notes: list[str] = []
     ref = InstrumentRef(
@@ -578,4 +627,10 @@ def fundamentals_from_info(symbol: str, info: dict) -> Fundamentals:
     )
 
 
-__all__ = ["YahooProvider", "quote_from_history", "fundamentals_from_info", "normalize_dividend_yield"]
+__all__ = [
+    "YahooProvider",
+    "quote_from_history",
+    "fundamentals_from_info",
+    "normalize_dividend_yield",
+    "statements_from_frames",
+]

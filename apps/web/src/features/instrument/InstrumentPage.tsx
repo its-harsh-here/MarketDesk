@@ -26,6 +26,7 @@ import { ChartPanel } from "@/features/market/ChartPanel";
 import { useActions, useFundamentals, useSessions, useSnapshots } from "@/features/market/api";
 import { ComparePanel } from "@/features/market/ComparePanel";
 import { EventsTab, FilingsTab, FinancialsTab } from "@/features/research/ResearchTabs";
+import { PeersTab } from "@/features/screener/PeersTab";
 import { useAiStatus } from "@/features/ai/api";
 import { REGION_LABEL, sessionFor, sessionText } from "@/lib/markets";
 import { usePrefs, useSession } from "@/features/settings/api";
@@ -210,6 +211,8 @@ export function InstrumentPage() {
         <FilingsTab symbol={symbol} />
       ) : tab === "events" ? (
         <EventsTab symbol={symbol} />
+      ) : tab === "peers" ? (
+        <PeersTab symbol={symbol} />
       ) : (
         <>
       <ChartPanel symbol={symbol} currency={ccy} title="Price history" className="lg:col-span-8" height={400} defaultRange="1Y" />
@@ -319,6 +322,7 @@ const TABS = [
   { value: "financials", label: "Financials" },
   { value: "filings", label: "Filings" },
   { value: "events", label: "Events" },
+  { value: "peers", label: "Peers" },
 ] as const;
 type Tab = (typeof TABS)[number]["value"];
 

@@ -248,7 +248,53 @@ def main() -> None:
         "instruments": sorted(instruments, key=lambda i: i["symbol"]),
     }
     (out_dir / "instruments.json").write_text(json.dumps(meta, indent=2) + "\n")
+    (out_dir / "financials.json").write_text(json.dumps(annual_statements(instruments), indent=2) + "\n")
     print(f"wrote {len(rows)} bars for {len(instruments)} instruments to {out_dir}")
+
+
+# Synthetic annual statements: (net margin, revenue growth per year, debt/equity) per company. No randomness: the
+# latest year's net income is EPS x shares and equity is book value per share x shares, so they agree with the
+# per-share figures above. HELIX has no statements (coverage gap); NIMBUS has a loss and no reported equity.
+STATEMENT_SHAPES = {
+    "AURORA": (0.18, 0.07, 1.35), "BANYAN": (0.06, 0.14, 0.42), "COBALT": (0.08, 0.11, 0.95),
+    "DELTAFIN": (0.21, 0.16, 4.80), "ELARA": (0.17, 0.09, 0.12), "FERRUM": (0.07, -0.04, 0.88),
+    "GLASSWING": (0.19, 0.12, 0.05), "HALCYON": (0.11, 0.31, 0.22), "IRONLEAF": (0.10, 0.05, 0.30),
+    "KESTREL": (0.07, 0.13, 0.61), "LUMEN": (0.13, 0.06, 0.48), "MERIDIAN": (0.09, 0.10, 0.37),
+    "NIMBUS": (-0.12, 0.38, None), "ORCHID": (0.12, 0.18, 1.10), "PEREGRINE": (0.24, 0.12, 7.20),
+    "QUILL": (0.04, -0.02, 0.70),
+}
+
+
+def annual_statements(instruments: list[dict]) -> dict:
+    out: dict[str, list[dict]] = {}
+    for inst in sorted(instruments, key=lambda i: i["symbol"]):
+        short = inst["symbol"].removeprefix("SX:")
+        shape = STATEMENT_SHAPES.get(short)
+        fiscal = inst.get("fiscal")
+        if shape is None or not fiscal or inst.get("eps_ttm") is None:
+            continue
+        margin, growth, de = shape
+        shares = inst["shares_outstanding"]
+        net = inst["eps_ttm"] * shares
+        revenue = abs(net / margin)
+        equity = inst["book_value_per_share"] * shares if inst.get("book_value_per_share") else None
+        end = date.fromisoformat(fiscal["last_fiscal_year_end"])
+        years = []
+        for k in range(3):
+            scale = (1 + growth) ** -k
+            eq_k = equity * (0.93**k) if equity else None
+            years.append({
+                "period_end": end.replace(year=end.year - k).isoformat(),
+                "revenue": int(round(revenue * scale, -5)),
+                "net_income": int(round(net * scale * (1 - 0.02 * k), -5)),
+                "total_debt": int(round(eq_k * de, -5)) if eq_k and de is not None else None,
+                "total_equity": int(round(eq_k, -5)) if eq_k else None,
+            })
+        out[inst["symbol"]] = years
+    return {
+        "note": "Fictitious annual statements for the synthetic sample companies (see scripts/generate_fixtures.py).",
+        "statements": out,
+    }
 
 
 if __name__ == "__main__":
