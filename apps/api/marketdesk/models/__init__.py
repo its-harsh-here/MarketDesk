@@ -247,6 +247,18 @@ class Briefing(Base):
     read_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
 
+class AllocationTarget(Base):
+    """The owner's target weight for a holding in one currency account (used only for rebalance simulations)."""
+
+    __tablename__ = "allocation_targets"
+    __table_args__ = (UniqueConstraint("currency", "symbol", name="uq_allocation_target"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False)
+    symbol: Mapped[str] = mapped_column(String(32), nullable=False)
+    target_pct: Mapped[Decimal] = mapped_column(DecimalText, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
 class ScreenUniverse(Base):
     """A named, user-declared list of symbols the screener may use (bounded; never "the whole market")."""
 

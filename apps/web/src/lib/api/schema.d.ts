@@ -1169,6 +1169,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portfolio/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Performance */
+        get: operations["performance_api_portfolio_performance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/exposure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Exposure */
+        get: operations["exposure_api_portfolio_exposure_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/correlations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Correlations */
+        get: operations["correlations_api_portfolio_correlations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Targets */
+        get: operations["get_targets_api_portfolio_targets_get"];
+        /** Put Targets */
+        put: operations["put_targets_api_portfolio_targets_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/rebalance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rebalance */
+        post: operations["rebalance_api_portfolio_rebalance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2244,6 +2330,29 @@ export interface components {
              */
             market_time: string;
         };
+        /** RebalanceIn */
+        RebalanceIn: {
+            /**
+             * Account
+             * @enum {string}
+             */
+            account: "INR" | "USD";
+            /**
+             * Extra Cash
+             * @default 0
+             */
+            extra_cash: number | string;
+            /**
+             * Whole Shares
+             * @default true
+             */
+            whole_shares: boolean;
+            /**
+             * Fee Pct
+             * @default 0
+             */
+            fee_pct: number | string;
+        };
         /** RefreshIn */
         RefreshIn: {
             universe: components["schemas"]["UniverseSpec"];
@@ -2461,6 +2570,18 @@ export interface components {
             data_status?: string | null;
             /** Reference Session */
             reference_session?: string | null;
+        };
+        /** TargetIn */
+        TargetIn: {
+            /** Symbol */
+            symbol: string;
+            /** Target Pct */
+            target_pct: number | string;
+        };
+        /** TargetsIn */
+        TargetsIn: {
+            /** Targets */
+            targets: components["schemas"]["TargetIn"][];
         };
         /** TransactionIn */
         TransactionIn: {
@@ -5183,6 +5304,200 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    performance_api_portfolio_performance_get: {
+        parameters: {
+            query?: {
+                account?: "INR" | "USD" | "ALL";
+                benchmark?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    exposure_api_portfolio_exposure_get: {
+        parameters: {
+            query?: {
+                account?: "INR" | "USD" | "ALL";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    correlations_api_portfolio_correlations_get: {
+        parameters: {
+            query?: {
+                account?: "INR" | "USD" | "ALL";
+                benchmark?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_targets_api_portfolio_targets_get: {
+        parameters: {
+            query?: {
+                account?: "INR" | "USD";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_targets_api_portfolio_targets_put: {
+        parameters: {
+            query?: {
+                account?: "INR" | "USD";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TargetsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rebalance_api_portfolio_rebalance_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RebalanceIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

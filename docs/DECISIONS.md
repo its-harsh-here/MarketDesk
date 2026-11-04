@@ -200,4 +200,14 @@ Consequential choices, newest last. Routine choices live in code comments.
     currency. Debt/equity is withheld for financial-services companies. Currency filters compare other-currency listings
     at the current USD/INR rate (stated), never by relabelling. Peer suggestions come only from instruments the owner
     already tracks (same industry, then sector, nearest market cap); chosen peer groups are owner data and backed up.
+44. **Performance and risk methods (M09, 4 Nov 2026).** Daily value = cash + end-of-day quantity × as-traded close; the
+    provider's split-adjusted closes are restored with its split history and recorded SPLIT entries change quantity,
+    so splits count once (unrecorded provider splits are flagged). Holiday gaps carry a close forward ≤ 10 days, else
+    the day is left out and its flows move forward. Time-weighted return with flows at the end of their day;
+    money-weighted XIRR (365-day years); annualization only for ≥ 365 days; volatility only with ≥ 60 returns. The
+    consolidated view converts USD daily at the USD/INR close and treats FX conversions as internal. Beta/correlation
+    to the benchmark only when every holding shares the benchmark's exchange time zone; pairwise correlations use
+    daily returns on common dates within a time zone and weekly (Friday) returns across time zones, with minimum
+    sample sizes. Benchmarks are price indices (dividends excluded, stated). Rebalancing is a simulation only, with
+    targets stored per account (`allocation_targets`, owner data).
 

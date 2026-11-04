@@ -493,3 +493,43 @@ test("screener: named list → load data → filter (missing never passes) → s
   await expect(peers.getByRole("columnheader", { name: /SX:NIMBUS/ })).toBeVisible({ timeout: 20_000 });
   await expect(peers.getByText("Same sector (Technology)").first()).toBeVisible();
 });
+
+test("performance & risk: time-weighted vs money-weighted, table alternative, exposure; rebalance is a simulation", async ({ page }) => {
+  await page.goto("/portfolio");
+  await ready(page);
+  const csrf = (await (await page.request.get("/api/auth/session")).json()).csrf_token;
+  const post = (data: object) => page.request.post("/api/portfolio/transactions", { data, headers: { "x-csrf-token": csrf } });
+  expect((await post({ type: "DEPOSIT", effective_date: "2025-03-03", amount: "100000" })).status()).toBe(201);
+  expect((await post({ type: "BUY", effective_date: "2025-03-04", symbol: "SX:GLASSWING", quantity: "30", price: "1500" })).status()).toBe(201);
+  const txnCount = (await (await page.request.get("/api/portfolio/transactions")).json()).items.length;
+  await page.goto("/portfolio"); // show the transactions created above
+
+  await page.getByRole("radio", { name: "Performance & risk" }).click();
+  await expect(page).toHaveURL(/section=performance/);
+  const perf = page.getByRole("region", { name: "Performance" });
+  await expect(perf.getByText("Time-weighted return", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(perf.getByText("Money-weighted return", { exact: true })).toBeVisible();
+  await expect(perf.getByText(/Growth of 100 \(time-weighted\)/)).toBeVisible();
+  await perf.getByRole("radio", { name: "Table" }).click();
+  await expect(perf.getByRole("table", { name: /Daily portfolio value/ })).toBeVisible();
+  await perf.getByText("How these are calculated").click();
+  await expect(perf.getByText(/split-adjusted/).first()).toBeVisible();
+  const exp = page.getByRole("region", { name: "Exposure and concentration" });
+  await expect(exp.getByText("Effective holdings")).toBeVisible();
+  await exp.getByRole("radio", { name: "Sector" }).click();
+  await expect(exp.getByRole("cell", { name: "Technology" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Correlation" }).getByRole("table")).toBeVisible();
+
+  await page.getByRole("radio", { name: "Rebalance" }).click();
+  await page.getByLabel("SX:GLASSWING", { exact: true }).fill("60");
+  await page.getByRole("button", { name: "Save targets" }).click();
+  await expect(page.getByText("Targets saved.")).toBeVisible();
+  await page.getByRole("button", { name: "Simulate with saved targets" }).click();
+  const sim = page.getByRole("region", { name: "Rebalance simulation" });
+  await expect(sim.getByText(/no orders are placed/).first()).toBeVisible();
+  const shares = sim.getByLabel("Shares to trade for SX:GLASSWING (negative sells)");
+  await shares.fill("1");
+  await expect(shares).toHaveValue("1");
+  // nothing was written to the ledger by the simulation
+  expect((await (await page.request.get("/api/portfolio/transactions")).json()).items.length).toBe(txnCount);
+});

@@ -17,6 +17,8 @@ import { DASH, formatInstant, formatMoney, formatNumber, formatPercent, formatQu
 import { cn } from "@/lib/cn";
 import { usePrefs, useSession } from "@/features/settings/api";
 import { usePortfolioOverview, usePortfolioSummary, useTransactions } from "./api";
+import { PerformanceView } from "./PerformanceView";
+import { RebalanceView } from "./RebalanceView";
 
 const TYPE_TONE: Record<string, "pos" | "neg" | "info" | "neutral" | "accent"> = {
   DEPOSIT: "info",
@@ -132,11 +134,20 @@ function AccountsOverview({ ov, onOpen }: { ov: PortfolioOverview; onOpen: (c: A
   );
 }
 
+type Section = "holdings" | "performance" | "rebalance";
+
 export function PortfolioPage() {
   const [params, setParams] = useSearchParams();
   const raw = params.get("account");
   const view: View = raw === "USD" || raw === "ALL" ? raw : "INR";
   const ccy: AccountCurrency = view === "ALL" ? "INR" : view;
+  const section: Section = params.get("section") === "performance" ? "performance" : params.get("section") === "rebalance" ? "rebalance" : "holdings";
+  const setSection = (v: Section) => {
+    const next = new URLSearchParams(params);
+    if (v === "holdings") next.delete("section");
+    else next.set("section", v);
+    setParams(next, { replace: true });
+  };
   const setView = (v: View) => {
     const next = new URLSearchParams(params);
     if (v === "INR") next.delete("account");
@@ -263,7 +274,11 @@ export function PortfolioPage() {
         ) : !anyAccount ? (
           <EmptyState icon={<Briefcase aria-hidden />} title="No transactions yet" actions={actions}>Record a deposit in the INR or USD account first.</EmptyState>
         ) : (
-          <AccountsOverview ov={overview.data!} onOpen={setView} />
+          <>
+            <Segmented<Section> label="Portfolio section" value={section === "rebalance" ? "holdings" : section} onChange={setSection}
+              options={[{ value: "holdings", label: "Accounts" }, { value: "performance", label: "Performance & risk" }]} />
+            {section === "performance" ? <PerformanceView account="ALL" /> : <AccountsOverview ov={overview.data!} onOpen={setView} />}
+          </>
         )}
       </div>
     );
@@ -344,10 +359,18 @@ export function PortfolioPage() {
       )}
       {s!.total_profit_before_dividends !== null && (
         <p className="text-[13px] text-fg-2">
-          Total profit before dividends (realized + unrealized): <PnlText value={s!.total_profit_before_dividends} currency={ccy} />. Change in portfolio value is not an investment return; time-weighted returns are not computed in this release.
+          Total profit before dividends (realized + unrealized): <PnlText value={s!.total_profit_before_dividends} currency={ccy} />. Change in portfolio value is not an investment return; see Performance &amp; risk for time-weighted and money-weighted returns.
         </p>
       )}
 
+      <Segmented<Section> label="Portfolio section" value={section} onChange={setSection}
+        options={[{ value: "holdings", label: "Holdings & ledger" }, { value: "performance", label: "Performance & risk" }, { value: "rebalance", label: "Rebalance" }]} />
+      {section === "performance" ? (
+        <PerformanceView account={ccy} />
+      ) : section === "rebalance" ? (
+        <RebalanceView account={ccy} holdings={s!.holdings} />
+      ) : (
+        <>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
         <Panel title="Holdings" titleId="hold-title" className="lg:col-span-9" bodyClassName="p-0" refreshing={summary.isFetching} meta={`${s!.holdings.length} open position(s) · long-only · ${ccy}`}>
           {s!.holdings.length === 0 ? (
@@ -424,6 +447,8 @@ export function PortfolioPage() {
           />
         )}
       </Panel>
+        </>
+      )}
     </div>
   );
 }

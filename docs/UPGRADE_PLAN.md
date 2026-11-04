@@ -45,7 +45,9 @@ earlier as soon as their credentials exist.
   xAI; tested with fake clients and a fake endpoint in the browser journeys; live check in `docs/UPGRADE_STATUS.md`.
 - Phase 7 (M06): ✅ implemented, tested (fixtures; migration rehearsed on a production copy) and deployed; live
   checks in `docs/UPGRADE_STATUS.md`.
-- Phase 8 (M09): next.
+- Phase 8 (M09): ✅ implemented, tested (hand-checked vectors; migration rehearsed on a production copy) and
+  deployed; live checks in `docs/UPGRADE_STATUS.md`.
+- Phase 9 (M11): next.
 
 ## After the final check
 The owner asked (4 Nov 2026) for a follow-on roadmap toward a terminal-style view with every piece of information about

@@ -233,7 +233,8 @@ Decimal arithmetic throughout; amounts settle to 2 decimals; average cost keeps 
 display. Buy cost = qty × price + fees; a sell releases qty × average cost; realized P&L = proceeds − fees − released
 basis; splits change quantity, not basis. Every edit replays both accounts and is rejected if either account's cash
 would go negative or a sale would exceed holdings at any point. Average cost is an analytical convention, not a tax
-report. Net deposits are not shown as gains, and returns (XIRR/TWR) are deliberately not computed in this release.
+report. Net deposits are not shown as gains; returns are computed only under Portfolio → Performance & risk, with the
+methods below.
 
 **All accounts** shows each account's value in its own currency and, for display only, in INR at the current valuation
 rate (with its pair, source, market time and status). Without a usable rate, or with an unpriced holding, the
@@ -245,6 +246,28 @@ CSV import uses the canonical columns
 (`currency` is the account; the five FX columns apply to FX rows only; files without them still import). A template is
 downloadable in the import dialog. Imports are previewed row by row, all-or-nothing, and duplicate rows are skipped.
 Exports neutralise spreadsheet formulas; holdings export per account.
+
+## Performance, risk and rebalancing
+
+Portfolio → **Performance & risk** (per account, or all accounts in INR):
+- **Daily value** = cash + quantity held × that day's as-traded close. Provider closes are split-adjusted, so MarketDesk
+  restores as-traded prices from the provider's split history and applies the splits you recorded to the quantity — a
+  split is never counted twice; a provider split missing from your ledger is flagged. A close missing on an exchange
+  holiday is carried forward up to 10 days; longer gaps are left out with the reason.
+- **Time-weighted return** (daily, flows at the end of their day, linked) and **money-weighted return** (XIRR) side
+  by side, against a chosen benchmark (a price index; dividends excluded — stated). Annualized only for periods of at
+  least a year; volatility only with 60+ daily returns.
+- **Volatility, drawdown** (underwater chart, peak/trough/recovery dates), best/worst day, **beta and correlation** to
+  the benchmark when all holdings trade on the benchmark's exchange time zone; a table alternative for every day.
+- **All accounts**: USD values converted at each day's USD/INR close; FX conversions between your accounts are
+  internal transfers.
+- **Exposure and concentration** by holding, sector, market and currency (largest, top five, HHI, effective number of
+  holdings); **correlation matrix** of holdings and the benchmark from aligned observations — daily returns on dates
+  both traded within one exchange time zone, weekly returns across exchanges — with sample sizes.
+
+Portfolio → **Rebalance**: target weights per holding (saved), then a **simulation** with optional added cash, whole
+shares and an assumed fee; the proposed share counts are editable and recalculate on the page. Nothing is submitted
+or recorded.
 
 ## Screener and peers
 
@@ -375,6 +398,6 @@ No licence has been chosen for MarketDesk's own code; add one before distributin
 
 See `docs/STATUS.md` and `docs/UPGRADE_STATUS.md`. In short: alerts are sampled, not tick-by-tick; session states come
 from published calendars (unknown beyond their data);
-portfolio is long-only with INR and USD accounts (no historical FX, so no consolidated returns); no XIRR/TWR or
-historical equity chart; broker-specific CSV mapping presets are not built; Yahoo coverage and field availability
+portfolio is long-only with INR and USD accounts; returns use daily closes (no intraday) and cash earns nothing;
+broker-specific CSV mapping presets are not built; Yahoo coverage and field availability
 vary (fields are shown as missing rather than guessed), and Yahoo may rate-limit cloud hosts.

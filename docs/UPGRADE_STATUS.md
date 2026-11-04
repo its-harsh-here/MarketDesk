@@ -681,11 +681,37 @@ The owner's key turned out to be a Groq key and the owner chose Groq's free tier
 - Read-only browser check at 1440 and 390 px (light theme, real data): no console errors or failed API calls, no page
   overflow; the phone layout uses summary rows.
 
+## M09 — Performance, risk and rebalancing (4 Nov 2026)
+- **Valuation series** (`services/risk_math.py`, pure): daily cash + quantity × as-traded close; provider split history
+  restores as-traded prices and ledger SPLIT entries change quantity (no double counting; a provider split missing
+  from the ledger is flagged); holiday gaps carried ≤ 10 days, longer gaps left out with reasons, flows moved forward.
+- **Returns:** time-weighted (daily, flows at the end of the day) and money-weighted (XIRR), annualized only for ≥ 1
+  year; benchmark (price index, selectable) total, annualized and difference; best/worst day.
+- **Risk:** annualized volatility (≥ 60 returns), drawdown series with peak/trough/recovery, beta and correlation to
+  the benchmark only when every holding shares its exchange time zone.
+- **All accounts:** USD converted at each day's USD/INR close; FX conversions internal.
+- **Exposure:** by holding, sector, market, currency; largest, top five, HHI, effective holdings; unpriced listed.
+- **Correlations:** holdings (≤ 12) + benchmark over one year; daily returns on common dates within a time zone,
+  weekly across time zones; minimum 60 / 26 observations; n shown per cell.
+- **Rebalance:** targets per account (migration 0009, `allocation_targets`), simulation with added cash, whole shares
+  and an assumed fee; share counts editable on the page; nothing is recorded or submitted.
+- **UI:** Portfolio → "Holdings & ledger" | "Performance & risk" | "Rebalance" (URL `section=`); growth-of-100 and
+  drawdown charts with a daily table alternative and a "How these are calculated" list; All accounts → Performance.
+- **Schema:** 0009 rehearsed on a production copy (0008 backup): restored, migrated, owner-data fingerprints identical.
+
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 17 | 239 passed, 3 skipped / 241 passed, 1 skipped (M09: 10 — hand-checked TWR vs MWR vector, split restoration and carry window, drawdown/recovery, volatility threshold, aligned and weekly correlations, rebalance vector incl. rounding toward zero and negative cash, API consistency with the holdings view, unrecorded split warning, exposure/targets/simulation, consolidated FX) |
+| Migrations match models (SQLite, PostgreSQL); downgrade 0009→0008 and upgrade | pass |
+| tsc, eslint, vitest | clean; 32 |
+| Playwright | 18 journeys pass (new: performance & risk with table alternative and methods, exposure by sector, correlation table, targets → simulation → edited shares, ledger unchanged) |
+| Visual QA | Performance, exposure, correlation and rebalance at 1440 and 390 px inspected; fixed tiny "₹0.01 Cr" amounts (whole rupees below a crore), inline benchmark picker, shorter fee label |
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
 - Yahoo (yfinance) is unofficial; it refuses `quoteSummary` from Render, so some fundamentals are derived and labeled.
-- Portfolio has INR and USD accounts; there are no returns metrics (XIRR/TWR) and no historical FX by design.
+- Portfolio has INR and USD accounts; returns (M09) use daily closes, benchmarks are price indices, and cash earns no interest.
 
 ## Next concrete action
-Phase 8 — **M09 Performance + risk** (see `docs/UPGRADE_PLAN.md`). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
+Phase 9 — **M11 Valuation lab** (see `docs/UPGRADE_PLAN.md`). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
