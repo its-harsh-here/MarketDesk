@@ -339,7 +339,7 @@ async def _filing_text(research, cik: int, filing: dict, max_chars: int = 2_000_
     doc = _pick_document(files, filing["form"])
     if doc is None:
         raise ProviderError("missing", "No readable document in this filing.")
-    text = await asyncio.to_thread(client.document_text, cik, filing["accession"], doc, max_chars)
+    text = await asyncio.to_thread(client.document_text, cik, filing["accession"], doc, max_chars, 20_000_000)
     url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{filing['accession'].replace('-', '')}/{doc}"
     return text, url
 

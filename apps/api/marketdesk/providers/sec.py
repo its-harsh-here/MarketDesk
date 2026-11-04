@@ -132,11 +132,15 @@ class SecClient:
         items = ((data or {}).get("directory") or {}).get("item") or []
         return [i for i in items if isinstance(i, dict) and i.get("name")]
 
-    def document_text(self, cik: int, accession: str, name: str, max_chars: int = 12_000) -> str:
-        """Plain text of one filing document (HTML stripped), cut to max_chars. Only SEC archive URLs are built."""
+    def document_text(
+        self, cik: int, accession: str, name: str, max_chars: int = 12_000, max_bytes: int = 3_000_000
+    ) -> str:
+        """Plain text of one filing document (HTML stripped), cut to max_chars. Only SEC archive URLs are built.
+        Inline-XBRL annual reports carry megabytes of hidden data before the visible text: comparisons of whole
+        sections pass a larger `max_bytes`."""
         if not _DOC_RE.match(name or ""):
             raise ProviderError("unsupported", "Only plain filing documents (.htm, .html, .txt) can be read.")
-        raw = self._fetch(filing_document_url(int(cik), _accession(accession), name), "text/html", 3_000_000)
+        raw = self._fetch(filing_document_url(int(cik), _accession(accession), name), "text/html", max_bytes)
         return html_to_text(raw.decode("utf-8", errors="replace"))[:max_chars]
 
     def ticker_map(self) -> dict[str, tuple[int, str]]:
