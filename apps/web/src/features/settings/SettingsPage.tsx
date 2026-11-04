@@ -265,6 +265,7 @@ function AiPanel() {
           <div className="flex justify-between gap-2"><dt className="text-fg-2">Status</dt><dd><Pill tone={st.enabled ? "pos" : "neutral"}>{st.enabled ? "On" : "Off"}</Pill></dd></div>
           {!st.enabled && <p className="text-xs text-fg-3">{st.reason}</p>}
           <div className="flex justify-between gap-2"><dt className="text-fg-2">Model</dt><dd className="num">{st.model}</dd></div>
+          {st.key_format && <div className="flex justify-between gap-2"><dt className="text-fg-2">API key</dt><dd className="text-right text-xs text-fg-2">{st.key_format}</dd></div>}
           <div className="flex justify-between gap-2"><dt className="text-fg-2">Today (UTC)</dt><dd className="num">${Number(st.budget.spent_usd).toFixed(4)} of ${Number(st.budget.limit_usd).toFixed(2)} · {st.budget.requests_used}/{st.budget.requests_limit} answers</dd></div>
           <div className="flex justify-between gap-2"><dt className="text-fg-2">Per answer</dt><dd className="num">≤ {st.budget.max_output_tokens} output tokens · ≤ {st.budget.max_tool_calls} filing lookups</dd></div>
           <p className="text-xs leading-4 text-fg-3">

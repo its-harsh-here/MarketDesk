@@ -6,6 +6,7 @@ export type AiStatus = {
   enabled: boolean;
   reason: string | null;
   model: string;
+  key_format: string | null;
   tools: string[];
   web_search: boolean;
   budget: {

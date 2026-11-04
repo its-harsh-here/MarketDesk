@@ -30,7 +30,8 @@ class XaiError(Exception):
 
 class XaiClient:
     def __init__(self, api_key: str | None, base_url: str, model: str, timeout: float = 90.0, retries: int = 1):
-        self._key = (api_key or "").strip()
+        # Hosting dashboards make it easy to paste surrounding whitespace or quotes; a key never contains them.
+        self._key = (api_key or "").strip().strip("'\"").strip()
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = timeout
@@ -39,6 +40,14 @@ class XaiClient:
     @property
     def configured(self) -> bool:
         return bool(self._key)
+
+    @property
+    def key_format(self) -> str | None:
+        """A non-secret description of the configured key's shape, to diagnose a wrong key without revealing it."""
+        if not self._key:
+            return None
+        shape = "starts with 'xai-'" if self._key.startswith("xai-") else "does not start with 'xai-' (xAI API keys do)"
+        return f"{shape}, {len(self._key)} characters"
 
     def _request(self, method: str, path: str, body: dict | None = None) -> dict:
         if not self._key:
@@ -65,8 +74,12 @@ class XaiClient:
                     raise XaiError("malformed", "xAI returned a response that is not JSON.") from exc
             except urllib.error.HTTPError as exc:
                 detail = _error_detail(exc)
-                if exc.code in (401, 403):
-                    raise XaiError("auth", f"xAI rejected the API key (HTTP {exc.code}).", exc.code) from exc
+                if exc.code in (401, 403) or (exc.code == 400 and "api key" in detail.lower()):
+                    raise XaiError(
+                        "auth",
+                        f"xAI rejected the API key (HTTP {exc.code}){detail} Use an API key from console.x.ai.",
+                        exc.code,
+                    ) from exc
                 if exc.code == 429:
                     if attempt < self.retries:
                         time.sleep(min(8.0, 2.0 * (attempt + 1)))

@@ -579,8 +579,19 @@ saved answers per listing. Settings shows status, model, today's spend and the l
 | Playwright journeys (fixture harness + local fake xAI endpoint) | 16 passed (new: Ask Grok → cited answer → sources → repeat request reuses the saved answer → Settings shows usage) |
 | Visual | research panel at 1440 and 390, Settings section; no page overflow; budget line and saved list refresh when a job finishes |
 
-**Not verified here:** a real xAI call. The key is not in this coding session's environment (a new session picks up
-environment changes); live verification is through the deployed app.
+**Live check after deploying a24ca3c (4 Nov 2026).**
+- Migration 0007 applied; Settings reports Grok on (`grok-4.3`, $0.50 and 30 answers per day).
+- One "Latest results" request for SMR collected 7 sources in code (quote, price history, fundamentals, annual and
+  quarterly SEC statements, filing list, and the 8-K Item 2.02 results release), then xAI answered
+  **HTTP 400 "Incorrect API key provided"**: the key stored in Render as `GROK_API` is not accepted by xAI. No answer
+  was produced and xAI does not bill rejected requests.
+- That check found three bugs, fixed in the follow-up commit: the 400 key error was treated as a generic bad request
+  (and retried once without optional settings) instead of a key error; a failed request was charged its whole
+  worst-case reservation ($0.13 of the $0.50 day) instead of the usage xAI reported (zero); and late in the day a
+  request whose worst case did not fit was refused instead of being answered in one call without extra lookups. The
+  final usage of a successful answer was also not saved when it was updated in place. The miscounted failed record was
+  deleted from the live database (budget back to $0). Settings now shows a non-secret description of the configured
+  key (whether it starts with `xai-` and its length) to diagnose a wrong key, and surrounding quotes are ignored.
 
 **Docs fix:** the M08 README edit had removed the Alerts, Tests, Layout, Runtime versions and Attribution sections (and
 the M10 journal section was therefore never inserted). All are restored from history, and the journal and Grok sections

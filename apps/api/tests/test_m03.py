@@ -374,3 +374,56 @@ def test_a_rejected_optional_setting_is_retried_without_it(ai):
     a = ask(api, question="another")
     assert a["status"] == "done" and "text" not in fake.bodies[1]
     assert "Return only a JSON object matching this schema" in fake.bodies[1]["instructions"]
+
+
+def test_incorrect_key_is_an_auth_error_and_costs_nothing(ai, monkeypatch):
+    api, app, install = ai
+
+    def bad_key(req, timeout):
+        body = io.BytesIO(
+            json.dumps({"error": "Incorrect API key provided. You can obtain one at console.x.ai."}).encode()
+        )
+        raise urllib.error.HTTPError(req.full_url, 400, "Bad Request", {}, body)
+
+    calls = []
+    monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout: calls.append(1) or bad_key(req, timeout))
+    s = app.state.analyst.settings
+    app.state.analyst = AnalystService(s)  # the real client, with the patched network
+    a = ask(api)
+    assert a["status"] == "failed" and "rejected the API key" in a["error"] and "console.x.ai" in a["error"]
+    assert len(calls) == 1  # not retried with fewer options
+    assert Decimal(a["cost_usd"]) == 0  # rejected requests are not billed, so nothing is counted
+    assert api.get("/api/ai/status").json()["budget"]["spent_usd"] == "0"
+    assert KEY not in a["error"]
+
+
+def test_failures_count_only_reported_usage(ai):
+    api, _, install = ai
+    install([XaiError("rate_limited", "xAI rate limit or credit limit reached (HTTP 429).", 429)])
+    assert Decimal(ask(api)["cost_usd"]) == 0
+    install([resp({"type": "message", "content": [{"type": "output_text", "text": "not json"}]})])
+    assert Decimal(ask(api, question="q2")["cost_usd"]) == Decimal("0.015")  # the call ran and was billed
+    install([XaiError("timeout", "xAI did not respond in time.")])
+    a = ask(api, question="q3")
+    assert Decimal(a["cost_usd"]) > 0  # a call may have run without a reply: the reservation is kept
+
+
+def test_low_remaining_budget_answers_without_lookups(ai, monkeypatch):
+    api, app, install = ai
+    install([resp(message(answer(pt("Price 169.80 INR.", sources=["S1"]))))], ai_daily_budget_usd=0.05)
+    svc = app.state.analyst
+    monkeypatch.setattr(
+        svc, "estimate_usd", lambda chars, tool_calls=None: Decimal("0.4" if tool_calls is None else "0.01")
+    )
+    a = ask(api)
+    assert a["status"] == "done" and any("Little budget left" in st["text"] for st in a["steps"])
+
+
+def test_status_describes_the_key_shape_without_revealing_it(ai):
+    api, _, install = ai
+    install([])
+    st = api.get("/api/ai/status").json()
+    assert st["key_format"] == f"starts with 'xai-', {len(KEY)} characters"
+    assert KEY not in json.dumps(st)
+    assert XaiClient(' "xai-abc" ', "https://api.x.ai/v1", "m").key_format == "starts with 'xai-', 7 characters"
+    assert "does not start with 'xai-'" in XaiClient("sk-123", "https://api.x.ai/v1", "m").key_format

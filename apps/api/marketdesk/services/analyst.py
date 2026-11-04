@@ -570,6 +570,7 @@ class AnalystService:
             "enabled": self.enabled,
             "reason": self.problem,
             "model": self.client.model,
+            "key_format": self.client.key_format,
             "tools": ["read_filing (SEC, read-only)"],
             "web_search": False,
             "budget": {
@@ -584,12 +585,15 @@ class AnalystService:
             },
         }
 
-    def estimate_usd(self, payload_chars: int) -> Decimal:
+    def estimate_usd(self, payload_chars: int, tool_calls: int | None = None) -> Decimal:
+        """Worst-case cost: every round resends the context (billed as input) plus one filing excerpt per lookup."""
         pin, _, pout = price_for(self.client.model)
-        rounds = 1 + self.settings.ai_max_tool_calls
-        tokens_in = payload_chars / 3.2 + 1500
-        cost = rounds * ((tokens_in + 3500 * rounds / 2) * pin + self.settings.ai_max_output_tokens * pout) / 1e6
-        return Decimal(str(round(cost * 1.25, 6)))  # 25% margin for tokenizer differences
+        t = self.settings.ai_max_tool_calls if tool_calls is None else tool_calls
+        base = payload_chars / 3.6 + 800  # tokens; ~800 for the instructions and schema
+        excerpt = 3400  # tokens in one filing excerpt (12,000 characters)
+        tokens_in = (1 + t) * base + excerpt * t * (t + 1) / 2
+        cost = (tokens_in * pin + (1 + t) * self.settings.ai_max_output_tokens * pout) / 1e6
+        return Decimal(str(round(cost * 1.1, 6)))  # 10% margin for tokenizer differences
 
     def reserve(self, db: Session, answer: AiAnswer, estimate: Decimal) -> str | None:
         """Reserve the worst-case cost before dispatch. Returns a refusal reason, or None when reserved."""
@@ -692,7 +696,14 @@ class AnalystService:
                 "coverage_notes": ev.notes,
                 "sources": ev.sources,
             }
-            refusal = self.reserve(db, answer, self.estimate_usd(len(json.dumps(payload, default=str))))
+            chars = len(json.dumps(payload, default=str))
+            tools = self.settings.ai_max_tool_calls
+            refusal = self.reserve(db, answer, self.estimate_usd(chars))
+            if refusal and tools > 0 and "request limit" not in refusal:
+                # Not enough left for the worst case with lookups: answer in one call from the evidence alone.
+                if self.reserve(db, answer, self.estimate_usd(chars, 0)) is None:
+                    refusal, tools = None, 0
+                    step("Little budget left today: answering in one call without extra filing lookups.")
             if refusal:
                 answer.status, answer.error, answer.finished_at = "refused", refusal, datetime.now(UTC)
                 answer.cost_usd = Decimal(0)
@@ -700,15 +711,17 @@ class AnalystService:
                 return
             answer.model = self.client.model
             step(f"Asking {self.client.model} (structured, cited answer).")
-            raw, usage = await self._converse(payload, ev, insts, summaries, research, step)
+            usage = self._new_usage()
+            answer._live_usage = usage  # plain attribute (not a column): read by _fail if a later call fails
+            raw = await self._converse(payload, ev, insts, summaries, research, step, usage, tools)
             step("Checking every point against the evidence.")
             output, flags = validate_answer(raw, ev.by_id())
             answer.output, answer.flags, answer.sources = output, flags, list(ev.sources)  # new list: JSON change
-            answer.usage, answer.cost_usd = usage, Decimal(str(round(usage["cost_usd"], 6)))
+            answer.usage, answer.cost_usd = dict(usage), Decimal(str(round(usage["cost_usd"], 6)))
             answer.status, answer.finished_at = "done", datetime.now(UTC)
             step(f"Done: {len(flags)} check(s) flagged." if flags else "Done: no checks flagged.")
         except XaiError as err:
-            self._fail(db, answer, err.message)
+            self._fail(db, answer, err.message, err.kind)
         except AppError as err:
             self._fail(db, answer, err.message)
         except ValidationError:
@@ -719,16 +732,27 @@ class AnalystService:
         finally:
             db.commit()
 
-    def _fail(self, db: Session, answer: AiAnswer, message: str) -> None:
+    def _fail(self, db: Session, answer: AiAnswer, message: str, kind: str | None = None) -> None:
+        """Rejected requests (bad key, bad request, rate/credit limit) are not billed: only usage xAI reported counts.
+        After a timeout or outage a call may have run without a reply, so the reservation is kept (conservative)."""
+        live = getattr(answer, "_live_usage", None) or {}
+        used = Decimal(str(round(live.get("cost_usd") or 0, 6)))
         db.rollback()
         answer.status, answer.error, answer.finished_at = "failed", message[:300], datetime.now(UTC)
-        if answer.cost_usd is None:
-            answer.cost_usd = answer.reserved_usd if answer.model else Decimal(0)  # conservative after a call
+        if kind in ("timeout", "unavailable") and answer.reserved_usd:
+            answer.cost_usd = max(used, answer.reserved_usd)
+        else:
+            answer.cost_usd = used
+        if live:
+            answer.usage = dict(live)
 
-    async def _converse(self, payload: dict, ev: Evidence, insts, summaries, research, step) -> tuple[dict, dict]:
-        usage = {"input_tokens": 0, "output_tokens": 0, "cached_tokens": 0, "reasoning_tokens": 0, "calls": 0,
-                 "tool_calls": 0, "cost_usd": 0.0, "cost_source": "xai"}  # fmt: skip
-        allow_tools = any(s.get("filings") for s in summaries) and self.settings.ai_max_tool_calls > 0
+    @staticmethod
+    def _new_usage() -> dict:
+        return {"input_tokens": 0, "output_tokens": 0, "cached_tokens": 0, "reasoning_tokens": 0, "calls": 0,
+                "tool_calls": 0, "cost_usd": 0.0, "cost_source": "xai"}  # fmt: skip
+
+    async def _converse(self, payload: dict, ev: Evidence, insts, summaries, research, step, usage, tools) -> dict:
+        allow_tools = any(s.get("filings") for s in summaries) and tools > 0
         fmt = {"format": {"type": "json_schema", "name": "research_answer", "schema": ANSWER_SCHEMA, "strict": True}}
         body = {
             "instructions": INSTRUCTIONS,
@@ -739,13 +763,13 @@ class AnalystService:
         }
         if allow_tools:
             body.update({"tools": [READ_FILING_TOOL], "tool_choice": "auto", "parallel_tool_calls": False})
-        tools_left = self.settings.ai_max_tool_calls
-        for _ in range(self.settings.ai_max_tool_calls + 2):
+        tools_left = tools
+        for _ in range(tools + 2):
             resp = await self._create(body, usage)
             self._add_usage(usage, resp.get("usage"))
             calls = [o for o in resp.get("output") or [] if isinstance(o, dict) and o.get("type") == "function_call"]
             if not calls:
-                return _parse_output(resp), usage
+                return _parse_output(resp)
             outputs = []
             for call in calls:
                 result = await self._tool(call, ev, insts, summaries, research, tools_left > 0, step)
