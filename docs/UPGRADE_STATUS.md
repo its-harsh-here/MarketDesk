@@ -397,6 +397,16 @@ manual rearm), nullable event prices (filing events have none), and tables `aler
 
 No new environment variables. External channels (email/Telegram/push) are not built; nothing claims to send them.
 
+**Live verification after deploying 3daf7de (4 Nov 2026).**
+- CI green (web, API on SQLite and PostgreSQL, migrations match models, Docker build).
+- The schema migrated to `0004` and is up to date; the owner-data fingerprint (instruments, watchlists and items,
+  ledger, alerts, events, journal) is identical before and after. Both existing alerts are PRICE rules, still armed.
+- The first worker cycle after the deploy wrote three briefings from Yahoo data: India morning 4 Nov (opens 09:15
+  IST), and India and US end-of-session 3 Nov (moves versus the previous close, a volume note, next-session times).
+- Inbox, counts and alert endpoints return 200; the bell shows "Inbox: 3 unread". The Alerts page and the new alert
+  dialog render at 1440 and 390 px with no page overflow and no console errors (read-only check; nothing written).
+- The pre-deploy backup and the scratch rehearsal database have been deleted.
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
