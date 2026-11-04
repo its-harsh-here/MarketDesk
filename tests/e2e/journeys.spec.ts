@@ -124,7 +124,10 @@ test("USD account: an FX conversion funds a US listing; all-accounts view conver
   await expect(dialog.getByText("Effective 84.0000 INR per USD from the amounts.")).toBeVisible();
   await dialog.getByLabel("Rate source").fill("Sample Bank");
   await dialog.getByRole("button", { name: "Record transaction" }).click();
-  await expect(page.getByText("Transaction recorded.")).toBeVisible();
+  const recorded = page.getByRole("status").filter({ hasText: "Transaction recorded." });
+  await expect(recorded).toBeVisible();
+  await recorded.getByRole("button", { name: "Dismiss" }).click(); // so the next confirmation is unambiguous
+  await expect(recorded).toHaveCount(0);
   const summary = page.getByRole("region", { name: "Portfolio summary" });
   await expect(summary.getByText("Ledger balance · INR")).toBeVisible();
   await expect(summary.getByText("₹0.00", { exact: true }).first()).toBeVisible(); // 8,425 − 8,400 − 25
@@ -133,7 +136,7 @@ test("USD account: an FX conversion funds a US listing; all-accounts view conver
   await expect(page).toHaveURL(/account=USD/);
   await expect(summary.getByText("$100.00").first()).toBeVisible();
   await addTransaction(page, { type: "BUY", date: "2026-01-07", symbol: "SX:HALCYON", qty: "0.5", price: "160" });
-  await expect(page.getByText("Transaction recorded.")).toBeVisible();
+  await expect(recorded).toBeVisible();
   await expect(summary.getByText("$20.00").first()).toBeVisible(); // cash after the purchase, still in USD
   await expect(page.getByRole("table", { name: "Holdings" }).getByRole("row", { name: /SX:HALCYON/ })).toBeVisible();
   await expect(page.getByRole("table", { name: "Transaction ledger" }).getByText("INR → USD")).toBeVisible();
