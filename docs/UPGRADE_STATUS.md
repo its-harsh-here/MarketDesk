@@ -398,7 +398,9 @@ manual rearm), nullable event prices (filing events have none), and tables `aler
 No new environment variables. External channels (email/Telegram/push) are not built; nothing claims to send them.
 
 **Live verification after deploying 3daf7de (4 Nov 2026).**
-- CI green (web, API on SQLite and PostgreSQL, migrations match models, Docker build).
+- CI: web, API on SQLite and PostgreSQL, migrations-match-models and Docker jobs passed; the browser-journeys job
+  failed at its "OpenAPI types are in sync" step because the committed TypeScript types predated the fixture briefing
+  endpoint (the journeys themselves passed locally). The regenerated types shipped with the M08 commit.
 - The schema migrated to `0004` and is up to date; the owner-data fingerprint (instruments, watchlists and items,
   ledger, alerts, events, journal) is identical before and after. Both existing alerts are PRICE rules, still armed.
 - The first worker cycle after the deploy wrote three briefings from Yahoo data: India morning 4 Nov (opens 09:15
@@ -455,7 +457,9 @@ Fixture data: a synthetic `SX:USDINR` series was added by the generator with its
 byte-identical. No new environment variables.
 
 **Live verification after deploying da3c882 (4 Nov 2026).**
-- CI green; the schema migrated to `0005` and is up to date; the owner-data fingerprint is identical before and after
+- CI on 48c406b: all five jobs green (API on SQLite and PostgreSQL, migrations match models, web, Docker, and the
+  browser journeys including the OpenAPI types check). The M08 run on da3c882 was superseded by it.
+- The schema migrated to `0005` and is up to date; the owner-data fingerprint is identical before and after
   (the production ledger has no transactions yet, so nothing else changed).
 - `/api/portfolio/summary` (INR and USD), `/api/portfolio/overview` and the USD transaction filter return 200.
 - The Yahoo valuation rate `USDINR=X` resolves (94.64 INR per USD, quoted in INR, status available) when queried
