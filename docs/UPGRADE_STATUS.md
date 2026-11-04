@@ -664,8 +664,22 @@ The owner's key turned out to be a Groq key and the owner chose Groq's free tier
 | pytest SQLite / PostgreSQL 17 | 229 passed, 3 skipped / 231 passed, 1 skipped (M06: 10 — snapshot values, units and reasons; leverage/profitability edge cases; missing never passes; currency comparison; Yahoo statement frames; full screen flow incl. export; saved screens and lists; heatmap weighting; peers; holdings universe and worker refresh; backups) |
 | ruff, tsc, eslint, vitest | clean; 32 frontend tests |
 | Migrations match models (SQLite, PostgreSQL); downgrade 0008→0007 and upgrade | pass |
+| CI (928a944) | green |
 | Playwright | 17 journeys pass (new: named list → load data → P/E filter excludes a negative-earnings company with the count shown → save → reopen → preview → add to watchlist → heatmap → peers) |
 | Visual QA | Screener, heatmap and peers at 1440, 1024 and 390 px inspected; fixed wrapping market caps, stacked filters below 1280 px, wrapped toolbar at 390 px, full-contrast heatmap values. `docs/screenshots/screener-1440.png`, `peers-1440.png`, `heatmap-390.png` |
+
+**Live verification after deploying 928a944 (4 Nov 2026).**
+- Production migrated to 0008 on deploy (status `current 0008, up to date`), after the rehearsal above; a fresh
+  backup was taken first.
+- The worker built snapshots for all three watchlist members in its first cycle ("Load data" then found nothing due).
+  Coverage: price, returns, 52-week distance, volume, traded value, market cap, P/B, revenue growth, net margin, ROE
+  and volatility 3/3; P/E 2/3 ("not reported", a loss-making company); dividend yield 1/3; debt/equity 1/3 (withheld
+  for a lender; one company without a total-debt line). Yahoo annual statements loaded for all three from Render.
+- A P/E ≤ 40 screen: 1 pass, 1 fail, 1 no data (excluded and counted). Market-cap-weighted heatmap combined INR and
+  USD listings at the stated USD/INR rate. Peers: no suggestions yet (the three companies are in different sectors),
+  as designed.
+- Read-only browser check at 1440 and 390 px (light theme, real data): no console errors or failed API calls, no page
+  overflow; the phone layout uses summary rows.
 
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.

@@ -739,7 +739,7 @@ function AddToWatchlist({ symbols, onDone }: { symbols: string[]; onDone: () => 
   };
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <Select aria-label="Watchlist to add the selected results to" className="h-8 w-36" value={id ?? ""} onChange={(e) => setTarget(Number(e.target.value))}>
+      <Select aria-label="Watchlist to add the selected results to" className="h-8 w-44" value={id ?? ""} onChange={(e) => setTarget(Number(e.target.value))}>
         {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
       </Select>
       <Button size="sm" onClick={run} loading={busy} disabled={!symbols.length || session?.read_only}

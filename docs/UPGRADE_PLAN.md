@@ -46,3 +46,8 @@ earlier as soon as their credentials exist.
 - Phase 7 (M06): ✅ implemented, tested (fixtures; migration rehearsed on a production copy) and deployed; live
   checks in `docs/UPGRADE_STATUS.md`.
 - Phase 8 (M09): next.
+
+## After the final check
+The owner asked (4 Nov 2026) for a follow-on roadmap toward a terminal-style view with every piece of information about
+a security: `docs/TERMINAL_ROADMAP.md` (phases T1–T10, data-source matrix for India and the US, owner decisions).
+
