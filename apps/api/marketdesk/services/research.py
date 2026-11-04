@@ -232,6 +232,7 @@ class ResearchService:
             except ValueError as exc:
                 raise ProviderError("malformed", f"SEC company facts could not be normalized: {exc}") from exc
             st["ratios"] = compute_ratios(st, price, price_date, price_ccy)
+            st["coverage_note"] = _coverage_note(st, _filing_rows(sub, cik), period)
             st["entity"] = facts.get("entityName")
             st["facts_url"] = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
             for line in st["lines"]:
@@ -312,6 +313,30 @@ def _filing_rows(sub: dict, cik: int) -> list[dict]:
         )
     rows.sort(key=lambda r: r["filing_date"] or "", reverse=True)
     return rows
+
+
+ANNUAL_REPORTS = {"10-K", "20-F", "40-F"}
+
+
+def _fmt_day(d) -> str:
+    d = d if isinstance(d, date) else date.fromisoformat(str(d))
+    return f"{d.day} {d:%b %Y}"
+
+
+def _coverage_note(st: dict, rows: list[dict], period: str) -> str | None:
+    """Say so when the newest periodic report is not yet in SEC's company-facts data (the figures are then older than
+    the filing list suggests). Amendments are ignored: they often carry no financial statements."""
+    wanted = ANNUAL_REPORTS if period == "annual" else ANNUAL_REPORTS | {"10-Q"}
+    latest = next((r for r in rows if r["form"] in wanted and r["filing_date"]), None)
+    values = [v for line in st["lines"] for v in line["values"]]
+    if latest is None or not values or any(v["accession"] == latest["accession"] for v in values):
+        return None
+    newest = max(values, key=lambda v: v["filed"])
+    return (
+        f"The latest {latest['form']} (filed {_fmt_day(latest['filing_date'])}, accession {latest['accession']}) "
+        "has no figures in SEC's company-facts data yet, so it is not reflected here. The newest figures shown come "
+        f"from the {newest['form']} filed {_fmt_day(newest['filed'])}."
+    )
 
 
 def _latest_periodic(sub: dict):

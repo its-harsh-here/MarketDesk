@@ -59,6 +59,8 @@ export interface Statements {
   ratios: Ratio[];
   entity: string | null;
   facts_url: string;
+  /** Set when the newest periodic report has no figures in SEC's company-facts data yet. */
+  coverage_note?: string | null;
 }
 
 export interface Filing {

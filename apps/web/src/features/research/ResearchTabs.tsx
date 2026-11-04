@@ -81,6 +81,7 @@ export function FinancialsTab({ symbol }: { symbol: string }) {
           <DatasetStatus env={env} />
           {st && (
             <>
+              {st.coverage_note && <InlineNotice tone="warn">{st.coverage_note}</InlineNotice>}
               {STATEMENTS.map((group) => {
                 const lines = st.lines.filter((l) => l.statement === group.key);
                 return (

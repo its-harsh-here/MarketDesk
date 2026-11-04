@@ -34,7 +34,7 @@ earlier as soon as their credentials exist.
 ## Progress
 - Phase 1 (M00): ✅ done — verified locally and on the live service (`docs/UPGRADE_STATUS.md`).
 - Phase 2 (M01): ✅ done — verified locally, rehearsed on a copy of production data, and verified on the live service.
-- Phase 3 (M02): ✅ implemented and tested with fixtures; deployed. Live SEC verification waits for `SEC_USER_AGENT` (owner's contact).
+- Phase 3 (M02): ✅ implemented, tested and deployed; live SEC data verified on 4 Nov 2026 after `SEC_USER_AGENT` was set.
 - Phase 4 (M05): ✅ implemented, tested (fixtures + a real-data worker cycle on a production copy) and deployed; live
   checks in `docs/UPGRADE_STATUS.md`. Filing alerts wait for `SEC_USER_AGENT`.
 - Phase 5 (M08): ✅ implemented, tested and deployed; live checks in `docs/UPGRADE_STATUS.md`. Broker CSV mapping

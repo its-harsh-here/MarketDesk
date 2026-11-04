@@ -145,8 +145,22 @@ def test_financials_provenance_cache_and_invalidation_on_new_filing(env):
         fake.sub = sub
         db.query(MarketCacheEntry).filter(MarketCacheEntry.key == "sec:sub:1").delete()
         db.commit()
-        svc.financials(db, inst, "annual")
+        r = svc.financials(db, inst, "annual")
         assert fake.calls["facts"] == 2
+        assert r["data"]["coverage_note"] is None  # a newer 10-Q does not make the annual view out of date
+        q = svc.financials(db, inst, "quarterly")
+        # ...but the quarterly view says the new 10-Q has no figures in SEC's company facts yet
+        assert (
+            "The latest 10-Q (filed 1 Feb 2026, accession 0000000001-26-000005) has no figures"
+            in q["data"]["coverage_note"]
+        )
+
+
+def test_figures_up_to_date_have_no_coverage_note(env):
+    svc, _, (us_id, _) = env
+    with db_session() as db:
+        r = svc.financials(db, db.get(Instrument, us_id), "annual")
+        assert r["data"]["coverage_note"] is None
 
 
 def test_failure_after_success_returns_stale_data_and_records_the_error(env):

@@ -468,6 +468,18 @@ byte-identical. No new environment variables.
   FX form (read-only check, cancelled). Follow-up: the account switcher is now shown even on an empty ledger.
 - The pre-deploy backup and the scratch rehearsal database have been deleted.
 
+## Live SEC verification (4 Nov 2026, after the owner set `SEC_USER_AGENT`)
+- Settings status reports SEC enabled. The worker had already refreshed the watchlisted US companies.
+- SMR (NuScale Power, CIK 1822966): profile, 40 filings with links, 30 events (latest: 8-K Item 2.02 results,
+  5 Aug 2026), annual and quarterly statements (12 lines). Quarterly ratios are extreme but correct: the 10-Q filed
+  5 Aug 2026 reports Q2 revenue of $75,000 against a $64.0M operating loss (margin −853×); each input links to that
+  filing.
+- DOX (Amdocs, a 20-F/6-K filer, fiscal year to 30 Sep): profile, filings and events work. Its statements end at
+  FY2024 because SEC's company-facts data (checked directly) contains nothing filed after 2024, even though the FY2025
+  20-F was filed 15 Dec 2025. **Fix:** the Financials tab now states when the latest periodic report has no figures in
+  SEC's company-facts data yet, naming that filing and the filing the shown figures come from.
+- IFCI.NS: every research dataset reports "SEC data does not apply" (not a US registrant).
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -475,5 +487,4 @@ byte-identical. No new environment variables.
 - Portfolio has INR and USD accounts; there are no returns metrics (XIRR/TWR) and no historical FX by design.
 
 ## Next concrete action
-Phase 6 — **M10 Decision journal** (see `docs/UPGRADE_PLAN.md`). Owner inputs still open: `SEC_USER_AGENT`
-(SEC data and filing alerts), and later `XAI_API_KEY`/`XAI_MODEL` (M03) and Alpaca key/secret + feed (M04).
+Phase 6 — **M10 Decision journal** (see `docs/UPGRADE_PLAN.md`). Owner inputs still open: `XAI_API_KEY`/`XAI_MODEL` (M03) and Alpaca key/secret + feed (M04).
