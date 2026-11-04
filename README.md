@@ -269,6 +269,26 @@ Portfolio → **Rebalance**: target weights per holding (saved), then a **simula
 shares and an assumed fee; the proposed share counts are editable and recalculate on the page. Nothing is submitted
 or recorded.
 
+## Research lab (simulated)
+
+**Lab** (G L) — everything here is labelled *simulated*; no order is sent anywhere and nothing enters the real ledger.
+- **Rule test:** buy and hold, moving-average cross (fast/slow) or momentum (look-back) on five years of the provider's
+  split-adjusted daily bars. A rule decides at a session's close and trades at the **next session's open** (never the
+  close that produced the signal), plus slippage (bps against you) and a fee (% of traded value) paid from cash; whole
+  shares, long-only, no leverage, cash earns nothing. Dividends are credited in cash on the adjusted basis when the
+  position was held at the close before the ex-date. Results show the rule, buy and hold with the same costs and the
+  market benchmark over the same dates: end value, return, CAGR (≥ 1 year), maximum drawdown, trades, time invested
+  and fees, with the trade list (signal day → execution day).
+- **Run ledger:** each run stores its rule, parameters, costs, data provider, dates, bar count and a SHA-256
+  fingerprint of exactly the bars and dividends used. **Reproduce** re-runs it and says whether the data and the
+  results are identical (or that the data changed: new bars, restated prices, new corporate actions).
+- **Paper portfolio:** an isolated simulated account (₹, starting cash, fee and slippage). An order fills at the open of
+  the first session after the latest session known when it was placed; until that bar exists it is *pending* and can
+  be cancelled. A buy needs the cash and a sell the shares at the fill, or it is rejected with the reason. Later
+  splits convert order quantities; dividends are not credited in the paper portfolio.
+- **Read me:** look-ahead, sample limits, survivorship bias, overfitting, costs and fills, and the data basis
+  (fundamentals are today's values only, so no test uses historical fundamentals).
+
 ## Macro and sector context
 
 **Macro** (G M): a watchboard of market-traded series from the configured provider — Nifty 50, Sensex, S&P 500,

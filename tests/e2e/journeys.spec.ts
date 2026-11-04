@@ -622,3 +622,28 @@ test("macro: watchboard with provider/frequency/revision, briefing, official sta
   await ex.getByRole("button", { name: "Remove link SX:AURORA to SX:USDINR" }).click();
   await expect(ex.getByText(/No links yet/)).toBeVisible();
 });
+
+test("research lab: rule test executes after its signal, run ledger reproduces, paper order pending until the next session", async ({ page }) => {
+  await page.goto("/lab");
+  await ready(page);
+  await expect(page.getByText("Simulated · nothing here is a real trade")).toBeVisible();
+  await pickSymbol(page, "Instrument", "AURORA", "SX:AURORA");
+  await page.getByRole("button", { name: "Run test" }).click();
+  await expect(page.getByText("Run recorded in the run ledger.")).toBeVisible({ timeout: 30_000 });
+  const result = page.getByRole("region", { name: "Result" });
+  await expect(result.getByRole("table", { name: /Results of the rule, buy and hold and the benchmark/ })).toBeVisible();
+  await expect(result.getByText(/fingerprint/)).toBeVisible();
+  await page.getByRole("radio", { name: "Run ledger" }).click();
+  await page.getByRole("button", { name: "Reproduce" }).first().click();
+  await expect(page.getByText("Identical data and identical results.")).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("radio", { name: "Paper portfolio" }).click();
+  await page.getByLabel("New paper portfolio (₹1,00,000)").fill("E2E paper");
+  await page.getByRole("button", { name: "Create", exact: true }).click();
+  await pickSymbol(page, "Instrument", "BANYAN", "SX:BANYAN");
+  await page.getByLabel("Shares").fill("3");
+  await page.getByRole("button", { name: "Place" }).click();
+  await expect(page.getByText(/Simulated order placed/)).toBeVisible();
+  await expect(page.getByText("Waiting for the next session's opening price.")).toBeVisible();
+  await page.getByRole("radio", { name: "Read me" }).click();
+  await expect(page.getByRole("heading", { name: "Survivorship bias" })).toBeVisible();
+});

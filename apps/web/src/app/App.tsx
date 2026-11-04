@@ -17,6 +17,7 @@ import { AlertDialog } from "@/features/alerts/AlertDialog";
 import { JournalPage } from "@/features/journal/JournalPage";
 import { ScreenerPage } from "@/features/screener/ScreenerPage";
 import { MacroPage } from "@/features/macro/MacroPage";
+import { LabPage } from "@/features/lab/LabPage";
 import { JournalDialog } from "@/features/journal/JournalDialog";
 import { JournalDetailDialog } from "@/features/journal/JournalDetailDialog";
 import { AiDialog } from "@/features/ai/AiDialog";
@@ -130,6 +131,7 @@ const router = createBrowserRouter([
           { path: "watchlists", element: <WatchlistsPage /> },
           { path: "screener", element: <ScreenerPage /> },
           { path: "macro", element: <MacroPage /> },
+          { path: "lab", element: <LabPage /> },
           { path: "instrument/:symbol", element: <InstrumentPage /> },
           { path: "portfolio", element: <PortfolioPage /> },
           { path: "alerts", element: <AlertsPage /> },

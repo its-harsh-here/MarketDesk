@@ -23,7 +23,7 @@ Legend: ✅ done · 🟡 partly exists (see `docs/UPGRADE_STATUS.md` capability 
 | 11 | **M07** Earnings + filing changes | ⬜ | Earnings calendar, reported-period changes, filing diff with excerpts, guidance/risk timelines, bull/base/bear brief | needs M02 (+ M03) |
 | 12 | **M04** Streaming dashboard | 🟡 polling dashboard | Alpaca adapter (entitled feed), central upstream + SSE/WebSocket fan-out, gap backfill, feed labels, workstation layout | 🔑 Alpaca key/secret + feed choice |
 | 13 | **M12** Macro + sector | ⬜ | Verified sources, normalized series with vintages, watchboard, sector-relative view | 🔑 depends on chosen sources |
-| 14 | **M13** Paper investing + research tests | ⬜ | Isolated paper ledger, daily-bar engine with conservative fills, reproducible runs | needs a verified historical dataset |
+| 14 | **M13** Paper investing + research tests | ✅ | Isolated paper ledger, daily-bar engine with conservative fills, reproducible runs | needs a verified historical dataset |
 | 15 | **M14** Workspaces + offline | 🟡 command palette, density | Presets, PWA read-only offline snapshot, exports, usage panel | none |
 | 16 | Final release check | — | Audit all completed milestones, run every check, update docs | — |
 
@@ -53,7 +53,9 @@ earlier as soon as their credentials exist.
 - Phase 12 (M04): waits for the owner's Alpaca key/secret and feed choice.
 - Phase 13 (M12): ✅ implemented (market-traded series; official statistics wait for a FRED key / verified Indian
   source), tested and deployed; live checks in `docs/UPGRADE_STATUS.md`.
-- Phase 14 (M13): next.
+- Phase 14 (M13): ✅ implemented, tested (hand-checked execution and cost vectors; migration rehearsed on a
+  production copy) and deployed; live checks in `docs/UPGRADE_STATUS.md`.
+- Phase 15 (M14): next.
 
 ## After the final check
 The owner asked (4 Nov 2026) for a follow-on roadmap toward a terminal-style view with every piece of information about

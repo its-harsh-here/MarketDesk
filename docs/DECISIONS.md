@@ -232,4 +232,12 @@ Consequential choices, newest last. Routine choices live in code comments.
     attribution; RBI/MOSPI: no verified machine-readable source) and are shown as not configured. Briefings are
     deterministic (largest moves with dates) and show only owner-entered company ↔ series links; correlations are
     descriptive and use aligned observations (daily within a time zone, weekly across).
-
+48. **Research lab: next-open execution on adjusted daily bars, fingerprinted runs, isolated paper account (M13,
+    4 Nov 2026).** Rule tests use the provider's split-adjusted daily bars (open and close on one basis) and execute a
+    close-time decision at the next session's open with stated slippage and fees; whole shares, long-only, no
+    leverage, no interest on cash. Dividends are converted to the adjusted basis (÷ later split ratios) and credited
+    when held at the prior close. Only three simple rules are offered (buy and hold, moving-average cross, momentum)
+    with bounded parameters, to discourage overfitting; there is no optimiser. Each run records a SHA-256 fingerprint
+    of its bars and dividends so a re-run can prove whether it saw the same data. The paper portfolio is a separate
+    table set (not the ledger) replayed on read: an order fills at the first session after the latest known session at
+    placement, or stays pending. Historical fundamentals are not available, so no fundamental rules exist.

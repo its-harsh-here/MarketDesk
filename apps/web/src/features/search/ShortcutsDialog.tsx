@@ -16,6 +16,7 @@ const ROWS: [string[], string][] = [
   [["G", "P"], "Go to Portfolio"],
   [["G", "A"], "Go to Alerts"],
   [["G", "J"], "Go to Journal"],
+  [["G", "L"], "Go to Lab"],
   [["N"], "Add transaction"],
   [["Esc"], "Close dialog or menu"],
 ];

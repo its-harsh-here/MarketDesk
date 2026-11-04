@@ -780,6 +780,26 @@ cache key was versioned in the next commit so they are fetched again at once.
 | Playwright | 21 journeys pass (new: macro — labels, official statistics not approximated, link with correlation, briefing shows the link) |
 | Visual QA | Macro page at 1440 and 390 px inspected (no overflow) |
 
+## M13 — Research lab: rule tests and paper portfolio (4 Nov 2026)
+- **Engine** (`services/sim_math.py`, pure): signals use closes up to the decision day only; execution at the next
+  session's open × (1 ± slippage), fee % from cash, whole shares, long-only; dividends on the adjusted basis credited
+  when held at the prior close; CAGR only over ≥ 365 days; volatility only with ≥ 60 returns.
+- **Run ledger** (migration 0012 `research_runs`): rule, parameters, costs, provider, dates, bars and a SHA-256 data
+  fingerprint; *Reproduce* compares data and results.
+- **Paper portfolio** (0012 `paper_portfolios`, `paper_orders`): isolated from the ledger; orders fill at the first
+  session after the placement session or stay pending (cancellable); rejections give the reason.
+- **UI:** Lab page (G L; More menu on phones) with Rule test, Run ledger, Paper portfolio and Read me; results table,
+  equity chart (rule vs hold, ends on the table's values), trade list.
+- **Schema:** 0012 rehearsed on a production copy (0011 backup): restored, migrated, owner-data fingerprints identical.
+
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 17 | 284 passed, 3 skipped / 286 passed, 1 skipped (M13: 8 — no look-ahead in signals, next-open + costs hand vector, adjusted dividends and fingerprint, drawdown, paper fills/rejections/pending, API run recorded and reproducible, paper isolated from the ledger, backups) |
+| Migrations match models (SQLite, PostgreSQL); downgrade 0012→0011 and upgrade | pass |
+| tsc, eslint, vitest | clean; 32 |
+| Playwright | 22 journeys pass (new: research lab — run, reproduce, paper order pending) |
+| Visual QA | Lab page at 1440 and 390 px inspected (no overflow; mobile table drops two columns) |
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -787,4 +807,4 @@ cache key was versioned in the next commit so they are fetched again at once.
 - Portfolio has INR and USD accounts; returns (M09) use daily closes, benchmarks are price indices, and cash earns no interest.
 
 ## Next concrete action
-Phase 12 — **M04 Streaming dashboard** (needs the owner's Alpaca key/secret and feed choice) or **M12 Macro + sector** (see `docs/UPGRADE_PLAN.md`). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
+Phase 15 — **M14 Workspaces + offline**, then the final release check (see `docs/UPGRADE_PLAN.md`). M04 (streaming) waits for the owner's Alpaca key/secret and feed choice. Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.

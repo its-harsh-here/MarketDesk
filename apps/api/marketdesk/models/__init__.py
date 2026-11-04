@@ -247,6 +247,51 @@ class Briefing(Base):
     read_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
 
+class ResearchRun(Base):
+    """A reproducible rule test: parameters, costs, the exact data used (with its hash) and the results."""
+
+    __tablename__ = "research_runs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, index=True)
+    symbol: Mapped[str] = mapped_column(String(32), nullable=False)
+    rule: Mapped[str] = mapped_column(String(16), nullable=False)
+    params: Mapped[dict] = mapped_column(JSON, nullable=False)
+    costs: Mapped[dict] = mapped_column(JSON, nullable=False)
+    data: Mapped[dict] = mapped_column(JSON, nullable=False)  # provider, range, first/last day, bars, hash, adjustment
+    results: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+
+class PaperPortfolio(Base):
+    """A simulated portfolio, isolated from the real ledger."""
+
+    __tablename__ = "paper_portfolios"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(60), nullable=False, unique=True)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False)
+    starting_cash: Mapped[Decimal] = mapped_column(DecimalText, nullable=False)
+    fee_pct: Mapped[Decimal] = mapped_column(DecimalText, nullable=False)
+    slippage_bps: Mapped[Decimal] = mapped_column(DecimalText, nullable=False)
+    benchmark: Mapped[str | None] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    orders: Mapped[list[PaperOrder]] = relationship(
+        back_populates="portfolio", cascade="all, delete-orphan", order_by="PaperOrder.id"
+    )
+
+
+class PaperOrder(Base):
+    __tablename__ = "paper_orders"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    portfolio_id: Mapped[int] = mapped_column(
+        ForeignKey("paper_portfolios.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    side: Mapped[str] = mapped_column(String(4), nullable=False)
+    symbol: Mapped[str] = mapped_column(String(32), nullable=False)
+    quantity: Mapped[Decimal] = mapped_column(DecimalText, nullable=False)  # shares as traded when placed
+    placed_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    placed_session: Mapped[date] = mapped_column(Date, nullable=False)  # latest session known when placed
+    portfolio: Mapped[PaperPortfolio] = relationship(back_populates="orders")
+
+
 class MacroLink(Base):
     """An owner-entered link between a company and a macro series (e.g. an input cost), with a note. Never inferred."""
 

@@ -1,6 +1,6 @@
 import { listingLabel } from "@/lib/markets";
 import * as RD from "@radix-ui/react-dialog";
-import { Bell, BookOpen, Briefcase, CornerDownLeft, FileUp, Funnel, Globe, Keyboard, LayoutDashboard, ListChecks, NotebookPen, Plus, Search, Settings, SunMoon } from "lucide-react";
+import { Bell, BookOpen, Briefcase, CornerDownLeft, FileUp, FlaskConical, Funnel, Globe, Keyboard, LayoutDashboard, ListChecks, NotebookPen, Plus, Search, Settings, SunMoon } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { useDialogs } from "@/app/dialogs";
@@ -47,6 +47,7 @@ export function CommandPalette() {
       { id: "p-port", group: "Pages", label: "Portfolio", icon: <Briefcase />, run: go("/portfolio") },
       { id: "p-alerts", group: "Pages", label: "Alerts", icon: <Bell />, run: go("/alerts") },
       { id: "p-journal", group: "Pages", label: "Journal", icon: <BookOpen />, run: go("/journal") },
+      { id: "p-lab", group: "Pages", label: "Research lab", icon: <FlaskConical />, run: go("/lab") },
       { id: "p-settings", group: "Pages", label: "Settings", icon: <Settings />, run: go("/settings") },
     ];
     const actions: Item[] = [
