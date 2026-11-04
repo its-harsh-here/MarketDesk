@@ -617,6 +617,19 @@ The owner's key turned out to be a Groq key and the owner chose Groq's free tier
   fallbacks, trimming with stable ids, HTTP client and quota headers); browser journeys now run the Groq path against
   the local fake endpoint.
 
+**Live verification on Groq after deploying 2e07c08 (4 Nov 2026).**
+- Status reports provider Groq (free tier), model `openai/gpt-oss-120b`, a `gsk_` key, 150,000 tokens and 30 answers per
+  day.
+- The first live answer (results, SMR) completed in one call with S4 (SEC statements) and S7 (results release) cited,
+  $0 cost; six of its seven flags were checker errors (signs, Unicode dashes, dates, unit-written figures), fixed in
+  5ba8753 with a regression test built from that answer. Repeating the same request returned the saved answer at no
+  cost, as designed.
+- A fresh question on SMR after the fix: revenue, gross profit and operating-loss figures all matched the cited
+  statements, no flags; 5,296 input + 464 output tokens (53 reasoning), $0, within the 7,300-token request limit.
+  About 5–7k tokens per answer, so the 150,000-token allowance covers the 30 answers a day.
+- CI: the browser journey for the USD account was flaky (two "Transaction recorded." toasts on screen at once); the
+  journey now dismisses the first one. All 16 journeys pass locally.
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -624,4 +637,4 @@ The owner's key turned out to be a Groq key and the owner chose Groq's free tier
 - Portfolio has INR and USD accounts; there are no returns metrics (XIRR/TWR) and no historical FX by design.
 
 ## Next concrete action
-Phase 7 — **M06 Screener + peers** (see `docs/UPGRADE_PLAN.md`). Owner inputs still open: `XAI_API_KEY`/`XAI_MODEL` (M03) and Alpaca key/secret + feed (M04).
+Phase 7 — **M06 Screener + peers** (see `docs/UPGRADE_PLAN.md`). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
