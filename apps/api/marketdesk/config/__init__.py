@@ -70,19 +70,28 @@ class Settings(BaseSettings):
     research_refresh_hours: int = 24  # how often tracked companies are re-checked for new filings
     worker_heartbeat_stale_seconds: int = 900
 
-    # Grok (xAI) research analyst: optional, paid, server-side only. The key is read from GROK_API (the owner's name)
-    # or XAI_API_KEY; with no key every AI feature is off and nothing else changes. GROK_ENABLED=false turns it off
-    # without removing the key.
+    # AI research analyst: optional, server-side only. Providers: Groq (free tier, open models) or xAI Grok (paid).
+    # The key is read from GROK_API (the owner's variable), GROQ_API_KEY or XAI_API_KEY. AI_PROVIDER=auto picks the
+    # provider from the key's prefix (gsk_ = Groq, xai- = xAI). With no key every AI feature is off and nothing else
+    # changes. GROK_ENABLED=false turns it off without removing the key.
     grok_api: str | None = None
+    groq_api_key: str | None = None
     xai_api_key: str | None = None
     grok_enabled: bool = True
+    ai_provider: Literal["auto", "groq", "xai"] = "auto"
+    ai_model: str | None = None  # overrides the provider default below
     xai_model: str = "grok-4.3"  # cost-efficient Grok 4 model (docs.x.ai/docs/models, checked 4 Nov 2026)
     xai_base_url: str = "https://api.x.ai/v1"
+    groq_model: str = "openai/gpt-oss-120b"  # strict structured output on Groq (console.groq.com/docs, 4 Nov 2026)
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    groq_reasoning_effort: str = "low"  # gpt-oss reasoning tokens count toward the per-minute token limit
     xai_timeout_seconds: float = 90.0
-    ai_daily_budget_usd: float = 0.50  # application cap on estimated + reconciled spend per UTC day
+    ai_daily_budget_usd: float = 0.50  # xAI: application cap on estimated + reconciled spend per UTC day
+    ai_daily_tokens: int = 150_000  # Groq free tier: below its 200,000 tokens/day limit
+    ai_request_tokens: int = 7_000  # Groq free tier: one request (input + output) under its 8,000 tokens/minute
     ai_daily_requests: int = 30  # model-backed answers per UTC day (reused answers do not count)
     ai_max_output_tokens: int = 1800
-    ai_max_tool_calls: int = 3  # extra read-only lookups the model may request per answer
+    ai_max_tool_calls: int = 3  # xAI only: extra read-only filing lookups per answer
     ai_reuse_hours: int = 24  # an identical request on unchanged evidence returns the saved answer
 
     # Limits
@@ -95,9 +104,28 @@ class Settings(BaseSettings):
     display_timezone_default: str = "Asia/Kolkata"
 
     @property
-    def xai_key(self) -> str | None:
-        key = (self.grok_api or self.xai_api_key or "").strip()
+    def ai_key(self) -> str | None:
+        key = (self.grok_api or self.groq_api_key or self.xai_api_key or "").strip().strip("'\"").strip()
         return key or None
+
+    @property
+    def xai_key(self) -> str | None:  # kept for callers that only know xAI
+        return self.ai_key
+
+    @property
+    def effective_ai_provider(self) -> str:
+        if self.ai_provider != "auto":
+            return self.ai_provider
+        key = self.ai_key or ""
+        if key.startswith("gsk_") or (self.groq_api_key and not self.grok_api and not self.xai_api_key):
+            return "groq"
+        return "xai"
+
+    @property
+    def effective_ai_model(self) -> str:
+        if self.ai_model:
+            return self.ai_model
+        return self.groq_model if self.effective_ai_provider == "groq" else self.xai_model
 
     @property
     def is_production(self) -> bool:

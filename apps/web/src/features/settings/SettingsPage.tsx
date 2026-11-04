@@ -256,20 +256,36 @@ export function SettingsPage() {
 function AiPanel() {
   const q = useAiStatus();
   const st = q.data;
+  const b = st?.budget;
   return (
-    <Panel title="Grok research (optional, paid)" titleId="s-ai">
-      {!st ? (
+    <Panel title="AI research (optional)" titleId="s-ai">
+      {!st || !b ? (
         <SkeletonRows rows={3} />
       ) : (
         <dl className="space-y-2 text-[13px]">
           <div className="flex justify-between gap-2"><dt className="text-fg-2">Status</dt><dd><Pill tone={st.enabled ? "pos" : "neutral"}>{st.enabled ? "On" : "Off"}</Pill></dd></div>
           {!st.enabled && <p className="text-xs text-fg-3">{st.reason}</p>}
+          <div className="flex justify-between gap-2"><dt className="text-fg-2">Provider</dt><dd>{st.provider_label}</dd></div>
           <div className="flex justify-between gap-2"><dt className="text-fg-2">Model</dt><dd className="num">{st.model}</dd></div>
           {st.key_format && <div className="flex justify-between gap-2"><dt className="text-fg-2">API key</dt><dd className="text-right text-xs text-fg-2">{st.key_format}</dd></div>}
-          <div className="flex justify-between gap-2"><dt className="text-fg-2">Today (UTC)</dt><dd className="num">${Number(st.budget.spent_usd).toFixed(4)} of ${Number(st.budget.limit_usd).toFixed(2)} · {st.budget.requests_used}/{st.budget.requests_limit} answers</dd></div>
-          <div className="flex justify-between gap-2"><dt className="text-fg-2">Per answer</dt><dd className="num">≤ {st.budget.max_output_tokens} output tokens · ≤ {st.budget.max_tool_calls} filing lookups</dd></div>
+          <div className="flex justify-between gap-2">
+            <dt className="text-fg-2">Today (UTC)</dt>
+            <dd className="num text-right">
+              {b.tokens_limit ? `${b.tokens_used.toLocaleString()} of ${b.tokens_limit.toLocaleString()} tokens` : `$${Number(b.spent_usd).toFixed(4)} of $${Number(b.limit_usd).toFixed(2)}`} · {b.requests_used}/{b.requests_limit} answers
+            </dd>
+          </div>
+          <div className="flex justify-between gap-2">
+            <dt className="text-fg-2">Per answer</dt>
+            <dd className="num text-right">{b.request_tokens_limit ? `≤ ${b.request_tokens_limit.toLocaleString()} tokens, one call` : `≤ ${b.max_output_tokens} output tokens · ≤ ${b.max_tool_calls} filing lookups`}</dd>
+          </div>
+          {st.provider_limits?.remaining_requests_today && (
+            <div className="flex justify-between gap-2"><dt className="text-fg-2">Provider says</dt><dd className="num text-right">{st.provider_limits.remaining_requests_today} requests left today</dd></div>
+          )}
           <p className="text-xs leading-4 text-fg-3">
-            Tools: {st.tools.join(", ")}; web and X search are off. Only public market data and your question are sent to xAI, never your portfolio or journal. The key stays on the server (GROK_API); limits are set with AI_DAILY_BUDGET_USD, AI_DAILY_REQUESTS, AI_MAX_OUTPUT_TOKENS and AI_MAX_TOOL_CALLS. Spend is reconciled with the cost xAI reports per answer.
+            {st.provider === "groq"
+              ? "Groq's free tier runs open models without charge, within its rate limits (requests and tokens per minute and per day); MarketDesk keeps each answer to one call that fits those limits. "
+              : "xAI usage is billed to your xAI account; spend is reconciled with the cost xAI reports per answer. "}
+            Only public market data and your question are sent, never your portfolio or journal; web search is off. The key stays on the server (GROK_API). Limits: AI_DAILY_REQUESTS, {st.provider === "groq" ? "AI_DAILY_TOKENS, AI_REQUEST_TOKENS" : "AI_DAILY_BUDGET_USD, AI_MAX_TOOL_CALLS"}, AI_MAX_OUTPUT_TOKENS.
           </p>
         </dl>
       )}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A local stand-in for the xAI Responses API, for browser tests only (never used in production).
+"""A local stand-in for the AI providers (Groq chat completions and the xAI Responses API), for browser tests only.
 
 Answers POST /v1/responses with a structured answer that cites the first source it was given, quoting that source's
 price so MarketDesk's figure check can verify it. Usage reports a fixed cost so budgets can be exercised.
@@ -18,15 +18,19 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):  # noqa: N802
         body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
-        if self.path.rstrip("/") != "/v1/responses" or not self.headers.get("Authorization", "").startswith("Bearer "):
+        path = self.path.rstrip("/")
+        if path not in ("/v1/responses", "/openai/v1/chat/completions") or not self.headers.get(
+            "Authorization", ""
+        ).startswith("Bearer "):
             self.send_response(404)
             self.end_headers()
             return
-        payload = json.loads(body["input"][0]["content"])
+        chat = path.endswith("/chat/completions")
+        payload = json.loads(body["messages"][1]["content"] if chat else body["input"][0]["content"])
         src = payload["sources"][0]
         price = (src.get("data") or {}).get("price")
         answer = {
-            "headline": f"Test-harness answer for {payload['listings'][0]['symbol']} (fake xAI endpoint)",
+            "headline": f"Test-harness answer for {payload['listings'][0]['symbol']} (fake AI endpoint)",
             "sections": [
                 {
                     "title": "What the evidence shows",
@@ -41,16 +45,30 @@ class Handler(BaseHTTPRequestHandler):
             "uncertainties": ["The test harness uses fictitious companies."],
             "gaps": ["No filings exist for sample listings."],
         }  # fmt: skip
+        if chat:
+            out = {
+                "id": "chatcmpl-fake",
+                "object": "chat.completion",
+                "choices": [{"index": 0, "finish_reason": "stop",
+                             "message": {"role": "assistant", "content": json.dumps(answer)}}],
+                "usage": {"prompt_tokens": 2600, "completion_tokens": 640, "total_tokens": 3240},
+            }  # fmt: skip
+            return self._send(out, {"x-ratelimit-remaining-requests": "999", "x-ratelimit-remaining-tokens": "4760"})
         out = {
             "id": "resp_fake",
             "status": "completed",
             "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps(answer)}]}],
             "usage": {"input_tokens": 3200, "output_tokens": 420, "cost_in_usd_ticks": 50_000_000},
         }
+        self._send(out, {})
+
+    def _send(self, out: dict, headers: dict) -> None:
         data = json.dumps(out).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))
+        for k, v in headers.items():
+            self.send_header(k, v)
         self.end_headers()
         self.wfile.write(data)
 

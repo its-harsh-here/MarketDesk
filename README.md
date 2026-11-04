@@ -89,8 +89,8 @@ cookies and survive restarts on their own.
 | `ALERT_POLL_SECONDS`, `WORKER_START_DELAY_SECONDS`, `WORKER_NICE` | no | Worker sampling interval (300 s) and start-up pacing. |
 | `SEC_USER_AGENT` | for US filings | Application name and **your** contact email (SEC fair-access rule), e.g. `MarketDesk you@example.com`. Without it the Financials/Filings/Events tabs explain that SEC data is off. |
 | `SEC_MAX_REQUESTS_PER_SECOND`, `RESEARCH_REFRESH_HOURS` | no | SEC request budget (default 5/s; SEC allows 10) and the daily re-check interval. |
-| `GROK_API` (or `XAI_API_KEY`) | for Grok research | xAI API key, server-side only. Without it the "Ask Grok" research panel explains that AI is off; nothing else changes. |
-| `XAI_MODEL`, `GROK_ENABLED`, `AI_DAILY_BUDGET_USD`, `AI_DAILY_REQUESTS`, `AI_MAX_OUTPUT_TOKENS`, `AI_MAX_TOOL_CALLS`, `AI_REUSE_HOURS` | no | Model (default `grok-4.3`), off switch, and the spending/size limits (defaults $0.50 and 30 answers per UTC day, 1,800 output tokens, 3 filing lookups, 24 h reuse). |
+| `GROK_API` (or `GROQ_API_KEY` / `XAI_API_KEY`) | for AI research | A Groq key (`gsk_…`, free tier) or an xAI key (`xai-…`, paid); server-side only. The prefix picks the provider (`AI_PROVIDER=groq|xai` overrides). Without a key the "Ask AI" panel explains that AI is off; nothing else changes. |
+| `AI_MODEL`, `GROK_ENABLED`, `AI_DAILY_TOKENS`, `AI_REQUEST_TOKENS`, `AI_DAILY_BUDGET_USD`, `AI_DAILY_REQUESTS`, `AI_MAX_OUTPUT_TOKENS`, `AI_MAX_TOOL_CALLS`, `AI_REUSE_HOURS` | no | Model (defaults `openai/gpt-oss-120b` on Groq, `grok-4.3` on xAI), off switch, and limits: Groq 150,000 tokens/day and 7,000 per request; xAI $0.50/day and 3 filing lookups; 30 answers/day, 1,800 output tokens, 24 h reuse. |
 
 - **Start command:** none — the image's default `python -m marketdesk.serve` runs the web server and, 45 s after it
   answers, the alert worker in the same container. Leave Render's *Start Command* empty.
@@ -260,21 +260,25 @@ trim, sell or avoid — your record, not a recommendation), conviction (1–5), 
   (intact, weakened, invalidated, closed), your notes, the evidence at that moment and the next review date.
 - Notes are plain text, written by you; nothing is generated. Deleting a note (with confirmation) deletes its history.
 
-## Grok research (optional)
+## AI research (optional)
 
-On Instrument Detail, **Ask Grok** runs one of four tasks: latest results, possible catalysts, a comparison with one or
-two other listings, or your own question.
+On Instrument Detail, **Ask AI** runs one of four tasks: latest results, possible catalysts, a comparison with one or
+two other listings, or your own question. Two providers are supported, chosen from the key in `GROK_API`:
+**Groq's free tier** (a `gsk_` key; default model `openai/gpt-oss-120b`) or **xAI Grok** (an `xai-` key, paid; default
+`grok-4.3`).
 - **Evidence first:** MarketDesk retrieves and computes the evidence itself — quote, one-year price statistics,
   fundamentals, and for US registrants SEC statements (with period changes and ratios computed in code), the filing list
   and the latest results press release. Each item becomes a numbered source with its date, fetch time and status.
-- **One call, cited:** Grok answers from that package in a single structured response (it may ask to read up to three
-  more filings already listed). Every point is labelled fact, calculation or interpretation and cites sources.
+- **One call, cited:** the model answers from that package in one structured response. On Groq the package is trimmed
+  to fit the free tier's per-request token limit (source numbers never change); on xAI the model may also read up to
+  three more listed filings. Every point is labelled fact, calculation or interpretation and cites sources.
 - **Checked:** citations to unknown sources, facts without a source, figures that do not appear in the cited sources and
   advice-like wording are flagged on the answer. Figures and prices never come from the model.
-- **Budgeted:** a daily dollar cap and answer cap are enforced on the server (worst-case cost reserved before the call,
-  reconciled with the cost xAI reports). The same request on unchanged evidence returns the saved answer for free.
-- **Private:** only public market data and your question are sent — never your portfolio or journal. Web and X search
-  are not used. Answers are saved with their sources, data cutoff, model, tokens and cost.
+- **Limits:** Groq — a daily token allowance (default 150,000, under the free tier's 200,000/day) and 30 answers/day,
+  each request kept under 7,000 tokens; xAI — a daily dollar cap (default $0.50) reconciled with the cost xAI reports.
+  The same request on unchanged evidence returns the saved answer at no cost.
+- **Private:** only public market data and your question are sent — never your portfolio or journal. Web search is
+  not used. Answers are saved with their sources, data cutoff, model, tokens and cost.
 
 ## Alerts, inbox and briefings
 
@@ -314,8 +318,8 @@ Automated tests use the synthetic harness so they are deterministic and never de
 | Visual QA captures (not committed) | `cd tests/e2e && npm run screenshots` → `tests/e2e/test-results/screenshots` |
 | Live Yahoo smoke test | `cd apps/api && uv run python ../../scripts/check_yahoo.py` |
 
-The browser journeys point Grok research at a local fake xAI endpoint (`scripts/fake_xai.py`): no key, no network, no
-cost. CI (`.github/workflows/ci.yml`) runs these suites and builds the Docker image. Results are recorded in
+The browser journeys point AI research at a local fake provider endpoint (`scripts/fake_xai.py`, Groq path): no key,
+no network, no cost. CI (`.github/workflows/ci.yml`) runs these suites and builds the Docker image. Results are recorded in
 `docs/STATUS.md`. API types for the frontend are generated from OpenAPI: `cd apps/web && npm run gen:api`.
 
 ## Layout

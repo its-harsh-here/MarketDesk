@@ -273,17 +273,17 @@ test("journal: create, edit and filter a note", async ({ page }) => {
   await expect(page.getByText("No notes match these filters")).toBeVisible();
 });
 
-test("grok: cited answer from retrieved evidence, sources listed, repeat request reuses the saved answer", async ({ page }) => {
-  // The harness points the server at a local fake xAI endpoint: no key, no network, no cost.
+test("ai research: cited answer from retrieved evidence, sources listed, repeat request reuses the saved answer", async ({ page }) => {
+  // The harness points the server at a local fake provider (Groq path): no key, no network, no cost.
   await page.goto("/instrument/SX%3AAURORA");
-  await page.getByRole("button", { name: "Ask Grok" }).click();
-  const dialog = page.getByRole("dialog", { name: "Research SX:AURORA with Grok" });
+  await page.getByRole("button", { name: "Ask AI" }).click();
+  const dialog = page.getByRole("dialog", { name: "Research SX:AURORA" });
   await dialog.getByRole("radio", { name: "Ask" }).click();
   await dialog.getByLabel("Your question").fill("What does the evidence show?");
   await dialog.getByRole("button", { name: "Run", exact: true }).click();
-  const answer = dialog.getByRole("article", { name: "Grok answer" });
-  await expect(answer.getByText("Test-harness answer for SX:AURORA (fake xAI endpoint)")).toBeVisible({ timeout: 20_000 });
-  await expect(answer.getByText("Model output · Grok", { exact: false })).toBeVisible();
+  const answer = dialog.getByRole("article", { name: "AI answer" });
+  await expect(answer.getByText("Test-harness answer for SX:AURORA (fake AI endpoint)")).toBeVisible({ timeout: 20_000 });
+  await expect(answer.getByText("Model output · openai/gpt-oss-120b via Groq (free tier)", { exact: false })).toBeVisible();
   await expect(answer.getByText("Fact", { exact: true })).toBeVisible();
   await expect(answer.getByRole("link", { name: "Source S1" }).first()).toBeVisible();
   await expect(answer.getByText("automated check", { exact: false })).toHaveCount(0); // the quoted price is in S1
@@ -295,9 +295,11 @@ test("grok: cited answer from retrieved evidence, sources listed, repeat request
   await expect(dialog.getByText("Saved answers for SX:AURORA")).toBeVisible();
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await page.goto("/settings");
-  const panel = page.getByRole("region", { name: "Grok research (optional, paid)" });
+  const panel = page.getByRole("region", { name: "AI research (optional)" });
   await expect(panel.getByText("On", { exact: true })).toBeVisible();
   await expect(panel.getByText(/1\/30 answers/)).toBeVisible(); // the reused answer did not count
+  await expect(panel.getByText("Groq (free tier)")).toBeVisible();
+  await expect(panel.getByText(/3,240 of 150,000 tokens/)).toBeVisible();
 });
 
 test("theme: switch to light, persists across reload", async ({ page }) => {

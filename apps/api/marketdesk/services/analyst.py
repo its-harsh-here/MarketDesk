@@ -34,6 +34,7 @@ from marketdesk.api.errors import AppError
 from marketdesk.config import Settings
 from marketdesk.models import AiAnswer, Instrument
 from marketdesk.providers.base import ProviderError
+from marketdesk.providers.groq import GroqClient
 from marketdesk.providers.xai import XaiClient, XaiError, usage_cost_usd
 from marketdesk.services.market import MarketDataService
 
@@ -322,6 +323,7 @@ async def _listing(ev: Evidence, db, market, research, inst: Instrument, kind: s
             "statements",
             f"{sym} {period} statements (SEC XBRL company facts; changes and ratios computed by MarketDesk)",
             {
+                "period": period,
                 "currency": st.get("currency"),
                 "period_ends": st.get("period_ends", [])[:keep],
                 "lines": lines,
@@ -530,17 +532,105 @@ def validate_answer(raw: dict, sources: dict[str, dict]) -> tuple[dict, list[dic
 
 
 # --------------------------------------------------------------------------- service
+def _lean(schema):
+    """The answer schema without length/count/pattern keywords (not all providers enforce them; the answer is
+    validated here anyway)."""
+    if isinstance(schema, dict):
+        return {k: _lean(v) for k, v in schema.items() if k not in ("pattern", "maxLength", "maxItems", "minItems")}
+    if isinstance(schema, list):
+        return [_lean(v) for v in schema]
+    return schema
+
+
+LEAN_SCHEMA = _lean(ANSWER_SCHEMA)
+OMITTED = "[omitted to fit the free tier's request size]"
+
+
+def compact_evidence(ev: Evidence, max_chars: int, other_chars: int) -> list[str]:
+    """Trim source contents in place until the request fits; source ids never change. Returns what was trimmed."""
+
+    def size() -> int:
+        return other_chars + len(json.dumps(ev.sources, default=str))
+
+    def each(kind: str):
+        return [s for s in ev.sources if s["kind"] == kind]
+
+    def excerpt(n: int):
+        for s in each("filing_text"):
+            s["data"]["text"] = s["data"]["text"][:n]
+
+    def filings(n: int):
+        for s in each("filings"):
+            s["data"] = [
+                {k: f.get(k) for k in ("form", "filing_date", "report_date", "accession")} for f in s["data"][:n]
+            ]
+
+    def periods(which: str, n: int):
+        for s in each("statements"):
+            d = s["data"]
+            if d.get("period") == which and isinstance(d.get("lines"), dict):
+                d["period_ends"] = d.get("period_ends", [])[:n]
+                d["lines"] = {k: v[:n] for k, v in d["lines"].items()}
+
+    def bare_values():
+        for s in each("statements"):
+            for k, vals in (s["data"].get("lines") or {}).items():
+                s["data"]["lines"][k] = [{"period_end": v["period_end"], "value": v["value"]} for v in vals]
+
+    def omit(kind: str, which: str | None = None):
+        for s in each(kind):
+            if which is None or s["data"].get("period") == which:
+                s["data"] = (
+                    {"period": s["data"].get("period"), "omitted": OMITTED}
+                    if kind == "statements"
+                    else ({**s["data"], "text": OMITTED} if kind == "filing_text" else OMITTED)
+                )
+
+    steps = [
+        ("filing excerpts shortened", lambda: excerpt(4000)),
+        ("filing list shortened", lambda: filings(8)),
+        ("quarterly statements cut to 2 periods", lambda: periods("quarterly", 2)),
+        ("annual statements cut to 2 periods", lambda: periods("annual", 2)),
+        ("filing excerpts shortened further", lambda: excerpt(2000)),
+        ("statement values without filing references", bare_values),
+        ("quarterly statements omitted", lambda: omit("statements", "quarterly")),
+        ("filing list omitted", lambda: omit("filings")),
+        ("filing excerpts omitted", lambda: omit("filing_text")),
+    ]
+    applied = []
+    for label, fn in steps:
+        if size() <= max_chars:
+            break
+        fn()
+        applied.append(label)
+    return applied
+
+
 class AnalystService:
-    def __init__(self, settings: Settings, client: XaiClient | None = None):
+    def __init__(self, settings: Settings, client: XaiClient | GroqClient | None = None):
         self.settings = settings
-        self.client = client or XaiClient(
-            settings.xai_key, settings.xai_base_url, settings.xai_model, settings.xai_timeout_seconds
-        )
+        if client is None:
+            model, timeout = settings.effective_ai_model, settings.xai_timeout_seconds
+            if settings.effective_ai_provider == "groq":
+                client = GroqClient(settings.ai_key, settings.groq_base_url, model, timeout)
+            else:
+                client = XaiClient(settings.ai_key, settings.xai_base_url, model, timeout)
+        self.client = client
+        self.provider = getattr(client, "provider", "xai")
+
+    @property
+    def free_tier(self) -> bool:
+        return self.provider == "groq"
+
+    @property
+    def completion_tokens(self) -> int:
+        """Output cap; Groq's gpt-oss models also spend reasoning tokens from it."""
+        return self.settings.ai_max_output_tokens + (1000 if self.provider == "groq" else 0)
 
     @property
     def problem(self) -> str | None:
         if not self.client.configured:
-            return "Not configured: set GROK_API (or XAI_API_KEY) in the server environment."
+            return "Not configured: set GROK_API (a Groq gsk_ key or an xAI xai- key) in the server environment."
         if not self.settings.grok_enabled:
             return "Turned off with GROK_ENABLED=false."
         return None
@@ -550,38 +640,51 @@ class AnalystService:
         return self.problem is None
 
     # ------------------------------------------------------------------ budget
-    def _usage_today(self, db: Session, day: date, exclude: int | None = None) -> tuple[Decimal, Decimal, int]:
+    def _usage_today(self, db: Session, day: date, exclude: int | None = None) -> tuple[Decimal, Decimal, int, int]:
+        """(spent USD, reserved USD, answers counted, tokens counted incl. reservations) for one UTC day."""
         spent = reserved = Decimal(0)
-        count = 0
+        count = tokens = 0
         for a in db.scalars(select(AiAnswer).where(AiAnswer.day == day, AiAnswer.id != (exclude or -1))):
+            u = a.usage or {}
             if a.status == "running":
                 reserved += a.reserved_usd or 0
+                tokens += int(u.get("reserved_tokens") or 0)
                 count += 1
             elif a.status in ("done", "failed"):
                 spent += a.cost_usd or 0
+                counted = u.get("counted_tokens")
+                tokens += int(
+                    counted if counted is not None else (u.get("input_tokens") or 0) + (u.get("output_tokens") or 0)
+                )
                 count += 1
-        return spent, reserved, count
+        return spent, reserved, count, tokens
 
     def status(self, db: Session) -> dict:
         self.recover_stale(db)
         day = datetime.now(UTC).date()
-        spent, reserved, count = self._usage_today(db, day)
+        spent, reserved, count, tokens = self._usage_today(db, day)
         return {
             "enabled": self.enabled,
             "reason": self.problem,
+            "provider": self.provider,
+            "provider_label": "Groq (free tier)" if self.free_tier else "xAI",
             "model": self.client.model,
             "key_format": self.client.key_format,
-            "tools": ["read_filing (SEC, read-only)"],
+            "tools": [] if self.free_tier else ["read_filing (SEC, read-only)"],
             "web_search": False,
+            "provider_limits": getattr(self.client, "last_limits", None) or None,
             "budget": {
                 "day": day,
-                "limit_usd": _num(self.settings.ai_daily_budget_usd),
+                "limit_usd": None if self.free_tier else _num(self.settings.ai_daily_budget_usd),
                 "spent_usd": _num(spent),
                 "reserved_usd": _num(reserved),
+                "tokens_used": tokens,
+                "tokens_limit": self.settings.ai_daily_tokens if self.free_tier else None,
+                "request_tokens_limit": self.settings.ai_request_tokens if self.free_tier else None,
                 "requests_used": count,
                 "requests_limit": self.settings.ai_daily_requests,
                 "max_output_tokens": self.settings.ai_max_output_tokens,
-                "max_tool_calls": self.settings.ai_max_tool_calls,
+                "max_tool_calls": 0 if self.free_tier else self.settings.ai_max_tool_calls,
             },
         }
 
@@ -595,16 +698,29 @@ class AnalystService:
         cost = (tokens_in * pin + (1 + t) * self.settings.ai_max_output_tokens * pout) / 1e6
         return Decimal(str(round(cost * 1.1, 6)))  # 10% margin for tokenizer differences
 
-    def reserve(self, db: Session, answer: AiAnswer, estimate: Decimal) -> str | None:
-        """Reserve the worst-case cost before dispatch. Returns a refusal reason, or None when reserved."""
+    def reserve(self, db: Session, answer: AiAnswer, estimate: Decimal, tokens: int = 0) -> str | None:
+        """Reserve the worst case before dispatch (USD for xAI, tokens for Groq's free tier). Returns a refusal
+        reason, or None when reserved."""
         with _BUDGET_LOCK:  # one process; PostgreSQL also gets a transaction-scoped advisory lock below
             if db.get_bind().dialect.name == "postgresql":
                 db.execute(text("SELECT pg_advisory_xact_lock(724301)"))
-            spent, reserved, count = self._usage_today(db, answer.day, exclude=answer.id)
-            limit = Decimal(str(self.settings.ai_daily_budget_usd))
+            spent, reserved, count, used_tokens = self._usage_today(db, answer.day, exclude=answer.id)
             if count >= self.settings.ai_daily_requests:
                 db.rollback()
                 return f"Daily request limit reached ({self.settings.ai_daily_requests} answers per UTC day)."
+            if self.free_tier:
+                cap = self.settings.ai_daily_tokens
+                if used_tokens + tokens > cap:
+                    db.rollback()
+                    return (
+                        f"Daily token allowance would be exceeded: {used_tokens:,} of {cap:,} tokens used or reserved "
+                        f"today, and this request may use up to {tokens:,}."
+                    )
+                answer.usage = {"reserved_tokens": tokens}
+                answer.reserved_usd = Decimal(0)
+                db.commit()
+                return None
+            limit = Decimal(str(self.settings.ai_daily_budget_usd))
             if spent + reserved + estimate > limit:
                 db.rollback()
                 return (
@@ -622,6 +738,8 @@ class AnalystService:
         for a in stale:
             a.status, a.error = "failed", "Interrupted before it finished (for example by a server restart)."
             a.cost_usd = a.reserved_usd or Decimal(0)
+            u = a.usage or {}
+            a.usage = {**u, "counted_tokens": int(u.get("reserved_tokens") or 0)}
             a.finished_at = datetime.now(UTC)
         if stale:
             db.commit()
@@ -696,6 +814,8 @@ class AnalystService:
                 "coverage_notes": ev.notes,
                 "sources": ev.sources,
             }
+            if self.free_tier:
+                return await self._run_free_tier(db, answer, payload, ev, step)
             chars = len(json.dumps(payload, default=str))
             tools = self.settings.ai_max_tool_calls
             refusal = self.reserve(db, answer, self.estimate_usd(chars))
@@ -732,6 +852,83 @@ class AnalystService:
         finally:
             db.commit()
 
+    async def _run_free_tier(self, db: Session, answer: AiAnswer, payload: dict, ev: Evidence, step) -> None:
+        """Groq: one strict structured call (no tools: Groq cannot combine them with structured output), with the
+        evidence trimmed to fit one request under the per-minute token limit."""
+        completion = self.completion_tokens
+        other = len(json.dumps({**payload, "sources": []}, default=str)) + len(INSTRUCTIONS) + 2400  # + schema
+        max_chars = int(max(4000, (self.settings.ai_request_tokens - completion) * 3.2))
+        trims = compact_evidence(ev, max_chars, other)
+        if trims:
+            step("Evidence trimmed to fit the free tier's request size: " + "; ".join(trims) + ".")
+        payload = {**payload, "sources": ev.sources}
+        chars = len(json.dumps(payload, default=str)) + len(INSTRUCTIONS) + 2400
+        tokens = int(chars / 3.2) + completion
+        refusal = self.reserve(db, answer, Decimal(0), tokens)
+        if refusal:
+            answer.status, answer.error, answer.finished_at = "refused", refusal, datetime.now(UTC)
+            answer.cost_usd = Decimal(0)
+            db.commit()
+            return
+        answer.model = self.client.model
+        step(f"Asking {self.client.model} on Groq (one structured, cited answer).")
+        usage = self._new_usage()
+        usage["cost_source"] = "Groq free tier: not billed"
+        answer._live_usage = usage
+        body = {
+            "messages": [
+                {"role": "system", "content": INSTRUCTIONS},
+                {"role": "user", "content": json.dumps(payload, default=str)},
+            ],
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {"name": "research_answer", "strict": True, "schema": LEAN_SCHEMA},
+            },
+            "max_completion_tokens": completion,
+            "temperature": 0.2,
+            "reasoning_effort": self.settings.groq_reasoning_effort,
+            "include_reasoning": False,
+        }
+        resp = await self._chat(body, usage)
+        raw = _parse_chat(resp)
+        step("Checking every point against the evidence.")
+        output, flags = validate_answer(raw, ev.by_id())
+        answer.output, answer.flags, answer.sources = output, flags, list(ev.sources)
+        answer.usage = {**usage, "reserved_tokens": tokens, "trimmed": trims}
+        answer.cost_usd = Decimal(0)
+        answer.status, answer.finished_at = "done", datetime.now(UTC)
+        step(f"Done: {len(flags)} check(s) flagged." if flags else "Done: no checks flagged.")
+
+    async def _chat(self, body: dict, usage: dict) -> dict:
+        """One Groq call; if an optional setting is rejected, retry once without it (recorded in usage)."""
+        try:
+            resp = await asyncio.to_thread(self.client.chat, body)
+        except XaiError as err:
+            if err.kind != "bad_request":
+                raise
+            reduced = {
+                k: v for k, v in body.items() if k not in ("reasoning_effort", "include_reasoning", "temperature")
+            }
+            if re.search(r"json|schema|response_format|strict", err.message, re.I):
+                reduced["response_format"] = {"type": "json_object"}
+                reduced["messages"] = [
+                    {"role": "system", "content": INSTRUCTIONS + "\nReturn only a JSON object matching this schema: "
+                     + json.dumps(LEAN_SCHEMA)},
+                    body["messages"][1],
+                ]  # fmt: skip
+            if reduced == body:
+                raise
+            log.warning("Groq rejected a request option; retrying without it: %s", err.message)
+            usage.setdefault("fallbacks", []).append(err.message[:160])
+            resp = await asyncio.to_thread(self.client.chat, reduced)
+        u = resp.get("usage") if isinstance(resp, dict) else None
+        u = u if isinstance(u, dict) else {}
+        usage["calls"] += 1
+        usage["input_tokens"] += int(u.get("prompt_tokens") or 0)
+        usage["output_tokens"] += int(u.get("completion_tokens") or 0)
+        usage["reasoning_tokens"] += int((u.get("completion_tokens_details") or {}).get("reasoning_tokens") or 0)
+        return resp
+
     def _fail(self, db: Session, answer: AiAnswer, message: str, kind: str | None = None) -> None:
         """Rejected requests (bad key, bad request, rate/credit limit) are not billed: only usage xAI reported counts.
         After a timeout or outage a call may have run without a reply, so the reservation is kept (conservative)."""
@@ -743,8 +940,14 @@ class AnalystService:
             answer.cost_usd = max(used, answer.reserved_usd)
         else:
             answer.cost_usd = used
-        if live:
-            answer.usage = dict(live)
+        reserved_tokens = int((answer.usage or {}).get("reserved_tokens") or 0)
+        if live or reserved_tokens:
+            usage = dict(live) if live else {}
+            if kind in ("timeout", "unavailable") and reserved_tokens:
+                usage["counted_tokens"] = reserved_tokens  # a call may have run without a reply
+            else:
+                usage.setdefault("counted_tokens", (usage.get("input_tokens") or 0) + (usage.get("output_tokens") or 0))
+            answer.usage = usage
 
     @staticmethod
     def _new_usage() -> dict:
@@ -858,6 +1061,25 @@ def _parse_output(resp: dict) -> dict:
     raw = "".join(chunks).strip() or str(resp.get("output_text") or "").strip()
     if resp.get("status") == "incomplete":
         raise XaiError("malformed", "The model ran out of output tokens before finishing the answer.")
+    if raw.startswith("```"):
+        raw = raw.strip("`").removeprefix("json").strip()
+    try:
+        data = json.loads(raw)
+    except ValueError as exc:
+        raise XaiError("malformed", "The model did not return the required JSON answer.") from exc
+    if not isinstance(data, dict):
+        raise XaiError("malformed", "The model did not return the required JSON answer.")
+    return data
+
+
+def _parse_chat(resp: dict) -> dict:
+    choices = resp.get("choices") or []
+    if not choices or not isinstance(choices[0], dict):
+        raise XaiError("malformed", "The model returned no answer.")
+    choice = choices[0]
+    if choice.get("finish_reason") == "length":
+        raise XaiError("malformed", "The model ran out of output tokens before finishing the answer.")
+    raw = str((choice.get("message") or {}).get("content") or "").strip()
     if raw.startswith("```"):
         raw = raw.strip("`").removeprefix("json").strip()
     try:

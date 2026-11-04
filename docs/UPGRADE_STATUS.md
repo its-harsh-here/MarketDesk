@@ -25,7 +25,7 @@ Roadmap: `docs/MARKETDESK_ROADMAP.txt`. Older history and decisions: `docs/STATU
 | Alerts + worker | Price, crossing, completed-session volume/volatility and SEC filing rules; cooldown auto-rearm; quiet hours; unique event and delivery keys; unified inbox with scheduled morning/end-of-session briefings (exchange calendars); single worker every `ALERT_POLL_SECONDS` (300 s), started 45 s after the web server at nice 10 in single-container mode | No email/Telegram/push delivery; filing rules need `SEC_USER_AGENT` |
 | Briefing | Rule-based: largest watchlist moves, distance to alert thresholds, recent alert events, journal reviews due | No Grok narrative (optional, M03/M05) |
 | Journal | Thesis, risks, invalidation, decision, conviction, horizon, tags; immutable versions with change notes and evidence snapshots; then-vs-now comparison; review queue and history; plain-text rendering; filters | No Grok counterargument yet |
-| Grok research | Evidence-first cited answers (results, catalysts, compare, ask) with code-side checks, daily budget and request caps, reuse, saved answers | Real xAI call verified only on the deployed app; no web/X search |
+| AI research | Evidence-first cited answers (results, catalysts, compare, ask) on Groq's free tier (default) or xAI, with code-side checks, token/dollar and request caps, reuse, saved answers | No web search; Groq answers use one call without extra filing lookups |
 | Settings/diagnostics | Theme, density, default watchlist, timezone, data status (provider health, storage, DB round trip, created-at, worker), backup guidance, attribution; `Server-Timing` header on `/api` responses | — |
 | AI | None. No xAI/Grok code or keys | M03 |
 
@@ -599,6 +599,23 @@ saved answers per listing. Settings shows status, model, today's spend and the l
 **Docs fix:** the M08 README edit had removed the Alerts, Tests, Layout, Runtime versions and Attribution sections (and
 the M10 journal section was therefore never inserted). All are restored from history, and the journal and Grok sections
 added.
+
+## M03 follow-up — Groq free tier as the provider (4 Nov 2026)
+The owner's key turned out to be a Groq key and the owner chose Groq's free tier.
+- **Verified docs (console.groq.com, 4 Nov 2026):** chat completions at `https://api.groq.com/openai/v1`; strict
+  json_schema output on `openai/gpt-oss-120b`, `gpt-oss-20b`, `qwen/qwen3.8-27b`; structured output cannot be combined
+  with tool use; `reasoning_effort` and `include_reasoning`; listed base limits for gpt-oss-120b 30 requests/min,
+  1,000/day, 8,000 tokens/min, 200,000 tokens/day; 429 with `retry-after`; `x-ratelimit-*` headers.
+- **Implementation:** provider chosen from the key prefix; Groq client (stdlib) with quota headers captured; one strict
+  structured call per answer (`openai/gpt-oss-120b`, reasoning low, reasoning text omitted, 2,800 completion tokens);
+  evidence trimmed in fixed steps until the request fits 7,000 tokens (source ids unchanged; trims listed on the
+  answer); daily token allowance 150,000 and 30 answers, reserved before the call and counted from reported usage;
+  a 429 waits once if `retry-after` ≤ 20 s; rejected optional settings are dropped once (json_object fallback).
+- **UI:** "Ask AI" (provider-neutral); answers name the model and provider; Settings shows provider, key shape,
+  today's tokens and the provider's remaining requests.
+- **Tests:** 9 Groq tests (provider choice, request shape, token allowance, truncated output, 429/413, option
+  fallbacks, trimming with stable ids, HTTP client and quota headers); browser journeys now run the Groq path against
+  the local fake endpoint.
 
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.

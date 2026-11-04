@@ -5,13 +5,19 @@ export type AiKind = "ask" | "results" | "catalysts" | "compare";
 export type AiStatus = {
   enabled: boolean;
   reason: string | null;
+  provider: "groq" | "xai";
+  provider_label: string;
   model: string;
   key_format: string | null;
+  provider_limits: { remaining_requests_today?: string; remaining_tokens_this_minute?: string } | null;
   tools: string[];
   web_search: boolean;
   budget: {
     day: string;
-    limit_usd: string;
+    limit_usd: string | null;
+    tokens_used: number;
+    tokens_limit: number | null;
+    request_tokens_limit: number | null;
     spent_usd: string;
     reserved_usd: string;
     requests_used: number;

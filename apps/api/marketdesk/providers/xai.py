@@ -29,6 +29,8 @@ class XaiError(Exception):
 
 
 class XaiClient:
+    provider = "xai"
+
     def __init__(self, api_key: str | None, base_url: str, model: str, timeout: float = 90.0, retries: int = 1):
         # Hosting dashboards make it easy to paste surrounding whitespace or quotes; a key never contains them.
         self._key = (api_key or "").strip().strip("'\"").strip()

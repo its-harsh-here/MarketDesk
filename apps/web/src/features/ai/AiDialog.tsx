@@ -47,7 +47,7 @@ function SourceDetail({ s, tz }: { s: AiSource; tz?: string }) {
   );
 }
 
-function AnswerView({ a }: { a: AiAnswer }) {
+function AnswerView({ a, providerLabel }: { a: AiAnswer; providerLabel: string }) {
   const { data: prefs } = usePrefs();
   const tz = prefs?.display_timezone;
   const [showSources, setShowSources] = useState(false);
@@ -67,9 +67,9 @@ function AnswerView({ a }: { a: AiAnswer }) {
   }
   if (!o) return null;
   return (
-    <article className="space-y-4" aria-label="Grok answer">
+    <article className="space-y-4" aria-label="AI answer">
       <div>
-        <p className="text-xs font-medium text-accent-text">Model output · Grok ({a.model}) · interpretation of the sources listed · not investment advice</p>
+        <p className="text-xs font-medium text-accent-text">Model output · {a.model} via {providerLabel} · interpretation of the sources listed · not investment advice</p>
         <h3 className="mt-1 text-[15px] font-semibold text-fg">{o.headline}</h3>
       </div>
       {a.flags.length > 0 && (
@@ -129,7 +129,7 @@ function AnswerView({ a }: { a: AiAnswer }) {
         {a.status === "reused" ? `Reused answer #${a.reused_from} (same request, unchanged evidence; no new cost). ` : ""}
         Generated {formatInstant(a.finished_at ?? a.created_at, tz)} · data cutoff {formatInstant(a.data_cutoff, tz)}
         {a.usage ? ` · ${a.usage.input_tokens.toLocaleString()} input / ${a.usage.output_tokens.toLocaleString()} output tokens · ${a.usage.tool_calls} lookup(s)` : ""}
-        {a.cost_usd !== null ? ` · cost $${Number(a.cost_usd).toFixed(4)}` : ""}. Figures come from the sources; Grok wrote the wording and interpretation.
+        {a.cost_usd !== null && Number(a.cost_usd) > 0 ? ` · cost $${Number(a.cost_usd).toFixed(4)}` : ""}. Figures come from the sources; the model wrote the wording and interpretation.
       </p>
     </article>
   );
@@ -177,14 +177,21 @@ export function AiDialog() {
       setError(errorMessage(err));
     }
   };
-  const budget = useMemo(() => (st ? `Today: $${Number(st.budget.spent_usd).toFixed(3)} spent${Number(st.budget.reserved_usd) ? `, $${Number(st.budget.reserved_usd).toFixed(3)} in progress` : ""} of $${Number(st.budget.limit_usd).toFixed(2)} · ${st.budget.requests_used} of ${st.budget.requests_limit} answers` : ""), [st]);
+  const budget = useMemo(() => {
+    if (!st) return "";
+    const b = st.budget;
+    const spend = b.tokens_limit
+      ? `${b.tokens_used.toLocaleString()} of ${b.tokens_limit.toLocaleString()} tokens`
+      : `$${Number(b.spent_usd).toFixed(3)} spent${Number(b.reserved_usd) ? `, $${Number(b.reserved_usd).toFixed(3)} in progress` : ""} of $${Number(b.limit_usd).toFixed(2)}`;
+    return `Today: ${spend} · ${b.requests_used} of ${b.requests_limit} answers`;
+  }, [st]);
 
   return (
     <Dialog
       open={isOpen}
       onOpenChange={(o) => !o && close()}
-      title={`Research ${symbol} with Grok`}
-      description="MarketDesk retrieves and computes the evidence; Grok writes a cited answer from it. Every point is checked against the sources, and figures never come from the model."
+      title={`Research ${symbol}`}
+      description={`MarketDesk retrieves and computes the evidence; ${st ? `${st.model} (${st.provider_label})` : "the model"} writes a cited answer from it. Every point is checked against the sources, and figures never come from the model.`}
       size="xl"
       footer={<Button variant="ghost" onClick={close}>Close</Button>}
     >
@@ -193,7 +200,7 @@ export function AiDialog() {
       ) : status.isError ? (
         <ErrorState message={errorMessage(status.error)} onRetry={() => status.refetch()} />
       ) : !st?.enabled ? (
-        <InlineNotice tone="info">Grok research is unavailable: {st?.reason} Everything else in MarketDesk works without it.</InlineNotice>
+        <InlineNotice tone="info">AI research is unavailable: {st?.reason} Everything else in MarketDesk works without it.</InlineNotice>
       ) : (
         <div className="space-y-4">
           <div className="space-y-3">
@@ -234,7 +241,7 @@ export function AiDialog() {
             )}
             {error && <InlineNotice tone="neg"><span role="alert">{error}</span></InlineNotice>}
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs text-fg-3">{budget} · {st.model} · read-only filing lookups only, no web search</span>
+              <span className="text-xs text-fg-3">{budget} · {st.model} · {st.tools.length ? "read-only filing lookups, " : "one call, "}no web search</span>
               <Button variant="primary" icon={<Sparkles className="size-4" aria-hidden />} disabled={!canRun} loading={m.ask.isPending || answer.data?.status === "running"} onClick={run} title={readOnly ? "Read-only demo" : undefined}>
                 Run
               </Button>
@@ -242,7 +249,7 @@ export function AiDialog() {
           </div>
           {current !== null && (
             <div className="border-t border-line-subtle pt-4">
-              {answer.isLoading ? <SkeletonRows rows={3} /> : answer.isError ? <ErrorState message={errorMessage(answer.error)} onRetry={() => answer.refetch()} /> : answer.data && <AnswerView a={answer.data} />}
+              {answer.isLoading ? <SkeletonRows rows={3} /> : answer.isError ? <ErrorState message={errorMessage(answer.error)} onRetry={() => answer.refetch()} /> : answer.data && <AnswerView a={answer.data} providerLabel={st.provider_label} />}
             </div>
           )}
           {previous.data && previous.data.length > 0 && (

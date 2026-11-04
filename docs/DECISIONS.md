@@ -184,3 +184,10 @@ Consequential choices, newest last. Routine choices live in code comments.
     honoured (with `XAI_API_KEY` as an alias); a configured key is the opt-in and `GROK_ENABLED=false` the off switch.
     Default model `grok-4.3` for cost; `grok-4.7` is one setting away. Only public data and the question leave the
     server; web/X search stay off.
+42. **Groq's free tier as the AI provider (owner decision, 4 Nov 2026).** The owner's key in `GROK_API` turned out to be
+    a Groq key (groq.com, a different company from xAI) and the owner chose Groq's free tier. The analyst keeps one
+    evidence pipeline and chooses the client from the key prefix (`gsk_` Groq, `xai-` xAI; `AI_PROVIDER` overrides).
+    On Groq: `openai/gpt-oss-120b` (strict json_schema), reasoning effort low with reasoning text omitted, one call per
+    answer because Groq does not combine structured output with tool use, evidence trimmed deterministically (source
+    ids unchanged) so a request stays under the free tier's 8,000 tokens per minute, and a daily token allowance below
+    its 200,000 tokens per day. Free-tier usage is recorded with tokens and $0 cost.

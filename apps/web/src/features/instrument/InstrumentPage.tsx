@@ -193,10 +193,10 @@ export function InstrumentPage() {
               size="sm"
               variant="ghost"
               icon={<Sparkles className="size-3.5" aria-hidden />}
-              title={ai.data && !ai.data.enabled ? `Grok research unavailable: ${ai.data.reason}` : "Cited research from the evidence MarketDesk retrieves"}
+              title={ai.data && !ai.data.enabled ? `AI research unavailable: ${ai.data.reason}` : "Cited research from the evidence MarketDesk retrieves"}
               onClick={() => open({ kind: "ai", symbol })}
             >
-              Ask Grok
+              Ask AI
             </Button>
           </div>
           {holdReason && inst && <p className="w-full text-xs text-fg-3">{holdReason}</p>}
