@@ -166,6 +166,7 @@ def _populate(api, app):
     api.post("/api/fixture/advance")
     with db_session() as db:
         assert asyncio.run(run_evaluation_cycle(db, app.state.market))["triggered"] == 1
+    assert api.post("/api/fixture/briefing").status_code == 201  # M05: stored briefing + delivery rows
     api.post(
         "/api/journal", json={"symbol": "SX:AURORA", "entry_date": "2026-01-02", "title": "Thesis", "tags": ["core"]}
     )
@@ -181,6 +182,7 @@ def _snapshot(api):
         "realized": summary["realized_pnl"],
         "alerts": [(a["direction"], a["target_price"], a["active"]) for a in api.get("/api/alerts").json()],
         "events": len(api.get("/api/alert-events").json()),
+        "inbox": [(i["type"], i["title"], i["read_at"]) for i in api.get("/api/inbox").json()],
         "journal": [(e["title"], e["tags"]) for e in api.get("/api/journal").json()["items"]],
         "prefs": {k: v for k, v in api.get("/api/settings").json().items() if k in ("theme", "display_timezone")},
     }
@@ -223,6 +225,7 @@ def _restore_and_compare(target_settings, data, before):
 def test_backup_round_trip_into_empty_sqlite(tmp_path):
     data, before = _source(tmp_path)
     assert data["counts"]["ledger_transactions"] == 3 and data["counts"]["alert_events"] == 1
+    assert data["counts"]["briefings"] == 1 and data["counts"]["alert_deliveries"] == 1
     target = make_settings(
         tmp_path / "dst",
         marketdesk_env="development",

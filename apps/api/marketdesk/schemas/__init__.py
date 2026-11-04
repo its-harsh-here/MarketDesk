@@ -334,10 +334,25 @@ class ImportCommitOut(Model):
 
 
 # ----------------------------------------------------------------------------- alerts
+RuleName = Literal["PRICE", "CROSS", "VOLUME", "VOLATILITY", "FILING"]
+HHMM = Annotated[str, Field(pattern=r"^([01][0-9]|2[0-3]):[0-5][0-9]$")]
+
+
+class AlertParams(Model):
+    lookback: int | None = Field(default=None, ge=5, le=60)
+    forms: list[Literal["10-K", "10-Q", "8-K", "20-F", "6-K", "DEF 14A"]] | None = Field(default=None, max_length=6)
+
+
 class AlertIn(Model):
     symbol: str = Field(min_length=1, max_length=32)
-    direction: Literal["ABOVE", "BELOW"]
-    target_price: Decimal = Field(gt=0)
+    rule: RuleName = "PRICE"
+    direction: Literal["ABOVE", "BELOW"] = "ABOVE"
+    # PRICE/CROSS: the price level. VOLUME/VOLATILITY: the multiple. FILING: not used.
+    target_price: Decimal | None = Field(default=None, gt=0)
+    params: AlertParams | None = None
+    cooldown_minutes: int | None = Field(default=None, ge=5, le=7 * 24 * 60)
+    quiet_start: HHMM | None = None
+    quiet_end: HHMM | None = None
     note: str | None = Field(default=None, max_length=280)
 
 
@@ -346,6 +361,16 @@ class AlertPatch(Model):
     target_price: Decimal | None = Field(default=None, gt=0)
     note: str | None = Field(default=None, max_length=280)
     active: bool | None = None
+    cooldown_minutes: int | None = Field(default=None, ge=5, le=7 * 24 * 60)
+    quiet_start: HHMM | None = None
+    quiet_end: HHMM | None = None
+
+
+class DeliveryOut(Model):
+    channel: str
+    status: Literal["delivered", "held", "failed"]
+    attempts: int
+    last_error: str | None = None
 
 
 class AlertEventOut(Model):
@@ -353,21 +378,34 @@ class AlertEventOut(Model):
     alert_id: int
     symbol: str
     arm_seq: int
+    rule: str
     direction: str
-    target_price: Dec
-    observed_price: Dec
+    target_price: Dec | None = None
+    observed_price: Dec | None = None
     observed_market_time: datetime | None = None
     provider: str
     triggered_at: datetime
     read_at: datetime | None = None
+    explanation: str | None = None
+    link: str | None = None
+    deliver_after: datetime | None = None
+    deliveries: list[DeliveryOut] = []
 
 
 class AlertOut(Model):
     id: int
     symbol: str
     instrument: InstrumentOut
+    rule: str
+    description: str
     direction: str
     target_price: Dec
+    params: dict = {}
+    cooldown_minutes: int | None = None
+    rearm_at: datetime | None = None
+    quiet_start: str | None = None
+    quiet_end: str | None = None
+    last_skip_reason: str | None = None
     note: str | None = None
     active: bool
     arm_seq: int
@@ -377,6 +415,45 @@ class AlertOut(Model):
     last_observed_market_time: datetime | None = None
     created_at: datetime
     events: list[AlertEventOut] = []
+
+
+class StoredBriefingOut(Model):
+    id: int
+    kind: Literal["morning", "close"]
+    market: str
+    market_name: str
+    session_date: date
+    provider: str
+    created_at: datetime
+    read_at: datetime | None = None
+    title: str
+    items: list[BriefingItem]
+    method: str
+    data_status: str | None = None
+    reference_session: str | None = None
+
+
+class InboxItemOut(Model):
+    type: Literal["alert", "briefing"]
+    id: int
+    at: datetime
+    read_at: datetime | None = None
+    market: str | None = None
+    title: str
+    alert: AlertEventOut | None = None
+    briefing: StoredBriefingOut | None = None
+
+
+class InboxCountsOut(Model):
+    alerts: int
+    briefings: int
+    total: int
+    held: int
+
+
+class InboxReadIn(Model):
+    type: Literal["alert", "briefing"] | None = None
+    id: int | None = None
 
 
 class WorkerStatusOut(Model):
@@ -502,7 +579,7 @@ class StatusOut(Model):
 
 
 class BriefingItem(Model):
-    kind: Literal["move", "threshold", "alert", "review", "coverage", "info"]
+    kind: Literal["move", "threshold", "alert", "review", "coverage", "info", "session", "volume"]
     tone: Literal["positive", "negative", "neutral", "info", "warning"]
     symbol: str | None = None
     text: str

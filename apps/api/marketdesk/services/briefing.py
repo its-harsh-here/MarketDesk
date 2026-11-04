@@ -108,7 +108,7 @@ async def build_briefing(db: Session, market: MarketDataService, today: date) ->
         )
 
     # Distance to active alert thresholds (closest first).
-    active = list(db.scalars(select(Alert).where(Alert.active.is_(True))))
+    active = list(db.scalars(select(Alert).where(Alert.active.is_(True), Alert.rule.in_(("PRICE", "CROSS")))))
     if active:
         res = await market.quotes(list({a.instrument.symbol for a in active}))
         dist = []
@@ -150,12 +150,9 @@ async def build_briefing(db: Session, market: MarketDataService, today: date) ->
                 "kind": "alert",
                 "tone": "warning",
                 "symbol": a.instrument.symbol,
-                "text": f"Alert triggered: {a.instrument.symbol} observed at "
-                f"{_fmt_price(ev.observed_price, a.instrument.currency)} ({ev.direction.lower()} "
-                f"{_fmt_price(ev.target_price, a.instrument.currency)}).",
-                "detail": (
-                    f"Detected {_fmt_time(ev.triggered_at, tz)}; market time {_fmt_time(ev.observed_market_time, tz)}."
-                ),
+                "text": f"Alert triggered: {a.instrument.symbol}.",
+                "detail": (ev.explanation or "")
+                + f" Detected {_fmt_time(ev.triggered_at, tz)}; market time {_fmt_time(ev.observed_market_time, tz)}.",
             }
         )
 

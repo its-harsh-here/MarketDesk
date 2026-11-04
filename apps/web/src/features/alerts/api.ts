@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type Alert, type AlertEvent } from "@/lib/api/client";
+import { api, type Alert, type InboxCounts, type InboxItem, type StoredBriefing } from "@/lib/api/client";
 import { useStatus } from "@/features/settings/api";
 
 /**
@@ -21,20 +21,41 @@ export function useAlerts() {
   return useQuery({ queryKey: ["alerts"], queryFn: () => api.get<Alert[]>("/api/alerts"), refetchInterval });
 }
 
-export function useAlertEvents(unread = false) {
-  const refetchInterval = useAlertPollMs();
-  return useQuery({
-    queryKey: ["alert-events", unread],
-    queryFn: () => api.get<AlertEvent[]>("/api/alert-events", { unread, limit: 50 }),
-    refetchInterval,
-  });
-}
+export type RuleName = "PRICE" | "CROSS" | "VOLUME" | "VOLATILITY" | "FILING";
 
 export interface AlertInput {
   symbol: string;
+  rule: RuleName;
   direction: "ABOVE" | "BELOW";
-  target_price: string;
+  target_price?: string | null;
+  params?: { lookback?: number; forms?: string[] } | null;
+  cooldown_minutes?: number | null;
+  quiet_start?: string | null;
+  quiet_end?: string | null;
   note?: string | null;
+}
+
+export type AlertPatch = Partial<Omit<AlertInput, "symbol" | "rule" | "params">> & { active?: boolean };
+
+export interface InboxFilters {
+  type?: "alert" | "briefing";
+  market?: "IN" | "US";
+  unread?: boolean;
+}
+
+export function useInbox(filters: InboxFilters = {}, limit = 50) {
+  const refetchInterval = useAlertPollMs();
+  return useQuery({
+    queryKey: ["inbox", filters, limit],
+    queryFn: () => api.get<InboxItem[]>("/api/inbox", { ...filters, limit }),
+    refetchInterval,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useInboxCounts() {
+  const refetchInterval = useAlertPollMs();
+  return useQuery({ queryKey: ["inbox", "counts"], queryFn: () => api.get<InboxCounts>("/api/inbox/counts"), refetchInterval });
 }
 
 export function useAlertMutations() {
@@ -42,16 +63,30 @@ export function useAlertMutations() {
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["alerts"] });
     qc.invalidateQueries({ queryKey: ["alert-events"] });
+    qc.invalidateQueries({ queryKey: ["inbox"] });
     qc.invalidateQueries({ queryKey: ["briefing"] });
   };
   return {
     create: useMutation({ mutationFn: (body: AlertInput) => api.post<Alert>("/api/alerts", body), onSuccess: invalidate }),
     update: useMutation({
-      mutationFn: (v: { id: number; patch: Partial<AlertInput> & { active?: boolean } }) => api.patch<Alert>(`/api/alerts/${v.id}`, v.patch),
+      mutationFn: (v: { id: number; patch: AlertPatch }) => api.patch<Alert>(`/api/alerts/${v.id}`, v.patch),
       onSuccess: invalidate,
     }),
     rearm: useMutation({ mutationFn: (id: number) => api.post<Alert>(`/api/alerts/${id}/rearm`), onSuccess: invalidate }),
     remove: useMutation({ mutationFn: (id: number) => api.del<null>(`/api/alerts/${id}`), onSuccess: invalidate }),
-    readAll: useMutation({ mutationFn: () => api.post<{ updated: number }>("/api/alert-events/read"), onSuccess: invalidate }),
+    /** Mark one inbox item, or (no argument) everything delivered, as read. */
+    read: useMutation({
+      mutationFn: (item?: { type: InboxItem["type"]; id: number }) => api.post<{ updated: number }>("/api/inbox/read", item ?? {}),
+      onSuccess: invalidate,
+    }),
   };
+}
+
+/** Fixture harness only: write the end-of-session briefing for the current sample session. */
+export function useSampleBriefing() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<StoredBriefing>("/api/fixture/briefing"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inbox"] }),
+  });
 }

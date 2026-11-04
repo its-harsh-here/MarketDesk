@@ -1,9 +1,9 @@
 # MarketDesk
 
-A personal market research terminal for Indian equities, built on **real market data** from Yahoo Finance:
-watchlists, instrument charts and fundamentals, an INR portfolio ledger with CSV import/export, sampled price
-alerts, an investment journal and a rule-based morning briefing. It runs as a FastAPI web process (API + built React
-SPA on the same origin) plus one alert worker, on SQLite.
+A personal market research terminal for Indian and US listings, built on **real market data** from Yahoo Finance:
+watchlists, instrument charts and fundamentals, an INR portfolio ledger with CSV import/export, sampled alerts (price,
+crossing, volume, volatility, SEC filings) with an inbox, an investment journal and rule-based briefings. It runs as a
+FastAPI web process (API + built React SPA on the same origin) plus one alert worker, on SQLite or PostgreSQL.
 
 It is a research and record-keeping tool. It does not place orders, connect to a broker, or make recommendations.
 No paid or LLM APIs are used.
@@ -164,7 +164,7 @@ If Docker Hub rate-limits pulls, set `PYTHON_IMAGE=mirror.gcr.io/library/python:
 **Database-agnostic backups (SQLite or PostgreSQL, works on Render Free without a shell):**
 - Download: **Settings → Export and backup → Full backup (JSON)**, or `python -m marketdesk.cli export-data FILE.json`.
   It is one consistent snapshot of settings, instruments, watchlists, ledger transactions and import batches, alerts
-  with their observations and events, and the journal (caches, login attempts and worker heartbeats are left out).
+  with their observations, events and deliveries, stored briefings, and the journal (caches, login attempts and worker heartbeats are left out).
   The file is private; it carries a SHA-256 checksum and the schema revision.
 - Restore into an **empty** database (for example a new Neon branch/database or a fresh SQLite file), from any
   machine with the repository: `cd apps/api && DATABASE_URL='postgresql://…new-db…' uv run marketdesk import-data FILE.json --yes`.
@@ -230,12 +230,30 @@ CSV import uses the canonical columns `date,type,symbol,quantity,price,fees,amou
 (a template is downloadable in the import dialog). Imports are previewed row by row, all-or-nothing, and duplicate rows
 are skipped. Exports neutralise spreadsheet formulas.
 
-## Alerts
+## Alerts, inbox and briefings
 
-Alerts are **sampled**: the worker polls quotes every `ALERT_POLL_SECONDS` (default 300) and fires once on the first
-observed match, then waits to be rearmed. Observations are keyed by market timestamp and events by `alert:arm`, so
-cached re-reads and worker restarts cannot duplicate events. Stale or failed quotes are never evaluated. Only in-app
-notifications exist. Alerts require the server and worker to be running.
+Alerts are **sampled**: the worker checks new data every `ALERT_POLL_SECONDS` (default 300). Rule types:
+
+| Rule | Fires when | Data |
+| --- | --- | --- |
+| Price at or above / below | the first sampled quote at or beyond the level | each new quote observation |
+| Crosses above / below | two consecutive sampled quotes lie on opposite sides of the level (the first quote after arming is only a baseline) | each new quote observation |
+| Unusual volume | a session's volume ≥ multiple × the average of the previous 5–60 sessions | completed daily sessions only |
+| Unusual daily move | a session's close-to-close move ≥ multiple × the standard deviation of the previous 5–60 daily moves | completed daily sessions only |
+| New SEC filing (US) | a new filing of the chosen forms appears; links to the document; keeps watching | SEC EDGAR (`SEC_USER_AGENT` required) |
+
+A session still trading (by the exchange calendar) is never compared with full days. Stale, failed or missing data is
+never evaluated, and the reason is shown on the rule. After firing, a rule waits for a manual rearm or rearms itself
+after an optional cooldown (5 minutes to 7 days). Quiet hours (display timezone) hold the in-app notice until the
+window ends; the event itself is still recorded. Event keys and per-channel delivery rows are unique, so cached
+re-reads, retries and worker restarts cannot duplicate events or notices. Only in-app notices exist (no email,
+Telegram or push). Alerts require the server and worker to be running.
+
+The **inbox** (Alerts page and the topbar bell) lists alert events and **briefings** with type/market/unread filters
+and read state. The worker writes a morning briefing before each NSE/BSE and NYSE/Nasdaq session and an
+end-of-session briefing after the close, timed by the exchange calendars and stored once per session: largest
+completed-session moves among your symbols, volume notes, triggered alerts, distance to price levels and due journal
+reviews. It uses fixed templates only: no model, no causes, no recommendations.
 
 ## Tests
 

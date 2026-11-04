@@ -20,7 +20,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDialogs } from "./dialogs";
 import { MOD } from "@/features/search/ShortcutsDialog";
-import { useAlertEvents, useAlertMutations } from "@/features/alerts/api";
+import { useAlertMutations, useInbox, useInboxCounts } from "@/features/alerts/api";
 import { applyTheme, usePatchPrefs, usePrefs, useSession, useStatus } from "@/features/settings/api";
 import { useBenchmarks, useSessions } from "@/features/market/api";
 import { REGION_LABEL, sessionText } from "@/lib/markets";
@@ -29,7 +29,7 @@ import { FreshnessBadge, Pill } from "@/components/ui/Badges";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { IconButton } from "@/components/ui/Button";
 import { api } from "@/lib/api/client";
-import { formatInstant, formatMoney, formatSessionDate } from "@/lib/format";
+import { formatInstant, formatMoney, formatRelative, formatSessionDate } from "@/lib/format";
 import { isTypingTarget, useGlobalKeys } from "@/lib/hooks";
 import { cn } from "@/lib/cn";
 
@@ -148,43 +148,45 @@ function ProviderStatus() {
 }
 
 function NotificationsMenu() {
-  const { data: unread } = useAlertEvents(true);
-  const { readAll } = useAlertMutations();
+  const { data: unread } = useInbox({ unread: true }, 6);
+  const { data: counts } = useInboxCounts();
+  const { read } = useAlertMutations();
   const navigate = useNavigate();
   const { data: session } = useSession();
-  const count = unread?.length ?? 0;
+  const count = counts?.total ?? 0;
   return (
     <DM.Root>
       <DM.Trigger asChild>
-        <IconButton label={count ? `Notifications: ${count} unread alert${count > 1 ? "s" : ""}` : "Notifications"} className="relative">
+        <IconButton label={count ? `Inbox: ${count} unread` : "Inbox"} className="relative">
           <Bell className="size-4" aria-hidden />
           {count > 0 && (
-            <span className="num absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-fg">{count}</span>
+            <span className="num absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-fg">{count > 99 ? "99+" : count}</span>
           )}
         </IconButton>
       </DM.Trigger>
       <DM.Portal>
         <DM.Content align="end" sideOffset={6} className="anim-pop z-50 w-80 rounded-[var(--radius-control)] border border-line bg-elevated p-1 shadow-[var(--shadow-pop)]">
           <div className="flex items-center justify-between px-2.5 py-2">
-            <span className="text-[13px] font-semibold">Alert notifications</span>
+            <span className="text-[13px] font-semibold">Inbox</span>
             {count > 0 && !session?.read_only && (
-              <button type="button" className="text-xs text-accent-text hover:underline" onClick={() => readAll.mutate()}>
+              <button type="button" className="text-xs text-accent-text hover:underline" onClick={() => read.mutate(undefined)}>
                 Mark all read
               </button>
             )}
           </div>
-          {count === 0 && <p className="px-2.5 pb-3 text-[13px] text-fg-3">No unread alerts. Alerts are evaluated by the worker process.</p>}
-          {unread?.slice(0, 6).map((e) => (
-            <DM.Item key={e.id} onSelect={() => navigate("/alerts")} className="cursor-pointer rounded-md px-2.5 py-2 text-[13px] outline-none data-[highlighted]:bg-hover">
-              <div className="num font-semibold text-fg">{e.symbol}</div>
-              <div className="text-fg-2">
-                Observed {formatMoney(e.observed_price)} ({e.direction.toLowerCase()} {formatMoney(e.target_price)})
+          {count === 0 && <p className="px-2.5 pb-3 text-[13px] text-fg-3">Nothing unread. Alerts and briefings are written by the worker process.</p>}
+          {unread?.map((it) => (
+            <DM.Item key={`${it.type}-${it.id}`} onSelect={() => navigate("/alerts")} className="cursor-pointer rounded-md px-2.5 py-2 text-[13px] outline-none data-[highlighted]:bg-hover">
+              <div className="font-semibold text-fg">{it.title}</div>
+              <div className="line-clamp-2 text-fg-2">
+                {it.alert?.explanation ?? it.briefing?.items.find((x) => x.kind === "move")?.text ?? it.briefing?.items[0]?.text}
               </div>
+              <div className="num mt-0.5 text-xs text-fg-3">{formatRelative(it.at)}</div>
             </DM.Item>
           ))}
           <DM.Separator className="my-1 h-px bg-line-subtle" />
           <DM.Item onSelect={() => navigate("/alerts")} className="cursor-pointer rounded-md px-2.5 py-2 text-[13px] text-fg-2 outline-none data-[highlighted]:bg-hover">
-            View all alerts
+            Open inbox
           </DM.Item>
         </DM.Content>
       </DM.Portal>

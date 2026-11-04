@@ -150,4 +150,12 @@ Consequential choices, newest last. Routine choices live in code comments.
     mixing year-to-date with quarterly values or currencies, never deriving Q4, and leaving industrial lines unmapped
     for banks/insurers. Non-US listings show "not applicable" instead of borrowing another listing's facts. Cached
     payloads reuse the market cache table; check history lives in `research_checks`.
-
+38. **M05 alert rules, delivery and briefings.** Crossing alerts need two observations on opposite sides (the first
+    after arming is a baseline), so a level already passed when the alert is created does not fire. Volume and
+    volatility rules use only sessions the exchange calendar says have finished; an unknown state counts as
+    unfinished. Every event has a unique key and one delivery row per channel, written with the cooldown state in a
+    single transaction; only the in-app channel exists, and a failing channel is recorded rather than retried
+    silently. Quiet hours hold the notice, never the event. Briefings are stored rows, unique per kind, market and
+    session date, timed by exchange calendars rather than clock rules, and are not produced from the historical sample
+    dataset (a fixture-only endpoint writes one for tests). Backup restore inserts only the columns a backup contains,
+    so older backups restore into their own revision and migrate forward.

@@ -767,6 +767,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Inbox */
+        get: operations["list_inbox_api_inbox_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/inbox/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Counts */
+        get: operations["counts_api_inbox_counts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/inbox/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark Read */
+        post: operations["mark_read_api_inbox_read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/journal": {
         parameters: {
             query?: never;
@@ -833,12 +884,14 @@ export interface components {
             symbol: string;
             /** Arm Seq */
             arm_seq: number;
+            /** Rule */
+            rule: string;
             /** Direction */
             direction: string;
             /** Target Price */
-            target_price: string;
+            target_price?: string | null;
             /** Observed Price */
-            observed_price: string;
+            observed_price?: string | null;
             /** Observed Market Time */
             observed_market_time?: string | null;
             /** Provider */
@@ -850,18 +903,43 @@ export interface components {
             triggered_at: string;
             /** Read At */
             read_at?: string | null;
+            /** Explanation */
+            explanation?: string | null;
+            /** Link */
+            link?: string | null;
+            /** Deliver After */
+            deliver_after?: string | null;
+            /**
+             * Deliveries
+             * @default []
+             */
+            deliveries: components["schemas"]["DeliveryOut"][];
         };
         /** AlertIn */
         AlertIn: {
             /** Symbol */
             symbol: string;
             /**
+             * Rule
+             * @default PRICE
+             * @enum {string}
+             */
+            rule: "PRICE" | "CROSS" | "VOLUME" | "VOLATILITY" | "FILING";
+            /**
              * Direction
+             * @default ABOVE
              * @enum {string}
              */
             direction: "ABOVE" | "BELOW";
             /** Target Price */
-            target_price: number | string;
+            target_price?: number | string | null;
+            params?: components["schemas"]["AlertParams"] | null;
+            /** Cooldown Minutes */
+            cooldown_minutes?: number | null;
+            /** Quiet Start */
+            quiet_start?: string | null;
+            /** Quiet End */
+            quiet_end?: string | null;
             /** Note */
             note?: string | null;
         };
@@ -872,10 +950,31 @@ export interface components {
             /** Symbol */
             symbol: string;
             instrument: components["schemas"]["InstrumentOut"];
+            /** Rule */
+            rule: string;
+            /** Description */
+            description: string;
             /** Direction */
             direction: string;
             /** Target Price */
             target_price: string;
+            /**
+             * Params
+             * @default {}
+             */
+            params: {
+                [key: string]: unknown;
+            };
+            /** Cooldown Minutes */
+            cooldown_minutes?: number | null;
+            /** Rearm At */
+            rearm_at?: string | null;
+            /** Quiet Start */
+            quiet_start?: string | null;
+            /** Quiet End */
+            quiet_end?: string | null;
+            /** Last Skip Reason */
+            last_skip_reason?: string | null;
             /** Note */
             note?: string | null;
             /** Active */
@@ -904,6 +1003,13 @@ export interface components {
              */
             events: components["schemas"]["AlertEventOut"][];
         };
+        /** AlertParams */
+        AlertParams: {
+            /** Lookback */
+            lookback?: number | null;
+            /** Forms */
+            forms?: ("10-K" | "10-Q" | "8-K" | "20-F" | "6-K" | "DEF 14A")[] | null;
+        };
         /** AlertPatch */
         AlertPatch: {
             /** Direction */
@@ -914,6 +1020,12 @@ export interface components {
             note?: string | null;
             /** Active */
             active?: boolean | null;
+            /** Cooldown Minutes */
+            cooldown_minutes?: number | null;
+            /** Quiet Start */
+            quiet_start?: string | null;
+            /** Quiet End */
+            quiet_end?: string | null;
         };
         /** BarOut */
         BarOut: {
@@ -944,7 +1056,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "move" | "threshold" | "alert" | "review" | "coverage" | "info";
+            kind: "move" | "threshold" | "alert" | "review" | "coverage" | "info" | "session" | "volume";
             /**
              * Tone
              * @enum {string}
@@ -1051,6 +1163,20 @@ export interface components {
             message?: string | null;
             /** Error Kind */
             error_kind?: string | null;
+        };
+        /** DeliveryOut */
+        DeliveryOut: {
+            /** Channel */
+            channel: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "delivered" | "held" | "failed";
+            /** Attempts */
+            attempts: number;
+            /** Last Error */
+            last_error?: string | null;
         };
         /** FixtureStateOut */
         FixtureStateOut: {
@@ -1227,6 +1353,47 @@ export interface components {
              * @default []
              */
             messages: string[];
+        };
+        /** InboxCountsOut */
+        InboxCountsOut: {
+            /** Alerts */
+            alerts: number;
+            /** Briefings */
+            briefings: number;
+            /** Total */
+            total: number;
+            /** Held */
+            held: number;
+        };
+        /** InboxItemOut */
+        InboxItemOut: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "alert" | "briefing";
+            /** Id */
+            id: number;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Read At */
+            read_at?: string | null;
+            /** Market */
+            market?: string | null;
+            /** Title */
+            title: string;
+            alert?: components["schemas"]["AlertEventOut"] | null;
+            briefing?: components["schemas"]["StoredBriefingOut"] | null;
+        };
+        /** InboxReadIn */
+        InboxReadIn: {
+            /** Type */
+            type?: ("alert" | "briefing") | null;
+            /** Id */
+            id?: number | null;
         };
         /** InstrumentOut */
         InstrumentOut: {
@@ -1625,6 +1792,44 @@ export interface components {
             database_created_at?: string | null;
             /** Round Trip Ms */
             round_trip_ms?: number | null;
+        };
+        /** StoredBriefingOut */
+        StoredBriefingOut: {
+            /** Id */
+            id: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "morning" | "close";
+            /** Market */
+            market: string;
+            /** Market Name */
+            market_name: string;
+            /**
+             * Session Date
+             * Format: date
+             */
+            session_date: string;
+            /** Provider */
+            provider: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Read At */
+            read_at?: string | null;
+            /** Title */
+            title: string;
+            /** Items */
+            items: components["schemas"]["BriefingItem"][];
+            /** Method */
+            method: string;
+            /** Data Status */
+            data_status?: string | null;
+            /** Reference Session */
+            reference_session?: string | null;
         };
         /** TransactionIn */
         TransactionIn: {
@@ -3281,6 +3486,93 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_inbox_api_inbox_get: {
+        parameters: {
+            query?: {
+                type?: ("alert" | "briefing") | null;
+                market?: ("IN" | "US") | null;
+                unread?: boolean;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxItemOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    counts_api_inbox_counts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxCountsOut"];
+                };
+            };
+        };
+    };
+    mark_read_api_inbox_read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InboxReadIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

@@ -21,6 +21,7 @@ import { useSnapshots } from "@/features/market/api";
 import { usePatchPrefs, usePrefs, useSession, useStatus } from "@/features/settings/api";
 import { useWatchlistMutations, useWatchlists } from "@/features/watchlists/api";
 import { WatchlistTable } from "@/features/watchlists/WatchlistTable";
+import { BriefingItems } from "@/features/briefing/BriefingItems";
 import { usePortfolioSummary } from "@/features/portfolio/api";
 import { useJournal } from "@/features/journal/api";
 import type { SortState } from "@/components/ui/DataTable";
@@ -28,14 +29,6 @@ import type { SortState } from "@/components/ui/DataTable";
 function useBriefing() {
   return useQuery({ queryKey: ["briefing"], queryFn: () => api.get<Briefing>("/api/briefing"), refetchInterval: 120_000 });
 }
-
-const toneDot: Record<string, string> = {
-  positive: "bg-pos",
-  negative: "bg-neg",
-  neutral: "bg-fg-3",
-  info: "bg-info",
-  warning: "bg-warn",
-};
 
 function BriefingPanel({ className }: { className?: string }) {
   const q = useBriefing();
@@ -54,28 +47,7 @@ function BriefingPanel({ className }: { className?: string }) {
         <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />
       ) : (
         <>
-          <ul className="space-y-2.5">
-            {q.data!.items.map((it, i) => (
-              <li key={i} className="flex gap-3 text-[13px] leading-5">
-                <span className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", toneDot[it.tone] ?? "bg-fg-3")} aria-hidden />
-                <div className="min-w-0">
-                  <p className="text-fg">
-                    {it.symbol ? (
-                      <>
-                        <Link className="num font-semibold hover:text-accent-text" to={`/instrument/${encodeURIComponent(it.symbol)}`}>
-                          {it.symbol}
-                        </Link>
-                        {it.text.slice(it.symbol.length)}
-                      </>
-                    ) : (
-                      it.text
-                    )}
-                  </p>
-                  {it.detail && <p className="text-xs text-fg-3">{it.detail}</p>}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <BriefingItems items={q.data!.items} />
           {q.data!.data_status === "stale" && <InlineNotice tone="warn" className="mt-3">Some figures above are from stale data.</InlineNotice>}
           <p className="mt-4 text-xs leading-4 text-fg-3">{q.data!.method}</p>
         </>

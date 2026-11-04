@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from marketdesk import __version__
 from marketdesk.api import (
     routes_alerts,
+    routes_inbox,
     routes_journal,
     routes_market,
     routes_portfolio,
@@ -154,6 +155,7 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
         routes_watchlists,
         routes_portfolio,
         routes_alerts,
+        routes_inbox,
         routes_journal,
     ):
         app.include_router(r.router)

@@ -22,7 +22,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import Date, DateTime, Engine, Integer, func, insert, inspect, select, text
+from sqlalchemy import Column, Date, DateTime, Engine, Integer, MetaData, Table, func, insert, inspect, select, text
 
 from marketdesk.db.types import DecimalText, UTCDateTime
 from marketdesk.models import Base
@@ -143,6 +143,16 @@ def existing_rows(engine: Engine) -> dict[str, int]:
     return counts
 
 
+def _columns_of(table, names: list[str]) -> Table:
+    """The table restricted to the backup's own columns, without the current model's Python-side defaults.
+
+    A backup taken at an older schema revision is restored into that revision, which lacks columns added later; using
+    the full model table would make SQLAlchemy insert those columns' defaults and fail. Database (server) defaults
+    still apply, and the later migrations fill new columns exactly as they would on a live database.
+    """
+    return Table(table.name, MetaData(), *[Column(n, table.c[n].type) for n in names])
+
+
 def import_data(engine: Engine, data: dict, schema_revision: str | None) -> dict[str, int]:
     """Insert a validated backup into an empty database in one transaction. Returns row counts per table."""
     validate_backup(data, schema_revision)
@@ -163,7 +173,7 @@ def import_data(engine: Engine, data: dict, schema_revision: str | None) -> dict
                 for row in payload["rows"]
             ]
             if records:
-                conn.execute(insert(table), records)
+                conn.execute(insert(_columns_of(table, payload["columns"])), records)
             inserted[table.name] = len(records)
         if engine.dialect.name == "postgresql":
             for table in backup_tables():

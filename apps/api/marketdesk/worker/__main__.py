@@ -17,6 +17,7 @@ from marketdesk.config import get_settings, validate_settings
 from marketdesk.db import db_session, init_engine, session_factory
 from marketdesk.models import WorkerStatus
 from marketdesk.services.alerts import run_evaluation_cycle
+from marketdesk.services.briefings import run_due_briefings
 from marketdesk.services.runtime import build_market_service
 
 log = logging.getLogger("marketdesk.worker")
@@ -47,11 +48,24 @@ async def _refresh_research(market) -> dict:
         return {"error": type(exc).__name__}
 
 
-async def run_cycle(market) -> dict:
+async def _briefings(market) -> dict:
+    """Morning / end-of-session briefings that are due by the exchange calendars (idempotent per session)."""
+    try:
+        with db_session() as db:
+            return await run_due_briefings(db, market)
+    except Exception as exc:  # never let briefing generation break the alert worker
+        log.warning("briefing generation failed: %s", type(exc).__name__)
+        return {"error": type(exc).__name__}
+
+
+async def run_cycle(market, research=None) -> dict:
+    from marketdesk.services.research import ResearchService
+
+    research = research or ResearchService(market.settings)
     with db_session() as db:
         row = _status(db, market.source)
         try:
-            summary = await run_evaluation_cycle(db, market)
+            summary = await run_evaluation_cycle(db, market, research)
             row.last_success_at = datetime.now(UTC)
             row.last_error = None
         except Exception as exc:  # keep the worker alive; record a sanitized reason
@@ -59,6 +73,7 @@ async def run_cycle(market) -> dict:
             summary = {"error": type(exc).__name__}
             row.last_error = f"Evaluation failed ({type(exc).__name__})."
         summary["research"] = await _refresh_research(market)
+        summary["briefings"] = await _briefings(market)
         skipped = summary.get("skipped") or []
         if skipped and not row.last_error:
             row.last_error = f"{len(skipped)} symbol(s) skipped: provider data was stale or unavailable."
@@ -78,6 +93,9 @@ async def main_async(once: bool) -> None:
 
     ensure_migrated(settings.effective_database_url, settings.data_dir)
     market = build_market_service(settings, session_factory())
+    from marketdesk.services.research import ResearchService
+
+    research = ResearchService(settings)  # one client, so its SEC request pacing spans cycles
     with db_session() as db:
         row = _status(db, market.source)
         row.started_at = datetime.now(UTC)
@@ -90,7 +108,7 @@ async def main_async(once: bool) -> None:
         except NotImplementedError:  # pragma: no cover
             pass
     while True:
-        summary = await run_cycle(market)
+        summary = await run_cycle(market, research)
         log.info("cycle: %s", {k: v for k, v in summary.items() if k != "skipped"})
         if once:
             return

@@ -135,33 +135,63 @@ test("CSV: preview → import → duplicate upload is rejected", async ({ page }
   await expect(page.getByRole("table", { name: "Holdings" }).getByRole("row", { name: /SX:BANYAN/ })).toBeVisible();
 });
 
-test("alert: create → advance sample observation → exactly one event", async ({ page }) => {
+test("alert: crossing rule → advance sample observation → one inbox event → mark read persists", async ({ page }) => {
   await page.goto("/instrument/SX%3AAURORA");
   await page.getByRole("button", { name: "Create alert" }).click();
-  const dialog = page.getByRole("dialog", { name: "Create price alert" });
-  await dialog.getByLabel("Target price").fill("172");
+  const dialog = page.getByRole("dialog", { name: "Create alert" });
+  await dialog.getByLabel("Condition").selectOption("CROSS:ABOVE");
+  await expect(dialog.getByText(/The first quote after arming is a baseline/)).toBeVisible();
+  await dialog.getByLabel("Price level").fill("172");
+  await dialog.getByLabel("After it fires").selectOption("");
   await dialog.getByRole("button", { name: "Create alert" }).click();
   await expect(page.getByText("Alert armed for SX:AURORA.")).toBeVisible();
 
   await page.goto("/alerts");
-  await expect(page.getByText("No alert has triggered yet.")).toBeVisible();
-  // the worker evaluates the base observation (169.80) without triggering
-  await expect(page.getByRole("table", { name: "Price alerts" }).getByText("₹169.80")).toBeVisible({ timeout: 25_000 });
+  const rules = page.getByRole("table", { name: "Alert rules" });
+  await expect(rules.getByText("Crosses above 172.00", { exact: true })).toBeVisible();
+  // the worker records the base observation (169.80) as the crossing baseline without firing
+  await expect(rules.getByText("₹169.80")).toBeVisible({ timeout: 25_000 });
+  await page.getByRole("radio", { name: "Alerts", exact: true }).click(); // inbox filter: alerts only
+  await expect(page.getByText("Nothing matches these filters.")).toBeVisible();
   await page.getByRole("button", { name: "Advance sample session" }).click();
   await expect(page.getByText("Sample session advanced to 1 Jul 2026.")).toBeVisible();
 
-  const events = page.getByRole("table", { name: "Triggered alert events" });
-  await expect(events.getByRole("row")).toHaveCount(2, { timeout: 30_000 }); // header + one event
-  await expect(events.getByText("₹173.90")).toBeVisible();
-  await expect(page.getByRole("button", { name: /Notifications: 1 unread alert/ })).toBeVisible();
+  const inbox = page.getByRole("list", { name: "Inbox items" });
+  await expect(inbox.getByRole("listitem")).toHaveCount(1, { timeout: 30_000 });
+  await expect(inbox.getByText("Moved from 169.80 to 173.90, crossing 172.00", { exact: false })).toBeVisible();
+  await expect(inbox.getByText("In-app: delivered")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Inbox: 1 unread/ })).toBeVisible();
 
-  // further observations (175.80 next session) do not create another event until rearmed
+  // further observations (175.80 next session) never create another event for the same arm
   await page.getByRole("button", { name: "Advance sample session" }).click();
   await page.waitForTimeout(6000); // > 2 worker cycles
   await page.reload();
-  await expect(events.getByRole("row")).toHaveCount(2);
-  await expect(page.getByRole("table", { name: "Price alerts" }).getByText("Triggered")).toBeVisible();
+  await page.getByRole("radio", { name: "Alerts", exact: true }).click();
+  await expect(inbox.getByRole("listitem")).toHaveCount(1);
+  await expect(rules.getByText("Triggered")).toBeVisible();
+
+  await inbox.getByRole("button", { name: /Mark read: SX:AURORA/ }).click();
+  await expect(inbox.getByText("New", { exact: true })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Inbox", exact: true })).toBeVisible(); // no unread count after reload
   await page.getByRole("button", { name: "Reset" }).click();
+});
+
+test("briefing: sample end-of-session briefing appears in the inbox and the bell", async ({ page }) => {
+  await page.goto("/alerts");
+  await page.getByRole("button", { name: "Write sample briefing" }).click();
+  await expect(page.getByText(/Sample briefing written for 30 Jun 2026/)).toBeVisible();
+  await page.getByRole("radio", { name: "Briefings", exact: true }).click();
+  const inbox = page.getByRole("list", { name: "Inbox items" });
+  await expect(inbox.getByText("India (NSE/BSE) end-of-session briefing, 30 Jun 2026")).toBeVisible();
+  await expect(inbox.getByText("Sample data", { exact: true })).toBeVisible();
+  await page.getByRole("radio", { name: "US", exact: true }).click(); // market filter
+  await expect(page.getByText("Nothing matches these filters.")).toBeVisible();
+  await page.getByRole("button", { name: /Inbox: \d+ unread/ }).click();
+  await expect(page.getByRole("menuitem", { name: /end-of-session briefing/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Write sample briefing" }).click(); // once per session, never twice
+  await expect(page.getByText(/No briefing written: it already exists/).first()).toBeVisible();
 });
 
 test("journal: create, edit and filter a note", async ({ page }) => {

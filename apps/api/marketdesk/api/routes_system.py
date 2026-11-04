@@ -27,6 +27,7 @@ from marketdesk.schemas import (
     PrefsPatch,
     SessionOut,
     StatusOut,
+    StoredBriefingOut,
     WatchlistOut,
 )
 from marketdesk.services import auth
@@ -397,6 +398,25 @@ def fixture_reset(db: Session = Depends(get_db), market: MarketDataService = Dep
     market.invalidate()
     market.reset_circuit()
     return _fixture_out(market, db)
+
+
+@router.post(
+    "/fixture/briefing", response_model=StoredBriefingOut, status_code=201, dependencies=[Depends(require_writer)]
+)
+@off_event_loop
+async def fixture_briefing(db: Session = Depends(get_db), market: MarketDataService = Depends(market_dep)):
+    """Deterministic test path: write the end-of-session briefing for the current sample session (fixture only).
+    Calendar-timed briefings are not generated from the fixed sample dataset."""
+    _require_fixture(market)
+    from marketdesk.services.briefings import briefing_dict, generate_briefing
+
+    session = market.provider.cursor_date(read_fixture_state(db))
+    row = await generate_briefing(db, market, "close", "IN", session, {}, wait_for_bars=False)
+    if row is None:
+        raise AppError(
+            409, "not_created", "No briefing written: it already exists, or no sample symbols are watchlisted."
+        )
+    return briefing_dict(row)
 
 
 @router.post("/fixture/fault", response_model=FixtureStateOut, dependencies=[Depends(require_writer)])

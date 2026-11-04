@@ -159,9 +159,18 @@ class Alert(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     instrument_id: Mapped[int] = mapped_column(ForeignKey("instruments.id", ondelete="RESTRICT"), index=True)
     direction: Mapped[str] = mapped_column(String(5), nullable=False)
+    # PRICE target / CROSS level, or the multiple for VOLUME and VOLATILITY rules (unused for FILING).
     target_price: Mapped[Decimal] = mapped_column(DecimalText, nullable=False)
     note: Mapped[str | None] = mapped_column(String(280))
     active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    # M05 rule definition (migration 0004). Existing alerts are PRICE rules with manual rearm.
+    rule: Mapped[str] = mapped_column(String(16), nullable=False, default="PRICE", server_default="PRICE")
+    params: Mapped[dict | None] = mapped_column(JSON)  # e.g. {"lookback": 20} or {"forms": ["10-K", "8-K"]}
+    cooldown_minutes: Mapped[int | None] = mapped_column(Integer)  # None = rearm manually
+    rearm_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    quiet_start: Mapped[str | None] = mapped_column(String(5))  # "22:00" in the display timezone
+    quiet_end: Mapped[str | None] = mapped_column(String(5))
+    last_skip_reason: Mapped[str | None] = mapped_column(String(200))
     arm_seq: Mapped[int] = mapped_column(Integer, default=1)
     armed_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     last_evaluated_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
@@ -185,14 +194,49 @@ class AlertEvent(Base):
     event_key: Mapped[str] = mapped_column(String(64), unique=True)  # "<alert_id>:<arm_seq>"
     observation_id: Mapped[int | None] = mapped_column(ForeignKey("quote_observations.id", ondelete="SET NULL"))
     direction: Mapped[str] = mapped_column(String(5))
-    target_price: Mapped[Decimal] = mapped_column(DecimalText)
-    observed_price: Mapped[Decimal] = mapped_column(DecimalText)
+    target_price: Mapped[Decimal | None] = mapped_column(DecimalText)
+    observed_price: Mapped[Decimal | None] = mapped_column(DecimalText)
     observed_market_time: Mapped[datetime | None] = mapped_column(UTCDateTime)
     provider: Mapped[str] = mapped_column(String(16))
     triggered_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, index=True)
     read_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    rule: Mapped[str] = mapped_column(String(16), nullable=False, default="PRICE", server_default="PRICE")
+    explanation: Mapped[str | None] = mapped_column(Text)  # why it fired, with the data and its timestamps
+    link: Mapped[str | None] = mapped_column(String(300))  # filing URL for FILING events
+    deliver_after: Mapped[datetime | None] = mapped_column(UTCDateTime)  # held during quiet hours
 
     alert: Mapped[Alert] = relationship(back_populates="events")
+
+
+class AlertDelivery(Base):
+    """One row per event and channel: retries and restarts cannot deliver the same notice twice."""
+
+    __tablename__ = "alert_deliveries"
+    __table_args__ = (UniqueConstraint("event_id", "channel", name="uq_delivery_event_channel"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("alert_events.id", ondelete="CASCADE"), nullable=False, index=True)
+    channel: Mapped[str] = mapped_column(String(16), nullable=False)  # in_app (external channels when configured)
+    status: Mapped[str] = mapped_column(String(12), nullable=False)  # delivered | held | failed
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    last_error: Mapped[str | None] = mapped_column(String(200))
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class Briefing(Base):
+    """A stored deterministic briefing; one per kind, market and session date (idempotent across restarts)."""
+
+    __tablename__ = "briefings"
+    __table_args__ = (UniqueConstraint("kind", "market", "session_date", name="uq_briefing_session"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)  # morning | close
+    market: Mapped[str] = mapped_column(String(2), nullable=False)
+    session_date: Mapped[date] = mapped_column(Date, nullable=False)
+    provider: Mapped[str] = mapped_column(String(16), nullable=False)
+    content: Mapped[dict] = mapped_column(JSON, nullable=False)  # {"items": [...], "session": {...}, ...}
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, index=True)
+    read_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
 
 class QuoteObservation(Base):
