@@ -269,6 +269,18 @@ Portfolio → **Rebalance**: target weights per holding (saved), then a **simula
 shares and an assumed fee; the proposed share counts are editable and recalculate on the page. Nothing is submitted
 or recorded.
 
+## Macro and sector context
+
+**Macro** (G M): a watchboard of market-traded series from the configured provider — Nifty 50, Sensex, S&P 500,
+Nasdaq, India VIX, VIX, US 10-year and 13-week yields, USD/INR, EUR/INR, the dollar index, Brent, WTI, gold and copper
+(front-month futures roll) — each with provider, frequency, observation date and "market price: not revised"; changes
+over 1D/1W/1M/3M/1Y (yields in percentage points). **What moved** lists the largest moves with values and dates and
+the companies *you* linked to them. Official statistics and release calendars (FRED for the US; RBI/MOSPI for India)
+are listed as not configured until a verified source and key exist — nothing is approximated from markets.
+**Sector-relative performance** compares each member's return with its sector average and its market benchmark;
+the **exposure map** holds only your own company ↔ series links with notes, plus a descriptive correlation (not
+causal).
+
 ## Earnings and filing analysis
 
 Instrument → **Earnings**:

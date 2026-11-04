@@ -225,4 +225,11 @@ Consequential choices, newest last. Routine choices live in code comments.
     facts (three-month durations; year-to-date never mixed) or annual statements. Filing changes and guidance are
     deterministic quotes from the filings (Item 1A paragraph diff; guidance sentences with figures), not summaries.
     Results reminders are an alert rule (EARNINGS) evaluated by the worker, one event per date.
+47. **Macro context from market-traded series only, until official sources are verified (M12, 4 Nov 2026).** The
+    watchboard uses Yahoo quotes and daily history for indices, volatility indices, US Treasury yields (^TNX, ^IRX),
+    FX and front-month commodity futures, labelled with provider, frequency, observation date and "not revised".
+    Official statistics and release/revision calendars need a verified source with a key and licence (FRED: free key,
+    attribution; RBI/MOSPI: no verified machine-readable source) and are shown as not configured. Briefings are
+    deterministic (largest moves with dates) and show only owner-entered company ↔ series links; correlations are
+    descriptive and use aligned observations (daily within a time zone, weekly across).
 

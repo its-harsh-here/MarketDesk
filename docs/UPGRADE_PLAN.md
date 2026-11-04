@@ -50,7 +50,10 @@ earlier as soon as their credentials exist.
 - Phase 9 (M11): ✅ implemented, tested (hand-checked vectors; migration rehearsed on a production copy) and
   deployed; live checks in `docs/UPGRADE_STATUS.md`.
 - Phase 11 (M07): ✅ implemented, tested and deployed; live checks in `docs/UPGRADE_STATUS.md`.
-- Phase 12 (M04): waits for the owner's Alpaca key/secret and feed choice; M12 (macro + sector) proceeds meanwhile.
+- Phase 12 (M04): waits for the owner's Alpaca key/secret and feed choice.
+- Phase 13 (M12): ✅ implemented (market-traded series; official statistics wait for a FRED key / verified Indian
+  source), tested and deployed; live checks in `docs/UPGRADE_STATUS.md`.
+- Phase 14 (M13): next.
 
 ## After the final check
 The owner asked (4 Nov 2026) for a follow-on roadmap toward a terminal-style view with every piece of information about

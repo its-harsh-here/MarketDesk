@@ -760,6 +760,26 @@ cache key was versioned in the next commit so they are fetched again at once.
 | Playwright | 20 journeys pass (new: earnings — deadline label and SEBI rule, fiscal-year changes, reminder alert, brief preset, upcoming results) |
 | Visual QA | Earnings tab at 1440 and 390 px inspected (no overflow) |
 
+## M12 — Macro and sector context (4 Nov 2026)
+- **Watchboard** (`services/macro.py`): 15 Yahoo series (benchmarks, volatility, US yields, FX, commodity futures; the
+  sample dataset's 3 series in fixture mode) with provider, frequency, observation date, revision status, 1D/1W/1M/
+  3M/1Y changes (yields in pp; start dates named; no substitute when history is too short) and a 60-session sparkline.
+- **Official statistics / release calendar:** listed as not configured (FRED key) or not verified (RBI/MOSPI) — not
+  approximated.
+- **What moved:** deterministic largest moves over a window with values, dates and the owner's linked companies.
+- **Sector-relative:** return vs equal-weighted sector average (≥ 2 members) and vs the market benchmark.
+- **Exposure map** (migration 0011 `macro_links`, owner data): company ↔ series links with relation, direction and
+  note; descriptive correlation with n and method.
+- **Schema:** 0011 rehearsed on a production copy (0010 backup): restored, migrated, owner-data fingerprints identical.
+
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 17 | 274 passed, 3 skipped / 276 passed, 1 skipped (M12: 6 — pp vs % changes and no substitutes, briefing order and owner links, watchboard API, sector-relative view, links with correlation, backups) |
+| Migrations match models (SQLite, PostgreSQL); downgrade 0011→0010 and upgrade | pass |
+| tsc, eslint, vitest | clean; 32 |
+| Playwright | 21 journeys pass (new: macro — labels, official statistics not approximated, link with correlation, briefing shows the link) |
+| Visual QA | Macro page at 1440 and 390 px inspected (no overflow) |
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.

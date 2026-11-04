@@ -247,6 +247,22 @@ class Briefing(Base):
     read_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
 
+class MacroLink(Base):
+    """An owner-entered link between a company and a macro series (e.g. an input cost), with a note. Never inferred."""
+
+    __tablename__ = "macro_links"
+    __table_args__ = (UniqueConstraint("instrument_id", "series_symbol", name="uq_macro_link"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    instrument_id: Mapped[int] = mapped_column(
+        ForeignKey("instruments.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    series_symbol: Mapped[str] = mapped_column(String(32), nullable=False)
+    relation: Mapped[str] = mapped_column(String(12), nullable=False)  # cost | revenue | rates | fx | demand | other
+    direction: Mapped[str] = mapped_column(String(8), nullable=False)  # up_helps | up_hurts | unclear
+    note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
 class ValuationScenario(Base):
     """A saved set of DCF assumptions for an instrument (bear/base/bull/custom) with the owner's notes."""
 

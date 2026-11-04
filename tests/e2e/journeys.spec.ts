@@ -599,3 +599,26 @@ test("earnings: deadline (never an announced date), fiscal-year changes, reminde
   await expect(up.getByRole("link", { name: "SX:AURORA" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("Results reminder 7 day(s) before the next results date")).toBeVisible();
 });
+
+test("macro: watchboard with provider/frequency/revision, briefing, official statistics not approximated, exposure link", async ({ page }) => {
+  await page.goto("/macro");
+  await ready(page);
+  const board = page.getByRole("region", { name: "Macro watchboard" });
+  await expect(board.getByText("SampleX Composite Index")).toBeVisible({ timeout: 30_000 });
+  await expect(board.getByText(/daily \(trading days\).*Market price: not revised/).first()).toBeVisible();
+  await expect(page.getByText(/Needs a FRED API key/)).toBeVisible();
+  const moved = page.getByRole("region", { name: "What moved" });
+  await moved.getByRole("radio", { name: "1M" }).click();
+  await expect(moved.getByText(/since 2026-05/).first()).toBeVisible();
+  const ex = page.getByRole("region", { name: "Exposure map" });
+  await ex.getByRole("combobox", { name: "Company" }).fill("AURORA");
+  await page.getByRole("option", { name: /SX:AURORA/ }).first().click();
+  await ex.getByLabel("Series", { exact: true }).selectOption("SX:USDINR");
+  await ex.getByLabel("Why (your note)").fill("imported turbines");
+  await ex.getByRole("button", { name: "Add link" }).click();
+  await expect(page.getByText("Link added.")).toBeVisible();
+  await expect(ex.getByText(/Correlation -?\d\.\d\d \(daily, n = \d+\)/)).toBeVisible();
+  await expect(moved.getByText(/Your link: .*imported turbines/)).toBeVisible();
+  await ex.getByRole("button", { name: "Remove link SX:AURORA to SX:USDINR" }).click();
+  await expect(ex.getByText(/No links yet/)).toBeVisible();
+});
