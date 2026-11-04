@@ -179,3 +179,13 @@ def test_risk_section_fallbacks():
     assert sec is not None and "Offices" not in sec  # no item number: the longest Risk Factors section
     d = er.risk_diagnostics("Annual report without the section")
     assert d["risk_factor_mentions"] == 0 and d["chars"] > 0
+
+
+def test_periodic_reports_use_the_primary_document():
+    from marketdesk.services.analyst import _pick_document
+
+    files = [{"name": "a311-302spaccertceojh1.htm"}, {"name": "smr-20251231.htm"}, {"name": "R1.htm"}]
+    filing = {"form": "10-K", "document_url": "https://www.sec.gov/Archives/edgar/data/1/2/smr-20251231.htm"}
+    assert _pick_document(files, "10-K", filing) == "smr-20251231.htm"  # not the certification exhibit
+    release = [{"name": "smr-ex991.htm"}, {"name": "smr-8k.htm"}]
+    assert _pick_document(release, "8-K", {"document_url": ".../smr-8k.htm"}) == "smr-ex991.htm"  # releases: exhibit 99

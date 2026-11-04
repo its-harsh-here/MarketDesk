@@ -393,7 +393,16 @@ async def _listing(ev: Evidence, db, market, research, inst: Instrument, kind: s
     return summary
 
 
-def _pick_document(files: list[dict], form: str) -> str | None:
+def primary_document(filing: dict) -> str | None:
+    """The filing's primary document as listed by SEC (submissions `primaryDocument`), for periodic reports."""
+    url = filing.get("document_url") or ""
+    name = url.rsplit("/", 1)[-1] if url else ""
+    return name if re.search(r"\.html?$", name, re.IGNORECASE) else None
+
+
+def _pick_document(files: list[dict], form: str, filing: dict | None = None) -> str | None:
+    if filing is not None and not form.startswith(("8-K", "6-K")) and (primary := primary_document(filing)):
+        return primary  # the index lists exhibits (certifications, consents) next to the report itself
     names = [f["name"] for f in files if re.search(r"\.html?$", f["name"], re.IGNORECASE)]
     if form in ("8-K", "8-K/A", "6-K", "6-K/A"):
         ex = [n for n in names if re.search(r"ex[-_]?99|exhibit[-_]?99|ex99", n, re.IGNORECASE)]
@@ -415,7 +424,7 @@ def _excerpt(textv: str, form: str, limit: int = 12_000) -> str:
 async def _read_filing(ev: Evidence, research, inst: Instrument, cik, filing: dict) -> str:
     client = research.client
     files = await asyncio.to_thread(client.filing_files, int(cik), filing["accession"])
-    doc = _pick_document(files, filing["form"])
+    doc = _pick_document(files, filing["form"], filing)
     if doc is None:
         raise ProviderError("missing", "No readable document in this filing.")
     body = await asyncio.to_thread(client.document_text, int(cik), filing["accession"], doc, 60_000)
