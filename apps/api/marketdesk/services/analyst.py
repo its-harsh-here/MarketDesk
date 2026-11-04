@@ -41,6 +41,7 @@ from marketdesk.services.market import MarketDataService
 log = logging.getLogger("marketdesk.analyst")
 KINDS = ("ask", "results", "catalysts", "compare")
 CERTAINTIES = ("confirmed", "scheduled", "possible")
+CHARS_PER_TOKEN = 3.4  # JSON evidence measured at ~3.5 characters per token on gpt-oss (4 Nov 2026); slightly lower
 USABLE = {"sample", "available", "cached", "stale"}
 STALE_JOB = timedelta(minutes=15)
 _BUDGET_LOCK = threading.Lock()
@@ -459,8 +460,19 @@ _ADVICE_RE = re.compile(
 _SCALE = {"billion": 1e9, "bn": 1e9, "b": 1e9, "million": 1e6, "mn": 1e6, "m": 1e6, "thousand": 1e3, "k": 1e3}
 
 
+_DASHES = str.maketrans({"\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-", "\u2014": "-", "\u2212": "-"})
+_MONTHS = r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?"
+_DATE_RE = re.compile(
+    rf"\b\d{{4}}-\d{{2}}-\d{{2}}\b|\b{_MONTHS}\s+\d{{1,2}}(?:st|nd|rd|th)?\b|\b\d{{1,2}}(?:st|nd|rd|th)?\s+{_MONTHS}"
+    r"|\b(?:q[1-4]|h[12]|fy\s?\d{2,4})\b",
+    re.I,
+)
+_CITE_RE = re.compile(r"\s*(?:【\s*S\d{1,3}\s*】|\[\s*S\d{1,3}(?:\s*,\s*S\d{1,3})*\s*\]|\(\s*S\d{1,3}\s*\))")
+
+
 def _numbers(s: str) -> list[tuple[float, float, bool]]:
-    """(value, tolerance, is_percent) for each figure stated in text; years and small counts are skipped."""
+    """(value, tolerance, is_percent) for each figure stated in text; dates, years and small counts are skipped."""
+    s = _DATE_RE.sub(" ", _CITE_RE.sub(" ", s.translate(_DASHES)))
     out = []
     for m in _NUM_RE.finditer(s):
         raw = m.group(0)
@@ -481,23 +493,25 @@ def _numbers(s: str) -> list[tuple[float, float, bool]]:
 
 
 def _source_numbers(src: dict) -> list[float]:
+    """Every figure in a source: raw numbers, plus figures written with units in its text ("1.9 billion")."""
+    blob = json.dumps(src.get("data"), default=str).translate(_DASHES)
     out = []
-    for m in re.finditer(
-        r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?", json.dumps(src.get("data"), default=str).replace(",", " ")
-    ):
+    for m in re.finditer(r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?", blob.replace(",", " ")):
         try:
             out.append(float(m.group(0)))
         except ValueError:
             continue
+    out.extend(v for v, _, _ in _numbers(blob))
     return out
 
 
 def _figure_found(value: float, tol: float, is_pct: bool, nums: list[float]) -> bool:
-    candidates = [value, abs(value)]
+    """Signs are compared loosely ("down 15%" against -15; a loss written as a positive amount)."""
+    target = abs(value)
     for n in nums:
-        for c in candidates:
-            if abs(n - c) <= tol or (is_pct and abs(n * 100 - c) <= tol):
-                return True
+        n = abs(n)
+        if abs(n - target) <= tol or (is_pct and abs(n * 100 - target) <= tol):
+            return True
     return False
 
 
@@ -527,7 +541,7 @@ def _clip(raw: dict) -> tuple[dict, list[dict]]:
         clean = []
         for pi, pt in enumerate(pts[:8]):
             pt = pt if isinstance(pt, dict) else {"text": str(pt)}
-            text = str(pt.get("text") or "")
+            text = _CITE_RE.sub("", str(pt.get("text") or "")).strip()
             if len(text) > 600:
                 flags.append({"section": si, "point": pi, "issue": "Long point shortened to 600 characters."})
             srcs = pt.get("sources") if isinstance(pt.get("sources"), list) else []
@@ -668,7 +682,7 @@ class AnalystService:
     @property
     def completion_tokens(self) -> int:
         """Output cap; Groq's gpt-oss models also spend reasoning tokens from it."""
-        return self.settings.ai_max_output_tokens + (1000 if self.provider == "groq" else 0)
+        return self.settings.ai_max_output_tokens + (500 if self.provider == "groq" else 0)  # low effort: ~50 used
 
     @property
     def problem(self) -> str | None:
@@ -903,13 +917,13 @@ class AnalystService:
         evidence trimmed to fit one request under the per-minute token limit."""
         completion = self.completion_tokens
         other = len(json.dumps({**payload, "sources": []}, default=str)) + len(INSTRUCTIONS) + 2400  # + schema
-        max_chars = int(max(4000, (self.settings.ai_request_tokens - completion) * 3.2))
+        max_chars = int(max(4000, (self.settings.ai_request_tokens - completion) * CHARS_PER_TOKEN))
         trims = compact_evidence(ev, max_chars, other)
         if trims:
             step("Evidence trimmed to fit the free tier's request size: " + "; ".join(trims) + ".")
         payload = {**payload, "sources": ev.sources}
         chars = len(json.dumps(payload, default=str)) + len(INSTRUCTIONS) + 2400
-        tokens = int(chars / 3.2) + completion
+        tokens = int(chars / CHARS_PER_TOKEN) + completion
         refusal = self.reserve(db, answer, Decimal(0), tokens)
         if refusal:
             answer.status, answer.error, answer.finished_at = "refused", refusal, datetime.now(UTC)

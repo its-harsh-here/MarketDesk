@@ -427,3 +427,28 @@ def test_status_describes_the_key_shape_without_revealing_it(ai):
     assert KEY not in json.dumps(st)
     assert XaiClient(' "xai-abc" ', "https://api.x.ai/v1", "m").key_format == "starts with 'xai-', 7 characters"
     assert "does not start with 'xai-'" in XaiClient("sk-123", "https://api.x.ai/v1", "m").key_format
+
+
+def test_figure_check_handles_signs_dates_units_and_citation_markers():
+    """Cases from the first live answer (all figures were present in the sources)."""
+    src = {
+        "S4": {"data": {"lines": {"revenue": [{"period_end": "2025-12-31", "value": "31479000"},
+                                              {"period_end": "2024-12-31", "value": "37045000"}],
+                                  "operating_income": [{"period_end": "2025-12-31", "value": "-689571000"}]},
+                        "change_vs_previous_pct": {"revenue": "-15.02", "operating_income": "-397.08"}}},
+        "S7": {"data": {"text": "NuScale ended the quarter with $1.9 billion in cash and investments."}},
+    }  # fmt: skip
+    points = [
+        pt("For the fiscal year ended December 31 2025, revenue was $31,479,000, down 15.02% from 2024 "
+           "($37,045,000)【S4】.", sources=["S4"]),
+        pt("Operating loss widened to $\u2011689,571,000, a 397.08% increase in the loss.", sources=["S4"]),
+        pt("NuScale ended Q2 2026 with $1.9 billion in cash [S7].", sources=["S7"]),
+    ]  # fmt: skip
+    ans, flags = validate_answer(answer(*points), src)
+    assert flags == []
+    assert (
+        "【S4】" not in ans["sections"][0]["points"][0]["text"]
+        and "[S7]" not in ans["sections"][0]["points"][2]["text"]
+    )
+    _, flags = validate_answer(answer(pt("Revenue was $41,479,000.", sources=["S4"])), src)
+    assert flags and "does not appear" in flags[0]["issue"]  # a wrong figure is still caught

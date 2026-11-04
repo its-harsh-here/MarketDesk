@@ -88,7 +88,7 @@ class Settings(BaseSettings):
     xai_timeout_seconds: float = 90.0
     ai_daily_budget_usd: float = 0.50  # xAI: application cap on estimated + reconciled spend per UTC day
     ai_daily_tokens: int = 150_000  # Groq free tier: below its 200,000 tokens/day limit
-    ai_request_tokens: int = 7_000  # Groq free tier: one request (input + output) under its 8,000 tokens/minute
+    ai_request_tokens: int = 7_300  # Groq free tier: one request (input + output) under its 8,000 tokens/minute
     ai_daily_requests: int = 30  # model-backed answers per UTC day (reused answers do not count)
     ai_max_output_tokens: int = 1800
     ai_max_tool_calls: int = 3  # xAI only: extra read-only filing lookups per answer

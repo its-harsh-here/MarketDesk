@@ -112,7 +112,7 @@ def test_one_strict_structured_call_without_tools(groq):
     assert rf["type"] == "json_schema" and rf["json_schema"]["strict"] is True
     assert "pattern" not in json.dumps(rf) and "maxLength" not in json.dumps(rf)  # lean schema for Groq
     assert "tools" not in body and body["reasoning_effort"] == "low" and body["include_reasoning"] is False
-    assert body["max_completion_tokens"] == 2800 and body["messages"][0]["role"] == "system"
+    assert body["max_completion_tokens"] == 2300 and body["messages"][0]["role"] == "system"
     assert a["usage"]["input_tokens"] == 3100 and a["usage"]["output_tokens"] == 900
     assert a["usage"]["cost_source"] == "Groq free tier: not billed" and a["cost_usd"] == "0"
     budget = api.get("/api/ai/status").json()["budget"]

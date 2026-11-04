@@ -90,7 +90,7 @@ cookies and survive restarts on their own.
 | `SEC_USER_AGENT` | for US filings | Application name and **your** contact email (SEC fair-access rule), e.g. `MarketDesk you@example.com`. Without it the Financials/Filings/Events tabs explain that SEC data is off. |
 | `SEC_MAX_REQUESTS_PER_SECOND`, `RESEARCH_REFRESH_HOURS` | no | SEC request budget (default 5/s; SEC allows 10) and the daily re-check interval. |
 | `GROK_API` (or `GROQ_API_KEY` / `XAI_API_KEY`) | for AI research | A Groq key (`gsk_…`, free tier) or an xAI key (`xai-…`, paid); server-side only. The prefix picks the provider (`AI_PROVIDER=groq|xai` overrides). Without a key the "Ask AI" panel explains that AI is off; nothing else changes. |
-| `AI_MODEL`, `GROK_ENABLED`, `AI_DAILY_TOKENS`, `AI_REQUEST_TOKENS`, `AI_DAILY_BUDGET_USD`, `AI_DAILY_REQUESTS`, `AI_MAX_OUTPUT_TOKENS`, `AI_MAX_TOOL_CALLS`, `AI_REUSE_HOURS` | no | Model (defaults `openai/gpt-oss-120b` on Groq, `grok-4.3` on xAI), off switch, and limits: Groq 150,000 tokens/day and 7,000 per request; xAI $0.50/day and 3 filing lookups; 30 answers/day, 1,800 output tokens, 24 h reuse. |
+| `AI_MODEL`, `GROK_ENABLED`, `AI_DAILY_TOKENS`, `AI_REQUEST_TOKENS`, `AI_DAILY_BUDGET_USD`, `AI_DAILY_REQUESTS`, `AI_MAX_OUTPUT_TOKENS`, `AI_MAX_TOOL_CALLS`, `AI_REUSE_HOURS` | no | Model (defaults `openai/gpt-oss-120b` on Groq, `grok-4.3` on xAI), off switch, and limits: Groq 150,000 tokens/day and 7,300 per request; xAI $0.50/day and 3 filing lookups; 30 answers/day, 1,800 output tokens, 24 h reuse. |
 
 - **Start command:** none — the image's default `python -m marketdesk.serve` runs the web server and, 45 s after it
   answers, the alert worker in the same container. Leave Render's *Start Command* empty.
@@ -275,7 +275,7 @@ two other listings, or your own question. Two providers are supported, chosen fr
 - **Checked:** citations to unknown sources, facts without a source, figures that do not appear in the cited sources and
   advice-like wording are flagged on the answer. Figures and prices never come from the model.
 - **Limits:** Groq — a daily token allowance (default 150,000, under the free tier's 200,000/day) and 30 answers/day,
-  each request kept under 7,000 tokens; xAI — a daily dollar cap (default $0.50) reconciled with the cost xAI reports.
+  each request kept under 7,300 tokens; xAI — a daily dollar cap (default $0.50) reconciled with the cost xAI reports.
   The same request on unchanged evidence returns the saved answer at no cost.
 - **Private:** only public market data and your question are sent — never your portfolio or journal. Web search is
   not used. Answers are saved with their sources, data cutoff, model, tokens and cost.

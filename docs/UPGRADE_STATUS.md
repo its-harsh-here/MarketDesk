@@ -607,8 +607,8 @@ The owner's key turned out to be a Groq key and the owner chose Groq's free tier
   with tool use; `reasoning_effort` and `include_reasoning`; listed base limits for gpt-oss-120b 30 requests/min,
   1,000/day, 8,000 tokens/min, 200,000 tokens/day; 429 with `retry-after`; `x-ratelimit-*` headers.
 - **Implementation:** provider chosen from the key prefix; Groq client (stdlib) with quota headers captured; one strict
-  structured call per answer (`openai/gpt-oss-120b`, reasoning low, reasoning text omitted, 2,800 completion tokens);
-  evidence trimmed in fixed steps until the request fits 7,000 tokens (source ids unchanged; trims listed on the
+  structured call per answer (`openai/gpt-oss-120b`, reasoning low, reasoning text omitted, 2,300 completion tokens);
+  evidence trimmed in fixed steps until the request fits 7,300 tokens (source ids unchanged; trims listed on the
   answer); daily token allowance 150,000 and 30 answers, reserved before the call and counted from reported usage;
   a 429 waits once if `retry-after` ≤ 20 s; rejected optional settings are dropped once (json_object fallback).
 - **UI:** "Ask AI" (provider-neutral); answers name the model and provider; Settings shows provider, key shape,
