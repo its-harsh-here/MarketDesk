@@ -24,7 +24,7 @@ export interface Run {
   rule: "buy_and_hold" | "sma_cross" | "momentum";
   params: Record<string, number>;
   costs: { fee_pct: string; slippage_bps: string; starting_cash: string; benchmark: string | null };
-  data: { provider: string; range: string; adjustment: string; bars: number; first: string; last: string; hash: string; dividends: number; currency: string | null; dropped_without_open: number };
+  data: { provider: string; range: string; adjustment: string; bars: number; first: string; last: string; hash: string; dividends: number; currency: string | null; dropped_without_open: number; unfinished_session_excluded?: string };
   summary: { strategy: Summary; buy_and_hold: Summary; benchmark?: Summary };
   results?: {
     strategy: Summary;

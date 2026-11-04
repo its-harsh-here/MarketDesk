@@ -152,3 +152,21 @@ def test_lab_data_in_backups():
     from marketdesk.services.backup import backup_tables
 
     assert {"research_runs", "paper_portfolios", "paper_orders"} <= {t.name for t in backup_tables()}
+
+
+def test_rule_test_leaves_out_an_unfinished_session_and_out_of_window_dividends():
+    from marketdesk.services.research_lab import _completed
+
+    d = days(5)
+    bars = [sm.Bar(x, D(10), D(10)) for x in d]
+    divs = {d[0]: D(1), d[2]: D(1), D0 - timedelta(days=400): D(1)}
+    info = {"country": None}  # no calendar: only bars at least a day old count as finished
+    kept, kd = _completed(bars, divs, info)
+    assert kept == bars and kd == {d[2]: D(1)}  # an ex-date on the first bar or before it cannot be credited
+    from datetime import UTC, datetime
+
+    today = datetime.now(UTC).date()
+    live = [sm.Bar(today - timedelta(days=3), D(1), D(1)), sm.Bar(today, D(1), D(1))]
+    info = {"country": None}
+    kept, _ = _completed(live, {}, info)
+    assert kept == live[:1] and info["unfinished_session_excluded"] == today.isoformat() and info["bars"] == 1

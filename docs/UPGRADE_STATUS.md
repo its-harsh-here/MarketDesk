@@ -800,6 +800,16 @@ cache key was versioned in the next commit so they are fetched again at once.
 | Playwright | 22 journeys pass (new: research lab — run, reproduce, paper order pending) |
 | Visual QA | Lab page at 1440 and 390 px inspected (no overflow; mobile table drops two columns) |
 
+**Live (Render + Neon, Yahoo, schema 0012):** read-me items listed; RELIANCE.NS moving-average cross 20/50 (0.1% fee,
+5 bps): 1,235 bars 2021-11-04 → 2026-11-03, benchmark ^NSEI, 30 trades, every signal day before its execution day,
+chart ends on the table value, *Reproduce* → identical data and results. AAPL momentum 60: benchmark ^GSPC, same
+checks. Paper portfolio: a RELIANCE.NS order placed after the 2026-11-03 session is pending for the next open; a USD
+instrument in the INR paper account is refused (`currency_mismatch`). The live check then deleted its runs and paper
+portfolio; the real ledger was unchanged. Two fixes followed: the dividend count/fingerprint now covers only the tested
+window (Yahoo returns all-time dividends: AAPL showed 92), and an unfinished latest session is left out of rule tests
+(its "close" is only the latest price); paper fills keep the conservative rule (an order placed during a session fills
+at the next session's open).
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.

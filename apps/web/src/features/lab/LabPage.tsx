@@ -156,7 +156,7 @@ function RunView({ run }: { run: Run }) {
         </details>
       )}
       <p className="text-xs leading-4 text-fg-3">
-        Data: {run.data.provider}, {run.data.bars} daily bars, {run.data.dividends} dividend(s) credited · {run.data.adjustment} · fingerprint <span className="num">{run.data.hash.slice(0, 12)}</span>. {run.label}
+        Data: {run.data.provider}, {run.data.bars} completed daily sessions{run.data.unfinished_session_excluded ? ` (the unfinished ${run.data.unfinished_session_excluded} session is left out)` : ""}, {run.data.dividends} dividend(s) in the period, credited only while held · {run.data.adjustment} · fingerprint <span className="num">{run.data.hash.slice(0, 12)}</span>. {run.label}
       </p>
     </div>
   );

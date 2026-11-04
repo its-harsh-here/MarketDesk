@@ -6,7 +6,7 @@ each run with the data fingerprint, and replays paper orders on read (fills at t
 from __future__ import annotations
 
 import asyncio
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -78,6 +78,7 @@ async def _series(market: MarketDataService, symbol: str) -> tuple[list[sm.Bar],
         "status": hist.meta.status,
         "fetched_at": hist.meta.fetched_at.isoformat() if hist.meta.fetched_at else None,
         "currency": hist.value.instrument.currency,
+        "country": hist.value.instrument.country,
     }
     return bars, sm.adjusted_dividends(divs, splits), splits, info
 
@@ -96,6 +97,20 @@ def _num(x):
     if isinstance(x, date):
         return x.isoformat()
     return x
+
+
+def _completed(bars: list[sm.Bar], divs: dict, info: dict) -> tuple[list[sm.Bar], dict]:
+    """A rule decides on a session's close, so an unfinished latest session (its 'close' is the latest price) is left
+    out; dividends are kept only where the test could credit them (after the first bar, up to the last)."""
+    from marketdesk.services.alerts import last_bar_complete
+
+    if bars and not last_bar_complete(info.get("country"), bars[-1].day, datetime.now(UTC)):
+        info["unfinished_session_excluded"] = bars[-1].day.isoformat()
+        bars = bars[:-1]
+        info["bars"] = len(bars)
+    if bars:
+        divs = {d: v for d, v in divs.items() if bars[0].day < d <= bars[-1].day}
+    return bars, divs
 
 
 def _thin(equity: list, points: int = 400) -> list:
@@ -117,6 +132,7 @@ async def compute(
     benchmark: str | None,
 ) -> tuple[dict, dict]:
     bars, divs, _, info = await _series(market, symbol)
+    bars, divs = _completed(bars, divs, info)
     if len(bars) < 60:
         raise AppError(422, "short_history", f"Only {len(bars)} daily bars; a rule test needs at least 60.")
     info.update(
@@ -138,8 +154,9 @@ async def compute(
     }
     if benchmark and benchmark != symbol:
         try:
-            bb, bd, _, _ = await _series(market, benchmark)
+            bb, bd, _, binfo = await _series(market, benchmark)
             bb = [b for b in bb if bars[0].day <= b.day <= bars[-1].day]
+            bd = {d: v for d, v in bd.items() if bb and bb[0].day < d <= bb[-1].day}
             if len(bb) >= 60:
                 bench = sm.run_rule(bb, "buy_and_hold", {}, sm.Costs(), cash0, bd)
                 results["benchmark"] = {"symbol": benchmark, **sm.summarize(bench["equity"], cash0)}
