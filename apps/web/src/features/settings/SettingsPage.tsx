@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 import { errorMessage, type Prefs } from "@/lib/api/client";
 import { formatInstant, formatRelative, formatSessionDate } from "@/lib/format";
 import { useWatchlists } from "@/features/watchlists/api";
+import { useAiStatus } from "@/features/ai/api";
 import { applyDensity, applyTheme, useFixture, useFixtureAction, usePatchPrefs, usePrefs, useSession, useStatus } from "./api";
 
 const TIMEZONES = ["Asia/Kolkata", "UTC", "Asia/Singapore", "Asia/Dubai", "Europe/London", "America/New_York"];
@@ -183,6 +184,8 @@ export function SettingsPage() {
         )}
       </Panel>
 
+      <AiPanel />
+
       <Panel title="Export and backup" titleId="s-backup">
         <div className="flex flex-wrap gap-2">
           <a className="inline-flex h-9 items-center gap-2 rounded-[var(--radius-control)] border border-line bg-elevated px-3 text-sm hover:bg-hover max-md:h-11" href="/api/portfolio/export/transactions.csv">
@@ -247,5 +250,28 @@ export function SettingsPage() {
         </div>
       </Panel>
     </div>
+  );
+}
+
+function AiPanel() {
+  const q = useAiStatus();
+  const st = q.data;
+  return (
+    <Panel title="Grok research (optional, paid)" titleId="s-ai">
+      {!st ? (
+        <SkeletonRows rows={3} />
+      ) : (
+        <dl className="space-y-2 text-[13px]">
+          <div className="flex justify-between gap-2"><dt className="text-fg-2">Status</dt><dd><Pill tone={st.enabled ? "pos" : "neutral"}>{st.enabled ? "On" : "Off"}</Pill></dd></div>
+          {!st.enabled && <p className="text-xs text-fg-3">{st.reason}</p>}
+          <div className="flex justify-between gap-2"><dt className="text-fg-2">Model</dt><dd className="num">{st.model}</dd></div>
+          <div className="flex justify-between gap-2"><dt className="text-fg-2">Today (UTC)</dt><dd className="num">${Number(st.budget.spent_usd).toFixed(4)} of ${Number(st.budget.limit_usd).toFixed(2)} · {st.budget.requests_used}/{st.budget.requests_limit} answers</dd></div>
+          <div className="flex justify-between gap-2"><dt className="text-fg-2">Per answer</dt><dd className="num">≤ {st.budget.max_output_tokens} output tokens · ≤ {st.budget.max_tool_calls} filing lookups</dd></div>
+          <p className="text-xs leading-4 text-fg-3">
+            Tools: {st.tools.join(", ")}; web and X search are off. Only public market data and your question are sent to xAI, never your portfolio or journal. The key stays on the server (GROK_API); limits are set with AI_DAILY_BUDGET_USD, AI_DAILY_REQUESTS, AI_MAX_OUTPUT_TOKENS and AI_MAX_TOOL_CALLS. Spend is reconciled with the cost xAI reports per answer.
+          </p>
+        </dl>
+      )}
+    </Panel>
   );
 }

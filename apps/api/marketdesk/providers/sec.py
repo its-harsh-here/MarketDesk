@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import gzip
+import html
 import json
 import random
 import re
@@ -25,6 +26,21 @@ SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 COMPANYFACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
 TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 _UA_RE = re.compile(r"^\S.{2,}\s\S+@\S+\.\S+$")
+_ACCESSION_RE = re.compile(r"^\d{10}-\d{2}-\d{6}$")
+_DOC_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.(htm|html|txt)$", re.IGNORECASE)
+_TAG_RE = re.compile(r"<(script|style)[^>]*>.*?</\1>|<[^>]+>", re.IGNORECASE | re.DOTALL)
+
+
+def _accession(value: str) -> str:
+    if not _ACCESSION_RE.match(value or ""):
+        raise ProviderError("unsupported", "Not an SEC accession number.")
+    return value
+
+
+def html_to_text(markup: str) -> str:
+    """Readable text from filing HTML: tags removed, entities decoded, whitespace collapsed."""
+    text = html.unescape(_TAG_RE.sub(" ", markup))
+    return re.sub(r"[ \t\r\f\v]+", " ", re.sub(r"\s*\n\s*", "\n", text)).strip()
 
 
 def user_agent_problem(ua: str | None) -> str | None:
@@ -73,26 +89,25 @@ class SecClient:
     def enabled(self) -> bool:
         return self.problem is None
 
-    def _get_json(self, url: str):
+    def _fetch(self, url: str, accept: str, max_bytes: int = 30_000_000) -> bytes:
         if not self.enabled:
             raise ProviderError("unsupported", self.problem or "SEC access is not configured.")
         for attempt in range(self.retries + 1):
             self._limiter.wait()
-            req = urllib.request.Request(  # noqa: S310 (only the fixed https SEC URLs above are ever requested)
-                url, headers={"User-Agent": self.user_agent, "Accept-Encoding": "gzip", "Accept": "application/json"}
+            req = urllib.request.Request(  # noqa: S310 (only fixed https SEC URLs are ever requested)
+                url, headers={"User-Agent": self.user_agent, "Accept-Encoding": "gzip", "Accept": accept}
             )
             try:
                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # noqa: S310 (fixed SEC hosts)
-                    raw = resp.read()
+                    raw = resp.read(max_bytes + 1)
                     if resp.headers.get("Content-Encoding") == "gzip":
                         raw = gzip.decompress(raw)
-                try:
-                    return json.loads(raw)
-                except ValueError as exc:
-                    raise ProviderError("malformed", "SEC returned data that is not valid JSON.") from exc
+                if len(raw) > max_bytes:
+                    raw = raw[:max_bytes]
+                return raw
             except urllib.error.HTTPError as exc:
                 if exc.code == 404:
-                    raise ProviderError("missing", "SEC has no data for this company.") from exc
+                    raise ProviderError("missing", "SEC has no data for this company or filing.") from exc
                 retryable = exc.code == 429 or exc.code >= 500
                 if not retryable or attempt == self.retries:
                     kind = "rate_limited" if exc.code == 429 else "upstream_unavailable"
@@ -102,6 +117,27 @@ class SecClient:
                     raise ProviderError("timeout", "SEC did not respond in time.", retryable=True) from exc
             time.sleep(min(8.0, 0.5 * 2**attempt) * (0.5 + random.random()))  # noqa: S311 (jitter only)
         raise AssertionError("unreachable")  # pragma: no cover
+
+    def _get_json(self, url: str):
+        raw = self._fetch(url, "application/json")
+        try:
+            return json.loads(raw)
+        except ValueError as exc:
+            raise ProviderError("malformed", "SEC returned data that is not valid JSON.") from exc
+
+    def filing_files(self, cik: int, accession: str) -> list[dict]:
+        """The documents in one filing (name, type, size) from the archive's index.json."""
+        url = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{_accession(accession).replace('-', '')}/index.json"
+        data = self._get_json(url)
+        items = ((data or {}).get("directory") or {}).get("item") or []
+        return [i for i in items if isinstance(i, dict) and i.get("name")]
+
+    def document_text(self, cik: int, accession: str, name: str, max_chars: int = 12_000) -> str:
+        """Plain text of one filing document (HTML stripped), cut to max_chars. Only SEC archive URLs are built."""
+        if not _DOC_RE.match(name or ""):
+            raise ProviderError("unsupported", "Only plain filing documents (.htm, .html, .txt) can be read.")
+        raw = self._fetch(filing_document_url(int(cik), _accession(accession), name), "text/html", 3_000_000)
+        return html_to_text(raw.decode("utf-8", errors="replace"))[:max_chars]
 
     def ticker_map(self) -> dict[str, tuple[int, str]]:
         """Ticker -> (CIK, registrant name) from SEC's published association file."""

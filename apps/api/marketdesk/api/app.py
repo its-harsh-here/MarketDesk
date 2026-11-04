@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 
 from marketdesk import __version__
 from marketdesk.api import (
+    routes_ai,
     routes_alerts,
     routes_inbox,
     routes_journal,
@@ -109,6 +110,9 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
     from marketdesk.services.research import ResearchService
 
     app.state.research = ResearchService(settings)
+    from marketdesk.services.analyst import AnalystService
+
+    app.state.analyst = AnalystService(settings)
     install_error_handlers(app)
 
     if settings.extra_origins:
@@ -155,6 +159,7 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
         routes_watchlists,
         routes_portfolio,
         routes_alerts,
+        routes_ai,
         routes_inbox,
         routes_journal,
     ):

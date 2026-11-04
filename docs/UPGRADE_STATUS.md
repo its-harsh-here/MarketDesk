@@ -24,7 +24,8 @@ Roadmap: `docs/MARKETDESK_ROADMAP.txt`. Older history and decisions: `docs/STATU
 | Portfolio | INR and USD long-only accounts (DEPOSIT, WITHDRAWAL, BUY, SELL, DIVIDEND, confirmed SPLIT) plus explicit FX conversions; Decimal replay of both accounts on every edit; average cost, realized/unrealized P&L; all-accounts view in INR at a stated current rate (withheld when incomplete); CSV preview/import/export with formula-injection defence | No historical FX or consolidated returns; no broker CSV mapping presets |
 | Alerts + worker | Price, crossing, completed-session volume/volatility and SEC filing rules; cooldown auto-rearm; quiet hours; unique event and delivery keys; unified inbox with scheduled morning/end-of-session briefings (exchange calendars); single worker every `ALERT_POLL_SECONDS` (300 s), started 45 s after the web server at nice 10 in single-container mode | No email/Telegram/push delivery; filing rules need `SEC_USER_AGENT` |
 | Briefing | Rule-based: largest watchlist moves, distance to alert thresholds, recent alert events, journal reviews due | No Grok narrative (optional, M03/M05) |
-| Journal | Thesis, risks, invalidation, decision, conviction, horizon, tags; immutable versions with change notes and evidence snapshots; then-vs-now comparison; review queue and history; plain-text rendering; filters | No Grok counterargument (needs M03) |
+| Journal | Thesis, risks, invalidation, decision, conviction, horizon, tags; immutable versions with change notes and evidence snapshots; then-vs-now comparison; review queue and history; plain-text rendering; filters | No Grok counterargument yet |
+| Grok research | Evidence-first cited answers (results, catalysts, compare, ask) with code-side checks, daily budget and request caps, reuse, saved answers | Real xAI call verified only on the deployed app; no web/X search |
 | Settings/diagnostics | Theme, density, default watchlist, timezone, data status (provider health, storage, DB round trip, created-at, worker), backup guidance, attribution; `Server-Timing` header on `/api` responses | — |
 | AI | None. No xAI/Grok code or keys | M03 |
 
@@ -536,6 +537,54 @@ No new environment variables.
 - Real-data evidence capture was exercised on a local Yahoo-mode copy instead: a RELIANCE.NS note stored an INR price,
   and an SMR note stored a USD price with its market time and Yahoo fundamentals (no P/E: earnings are negative).
 - The pre-deploy backup and the scratch rehearsal database have been deleted.
+
+## M03 — Cited Grok analyst (moved forward; 4 Nov 2026)
+The owner added an xAI key as `GROK_API` (Render) and asked for the most capable assistant that fits free credits.
+
+**Design for limited credit ("evidence first, one call").**
+- MarketDesk retrieves and computes the evidence in code: quote; one-year price statistics (1m/3m/1y change, high,
+  low, max drawdown); fundamentals; for US registrants SEC annual and quarterly statements with period changes and
+  ratios, the filing list, and the latest results release (8-K Item 2.02 exhibit 99). Each item is a source `S1..Sn`
+  with as-of date, fetch time and status. Comparisons get an aligned latest-fiscal-year table (period ends checked).
+- One structured Responses API call (`text.format` json_schema, strict) answers from that package. The model may call
+  one read-only tool, `read_filing`, for at most `AI_MAX_TOOL_CALLS` filings that are already in the filing list
+  (sec.gov archive URLs built from CIK + accession; nothing else can be fetched).
+- Answers are checked in code: unknown source ids are removed and flagged, facts without sources flagged, figures in
+  facts/calculations matched against the cited sources (rounding and units tolerated), advice-like wording flagged.
+- Budget: `AI_DAILY_BUDGET_USD` (default $0.50) and `AI_DAILY_REQUESTS` (30) per UTC day; a worst-case estimate is
+  reserved before dispatch under a lock (plus a PostgreSQL advisory lock), then reconciled with xAI's reported
+  `cost_in_usd_ticks`. Interrupted jobs count their reservation as spent. Reuse: the same request on unchanged
+  filings/statements/trading day returns the saved answer at no cost.
+- Model `grok-4.3` by default ($1.25/$2.50 per M tokens, docs.x.ai/docs/models, 4 Nov 2026); `XAI_MODEL=grok-4.7` for
+  the strongest model at ~2.4× the price. If xAI rejects an optional setting, the request is retried once without it.
+- Jobs run in a background thread and the UI polls progress; at most two run at once.
+- Only public data and the question are sent; never the portfolio or journal. No web/X search. The key is read from
+  `GROK_API` (or `XAI_API_KEY`), never logged or returned; `GROK_ENABLED=false` turns AI off.
+
+**UI.** "Ask Grok" on Instrument Detail: Latest results / Catalysts / Compare (up to two more listings) / Ask; progress
+steps; the answer labelled as model output with fact/calculation/interpretation and certainty badges, `[S1]` citations,
+flagged checks, uncertainties and gaps, the source list (as-of, fetched, status, link), data cutoff, tokens and cost;
+saved answers per listing. Settings shows status, model, today's spend and the limits.
+
+**Data migration 0007 (additive):** table `ai_answers`.
+
+**Not built:** the journal counterargument (M10 item 54) and Grok narratives on briefings; web/X search tools.
+
+**Checks.**
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 17 | all passed (M03: 17 with a fake xAI client — disabled without a key, validation flags, reuse, budget and request caps, concurrent reservations, stale-job recovery, failures incl. 429/malformed/incomplete/schema mismatch, compare, results release + model-requested filing via the tool loop, figure tolerance, key never in errors or responses, option fallback) |
+| Migration 0007 up/down/up and `alembic check` (SQLite and PostgreSQL) | clean |
+| ruff, tsc, ESLint / Vitest | clean / 32 passed |
+| Playwright journeys (fixture harness + local fake xAI endpoint) | 16 passed (new: Ask Grok → cited answer → sources → repeat request reuses the saved answer → Settings shows usage) |
+| Visual | research panel at 1440 and 390, Settings section; no page overflow; budget line and saved list refresh when a job finishes |
+
+**Not verified here:** a real xAI call. The key is not in this coding session's environment (a new session picks up
+environment changes); live verification is through the deployed app.
+
+**Docs fix:** the M08 README edit had removed the Alerts, Tests, Layout, Runtime versions and Attribution sections (and
+the M10 journal section was therefore never inserted). All are restored from history, and the journal and Grok sections
+added.
 
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.

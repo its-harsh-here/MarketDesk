@@ -89,6 +89,8 @@ cookies and survive restarts on their own.
 | `ALERT_POLL_SECONDS`, `WORKER_START_DELAY_SECONDS`, `WORKER_NICE` | no | Worker sampling interval (300 s) and start-up pacing. |
 | `SEC_USER_AGENT` | for US filings | Application name and **your** contact email (SEC fair-access rule), e.g. `MarketDesk you@example.com`. Without it the Financials/Filings/Events tabs explain that SEC data is off. |
 | `SEC_MAX_REQUESTS_PER_SECOND`, `RESEARCH_REFRESH_HOURS` | no | SEC request budget (default 5/s; SEC allows 10) and the daily re-check interval. |
+| `GROK_API` (or `XAI_API_KEY`) | for Grok research | xAI API key, server-side only. Without it the "Ask Grok" research panel explains that AI is off; nothing else changes. |
+| `XAI_MODEL`, `GROK_ENABLED`, `AI_DAILY_BUDGET_USD`, `AI_DAILY_REQUESTS`, `AI_MAX_OUTPUT_TOKENS`, `AI_MAX_TOOL_CALLS`, `AI_REUSE_HOURS` | no | Model (default `grok-4.3`), off switch, and the spending/size limits (defaults $0.50 and 30 answers per UTC day, 1,800 output tokens, 3 filing lookups, 24 h reuse). |
 
 - **Start command:** none — the image's default `python -m marketdesk.serve` runs the web server and, 45 s after it
   answers, the alert worker in the same container. Leave Render's *Start Command* empty.
@@ -242,6 +244,107 @@ CSV import uses the canonical columns
 (`currency` is the account; the five FX columns apply to FX rows only; files without them still import). A template is
 downloadable in the import dialog. Imports are previewed row by row, all-or-nothing, and duplicate rows are skipped.
 Exports neutralise spreadsheet formulas; holdings export per account.
+
+## Decision journal
+
+A note links one instrument to a dated thesis, risks, invalidation conditions, your decision (watch, buy, add, hold,
+trim, sell or avoid — your record, not a recommendation), conviction (1–5), horizon, tags and a review date.
+- **Versions:** the first save is version 1. An edit that changes the thesis must say what changed and why, and becomes a
+  new version; earlier versions are never modified. Tags and the review date can change without a new version, and a
+  note's instrument cannot change.
+- **Evidence:** each version stores what the data showed when it was saved — price with market time and status, P/E,
+  dividend yield and market cap, and recent SEC filings for US listings. The Evidence view puts any version's snapshot
+  beside today's data (fetched for comparison, never saved over the snapshot): price change in the instrument's
+  currency, filings since, and a warning when a split makes the raw price comparison meaningless.
+- **Reviews:** notes whose review date has arrived appear in the review queue. Completing a review records an outcome
+  (intact, weakened, invalidated, closed), your notes, the evidence at that moment and the next review date.
+- Notes are plain text, written by you; nothing is generated. Deleting a note (with confirmation) deletes its history.
+
+## Grok research (optional)
+
+On Instrument Detail, **Ask Grok** runs one of four tasks: latest results, possible catalysts, a comparison with one or
+two other listings, or your own question.
+- **Evidence first:** MarketDesk retrieves and computes the evidence itself — quote, one-year price statistics,
+  fundamentals, and for US registrants SEC statements (with period changes and ratios computed in code), the filing list
+  and the latest results press release. Each item becomes a numbered source with its date, fetch time and status.
+- **One call, cited:** Grok answers from that package in a single structured response (it may ask to read up to three
+  more filings already listed). Every point is labelled fact, calculation or interpretation and cites sources.
+- **Checked:** citations to unknown sources, facts without a source, figures that do not appear in the cited sources and
+  advice-like wording are flagged on the answer. Figures and prices never come from the model.
+- **Budgeted:** a daily dollar cap and answer cap are enforced on the server (worst-case cost reserved before the call,
+  reconciled with the cost xAI reports). The same request on unchanged evidence returns the saved answer for free.
+- **Private:** only public market data and your question are sent — never your portfolio or journal. Web and X search
+  are not used. Answers are saved with their sources, data cutoff, model, tokens and cost.
+
+## Alerts, inbox and briefings
+
+Alerts are **sampled**: the worker checks new data every `ALERT_POLL_SECONDS` (default 300). Rule types:
+
+| Rule | Fires when | Data |
+| --- | --- | --- |
+| Price at or above / below | the first sampled quote at or beyond the level | each new quote observation |
+| Crosses above / below | two consecutive sampled quotes lie on opposite sides of the level (the first quote after arming is only a baseline) | each new quote observation |
+| Unusual volume | a session's volume ≥ multiple × the average of the previous 5–60 sessions | completed daily sessions only |
+| Unusual daily move | a session's close-to-close move ≥ multiple × the standard deviation of the previous 5–60 daily moves | completed daily sessions only |
+| New SEC filing (US) | a new filing of the chosen forms appears; links to the document; keeps watching | SEC EDGAR (`SEC_USER_AGENT` required) |
+
+A session still trading (by the exchange calendar) is never compared with full days. Stale, failed or missing data is
+never evaluated, and the reason is shown on the rule. After firing, a rule waits for a manual rearm or rearms itself
+after an optional cooldown (5 minutes to 7 days). Quiet hours (display timezone) hold the in-app notice until the
+window ends; the event itself is still recorded. Event keys and per-channel delivery rows are unique, so cached
+re-reads, retries and worker restarts cannot duplicate events or notices. Only in-app notices exist (no email,
+Telegram or push). Alerts require the server and worker to be running.
+
+The **inbox** (Alerts page and the topbar bell) lists alert events and **briefings** with type/market/unread filters
+and read state. The worker writes a morning briefing before each NSE/BSE and NYSE/Nasdaq session and an
+end-of-session briefing after the close, timed by the exchange calendars and stored once per session: largest
+completed-session moves among your symbols, volume notes, triggered alerts, distance to price levels and due journal
+reviews. It uses fixed templates only: no model, no causes, no recommendations.
+
+## Tests
+
+Automated tests use the synthetic harness so they are deterministic and never depend on Yahoo being up.
+
+| Suite | Command |
+| --- | --- |
+| API (pytest) and lint | `cd apps/api && uv run pytest && uv run ruff check marketdesk tests` |
+| API on PostgreSQL | `TEST_DATABASE_URL=postgresql://USER:PW@HOST/DB uv run pytest` (resets that database's schema) |
+| Web types, lint, unit, build | `cd apps/web && npx tsc -b --noEmit && npx eslint . && npx vitest run && npm run build` |
+| Browser journeys (real API + worker) | after building the web app: `cd tests/e2e && npm ci && npx playwright test` |
+| Visual QA captures (not committed) | `cd tests/e2e && npm run screenshots` → `tests/e2e/test-results/screenshots` |
+| Live Yahoo smoke test | `cd apps/api && uv run python ../../scripts/check_yahoo.py` |
+
+The browser journeys point Grok research at a local fake xAI endpoint (`scripts/fake_xai.py`): no key, no network, no
+cost. CI (`.github/workflows/ci.yml`) runs these suites and builds the Docker image. Results are recorded in
+`docs/STATUS.md`. API types for the frontend are generated from OpenAPI: `cd apps/web && npm run gen:api`.
+
+## Layout
+
+```
+apps/api     FastAPI app (marketdesk/), Alembic migrations, pytest suite
+apps/web     React + TypeScript SPA (src/app, components, features, lib, styles), Vitest
+tests/e2e    Playwright journeys and visual QA captures
+fixtures     Synthetic test-harness dataset (tests only; refused in production)
+config       Starter NSE watchlist and benchmark indices
+docs         PLAN, STATUS, DECISIONS, screenshots
+```
+
+## Runtime versions
+
+Python 3.13 · FastAPI 0.162.0 · Uvicorn 0.54.0 · SQLAlchemy 2.1.6 · Alembic 1.20.1 · Pydantic 2.14.2 · yfinance 1.7.0 ·
+pandas 3.1.0 · argon2-cffi 25.1.0 · exchange-calendars 4.13.2 · Node 22 · React 19.3.1 · Vite 7.3.7 · TypeScript 5.9.3 · Tailwind CSS 4.3.4 ·
+TanStack Query 5.105.3 · React Router 7.18.5 · React Hook Form 7.91.0 · Zod 4.6.7 · Lightweight Charts 5.2.1 ·
+Vitest 3.2.7 · Playwright 1.63.0. Exact pins are in `apps/api/uv.lock` and the `package-lock.json` files.
+
+## Attribution
+
+- Charts: [TradingView Lightweight Charts™](https://www.tradingview.com/lightweight-charts/) (Apache-2.0), Copyright ©
+  TradingView, Inc. Each chart shows the TradingView attribution logo; Settings → About repeats it.
+- Market data: Yahoo Finance via [yfinance](https://github.com/ranaroussi/yfinance) (Apache-2.0, unofficial).
+- Exchange calendars: [exchange_calendars](https://github.com/gerrymanoim/exchange_calendars) (Apache-2.0).
+- Fonts: Inter and JetBrains Mono (SIL OFL 1.1) bundled through Fontsource. Icons: Lucide (ISC).
+
+No licence has been chosen for MarketDesk's own code; add one before distributing it.
 
 ## Known limitations
 

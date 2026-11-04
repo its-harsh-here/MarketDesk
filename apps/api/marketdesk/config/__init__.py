@@ -70,6 +70,21 @@ class Settings(BaseSettings):
     research_refresh_hours: int = 24  # how often tracked companies are re-checked for new filings
     worker_heartbeat_stale_seconds: int = 900
 
+    # Grok (xAI) research analyst: optional, paid, server-side only. The key is read from GROK_API (the owner's name)
+    # or XAI_API_KEY; with no key every AI feature is off and nothing else changes. GROK_ENABLED=false turns it off
+    # without removing the key.
+    grok_api: str | None = None
+    xai_api_key: str | None = None
+    grok_enabled: bool = True
+    xai_model: str = "grok-4.3"  # cost-efficient Grok 4 model (docs.x.ai/docs/models, checked 4 Nov 2026)
+    xai_base_url: str = "https://api.x.ai/v1"
+    xai_timeout_seconds: float = 90.0
+    ai_daily_budget_usd: float = 0.50  # application cap on estimated + reconciled spend per UTC day
+    ai_daily_requests: int = 30  # model-backed answers per UTC day (reused answers do not count)
+    ai_max_output_tokens: int = 1800
+    ai_max_tool_calls: int = 3  # extra read-only lookups the model may request per answer
+    ai_reuse_hours: int = 24  # an identical request on unchanged evidence returns the saved answer
+
     # Limits
     max_watchlists: int = 20
     max_watchlist_items: int = 50
@@ -78,6 +93,11 @@ class Settings(BaseSettings):
     max_import_rows: int = 2000
 
     display_timezone_default: str = "Asia/Kolkata"
+
+    @property
+    def xai_key(self) -> str | None:
+        key = (self.grok_api or self.xai_api_key or "").strip()
+        return key or None
 
     @property
     def is_production(self) -> bool:

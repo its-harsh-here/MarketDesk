@@ -41,4 +41,6 @@ earlier as soon as their credentials exist.
   presets not built (canonical CSV covers both accounts and FX).
 - Phase 6 (M10): ✅ implemented, tested and deployed; live checks in `docs/UPGRADE_STATUS.md`. Grok counterargument
   waits for M03.
+- M03 (moved forward when the owner added `GROK_API`): ✅ implemented, tested with a fake xAI client and a fake
+  endpoint in the browser journeys; live check in `docs/UPGRADE_STATUS.md`.
 - Phase 7 (M06): next.

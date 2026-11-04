@@ -175,3 +175,12 @@ Consequential choices, newest last. Routine choices live in code comments.
     what was known and how fresh it was; comparisons fetch "now" without storing it. Existing notes are backfilled as
     version 1 explicitly marked as having no evidence rather than being given today's data. The optional Grok
     counterargument is deferred to M03 (needs a key).
+41. **M03 Grok analyst on limited credit.** Evidence is retrieved and computed by MarketDesk before the model is called,
+    so most answers need one model call and the model never supplies figures; a single read-only tool can read filings
+    already in the evidence. Citations are checked in code (unknown ids, unsupported facts, figures absent from the
+    cited sources, advice wording) instead of trusting the model's own citations. The daily budget is enforced by
+    reserving a worst-case estimate before each call (serialized, PostgreSQL advisory lock) and reconciling with xAI's
+    reported cost; the same request on unchanged evidence reuses the saved answer. The owner's key name `GROK_API` is
+    honoured (with `XAI_API_KEY` as an alias); a configured key is the opt-in and `GROK_ENABLED=false` the off switch.
+    Default model `grok-4.3` for cost; `grok-4.7` is one setting away. Only public data and the question leave the
+    server; web/X search stay off.

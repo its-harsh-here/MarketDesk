@@ -17,6 +17,7 @@ import { AlertDialog } from "@/features/alerts/AlertDialog";
 import { JournalPage } from "@/features/journal/JournalPage";
 import { JournalDialog } from "@/features/journal/JournalDialog";
 import { JournalDetailDialog } from "@/features/journal/JournalDetailDialog";
+import { AiDialog } from "@/features/ai/AiDialog";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { CommandPalette } from "@/features/search/CommandPalette";
@@ -87,6 +88,7 @@ function GlobalDialogs() {
       <AlertDialog />
       <JournalDialog />
       <JournalDetailDialog />
+      <AiDialog />
       <NewWatchlistDialog />
       <AddSymbolDialog />
     </>

@@ -247,6 +247,33 @@ class Briefing(Base):
     read_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
 
+class AiAnswer(Base):
+    """A Grok research answer with the evidence it was given, validation flags, model and usage. Kept for reuse."""
+
+    __tablename__ = "ai_answers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, nullable=False, index=True)
+    finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    day: Mapped[date] = mapped_column(Date, nullable=False, index=True)  # UTC day, for the daily budget
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)  # ask | results | catalysts | compare
+    symbols: Mapped[list] = mapped_column(JSON, nullable=False)
+    question: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(12), nullable=False)  # running | done | reused | refused | failed
+    steps: Mapped[list | None] = mapped_column(JSON)
+    model: Mapped[str | None] = mapped_column(String(60))
+    output: Mapped[dict | None] = mapped_column(JSON)
+    sources: Mapped[list | None] = mapped_column(JSON)
+    flags: Mapped[list | None] = mapped_column(JSON)
+    usage: Mapped[dict | None] = mapped_column(JSON)
+    evidence_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    reserved_usd: Mapped[Decimal | None] = mapped_column(DecimalText)
+    cost_usd: Mapped[Decimal | None] = mapped_column(DecimalText)
+    data_cutoff: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    reused_from: Mapped[int | None] = mapped_column(Integer)
+    error: Mapped[str | None] = mapped_column(String(300))
+
+
 class QuoteObservation(Base):
     """A distinct provider quotation, keyed by market timestamp so re-reading a cached quote is idempotent."""
 

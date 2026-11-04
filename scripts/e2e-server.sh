@@ -9,10 +9,15 @@ PORT=${PORT:-8100}
 cd "$ROOT/apps/api"
 test -f "$ROOT/apps/web/dist/index.html" || { echo "Build the web app first: (cd apps/web && npm run build)" >&2; exit 1; }
 uv run --quiet marketdesk migrate
+# Grok research runs against a local fake xAI endpoint (no key, no network, no cost).
+XAI_PORT=$((PORT + 50))
+python3 "$ROOT/scripts/fake_xai.py" "$XAI_PORT" &
+FAKE_XAI=$!
+export GROK_API=e2e-fake-key XAI_BASE_URL="http://127.0.0.1:$XAI_PORT/v1"
 uv run --quiet python -m marketdesk.worker &
 WORKER=$!
 uv run --quiet uvicorn marketdesk.main:app --host 127.0.0.1 --port "$PORT" &
 WEB=$!
-cleanup() { kill "$WORKER" "$WEB" 2>/dev/null || true; }
+cleanup() { kill "$WORKER" "$WEB" "$FAKE_XAI" 2>/dev/null || true; }
 trap cleanup EXIT INT TERM
 wait -n "$WORKER" "$WEB"

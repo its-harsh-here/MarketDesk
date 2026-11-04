@@ -1,4 +1,4 @@
-import { Bell, NotebookPen, Plus } from "lucide-react";
+import { Bell, NotebookPen, Plus, Sparkles } from "lucide-react";
 import { useRef } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { Link } from "react-router";
@@ -26,6 +26,7 @@ import { ChartPanel } from "@/features/market/ChartPanel";
 import { useActions, useFundamentals, useSessions, useSnapshots } from "@/features/market/api";
 import { ComparePanel } from "@/features/market/ComparePanel";
 import { EventsTab, FilingsTab, FinancialsTab } from "@/features/research/ResearchTabs";
+import { useAiStatus } from "@/features/ai/api";
 import { REGION_LABEL, sessionFor, sessionText } from "@/lib/markets";
 import { usePrefs, useSession } from "@/features/settings/api";
 import { StarToggle } from "@/features/watchlists/StarToggle";
@@ -100,6 +101,7 @@ export function InstrumentPage() {
   const marketSession = sessionFor(sessions.data, inst?.country);
   const ccy = inst?.currency ?? fund.data?.currency ?? null;
   const readOnly = Boolean(session?.read_only);
+  const ai = useAiStatus();
   const kindUpper = (inst?.kind ?? "").toUpperCase();
   const account = inst?.currency === "INR" || inst?.currency === "USD" ? inst.currency : null;
   const holdable = Boolean(inst && account && kindUpper !== "INDEX" && kindUpper !== "CURRENCY");
@@ -186,6 +188,15 @@ export function InstrumentPage() {
             </Button>
             <Button size="sm" variant="ghost" icon={<NotebookPen className="size-3.5" aria-hidden />} disabled={readOnly} onClick={() => open({ kind: "journal", symbol })}>
               Note
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={<Sparkles className="size-3.5" aria-hidden />}
+              title={ai.data && !ai.data.enabled ? `Grok research unavailable: ${ai.data.reason}` : "Cited research from the evidence MarketDesk retrieves"}
+              onClick={() => open({ kind: "ai", symbol })}
+            >
+              Ask Grok
             </Button>
           </div>
           {holdReason && inst && <p className="w-full text-xs text-fg-3">{holdReason}</p>}
