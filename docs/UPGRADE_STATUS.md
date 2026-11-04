@@ -479,6 +479,9 @@ byte-identical. No new environment variables.
   20-F was filed 15 Dec 2025. **Fix:** the Financials tab now states when the latest periodic report has no figures in
   SEC's company-facts data yet, naming that filing and the filing the shown figures come from.
 - IFCI.NS: every research dataset reports "SEC data does not apply" (not a US registrant).
+- Also fixed (an M08 leftover seen in the live check): Instrument Detail still said the portfolio was INR-only and
+  disabled "Add transaction" for USD listings; it now opens the dialog on the USD account (indices and exchange rates
+  stay non-holdable). The browser journey that asserted the old message now checks the new behaviour.
 
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.

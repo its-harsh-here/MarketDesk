@@ -311,9 +311,16 @@ test("production build: SPA deep links load and unknown API routes return JSON 4
   const api404 = await request.get("/api/does-not-exist");
   expect(api404.status()).toBe(404);
   expect(await api404.json()).toEqual({ error: { code: "not_found", message: "No such API route.", details: null } });
+  // a USD listing is recorded in the USD account (preselected); an index cannot be held at all
   await page.goto("/instrument/SX%3AHALCYON");
+  await page.getByRole("button", { name: "Add transaction" }).click();
+  const dialog = page.getByRole("dialog", { name: "Add transaction" });
+  await expect(dialog.getByLabel("Account")).toHaveValue("USD");
+  await expect(dialog.getByLabel("Price per share (USD)")).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await page.goto("/instrument/SX%3ASX50");
   await expect(page.getByRole("button", { name: "Add transaction" })).toBeDisabled();
-  await expect(page.getByText(/INR-only with no currency conversion/)).toBeVisible();
+  await expect(page.getByText("Indices cannot be held in the portfolio.")).toBeVisible();
 });
 
 test("instrument header: a long symbol never overlaps the price at any width", async ({ page }) => {

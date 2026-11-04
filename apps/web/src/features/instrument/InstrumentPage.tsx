@@ -100,13 +100,15 @@ export function InstrumentPage() {
   const marketSession = sessionFor(sessions.data, inst?.country);
   const ccy = inst?.currency ?? fund.data?.currency ?? null;
   const readOnly = Boolean(session?.read_only);
-  const holdable = inst && inst.currency === "INR" && (inst.kind ?? "").toUpperCase() !== "INDEX";
+  const kindUpper = (inst?.kind ?? "").toUpperCase();
+  const account = inst?.currency === "INR" || inst?.currency === "USD" ? inst.currency : null;
+  const holdable = Boolean(inst && account && kindUpper !== "INDEX" && kindUpper !== "CURRENCY");
   const holdReason = !inst
     ? "Instrument not loaded"
-    : (inst.kind ?? "").toUpperCase() === "INDEX"
-      ? "Indices cannot be held in the portfolio."
-      : inst.currency !== "INR"
-        ? `Trades in ${inst.currency ?? "an unverified currency"}; the v1 portfolio is INR-only with no currency conversion.`
+    : kindUpper === "INDEX" || kindUpper === "CURRENCY"
+      ? `${kindUpper === "INDEX" ? "Indices" : "Exchange rates"} cannot be held in the portfolio.`
+      : !account
+        ? `Trades in ${inst.currency ?? "an unverified currency"}; portfolio accounts exist for INR and USD only, and amounts are never converted by relabeling.`
         : undefined;
   const myAlerts = alerts.data?.filter((a) => a.symbol === symbol) ?? [];
   const f = fund.data?.values;
@@ -178,7 +180,7 @@ export function InstrumentPage() {
               icon={<Plus className="size-3.5" aria-hidden />}
               disabled={readOnly || !holdable}
               title={readOnly ? "Read-only demo" : holdReason}
-              onClick={() => open({ kind: "transaction", symbol, type: "BUY" })}
+              onClick={() => open({ kind: "transaction", symbol, type: "BUY", currency: account ?? undefined })}
             >
               Add transaction
             </Button>
