@@ -592,6 +592,9 @@ saved answers per listing. Settings shows status, model, today's spend and the l
   final usage of a successful answer was also not saved when it was updated in place. The miscounted failed record was
   deleted from the live database (budget back to $0). Settings now shows a non-secret description of the configured
   key (whether it starts with `xai-` and its length) to diagnose a wrong key, and surrounding quotes are ignored.
+- After deploying 3b6d2cb the live status reports the stored key "does not start with 'xai-', 56 characters". xAI keys
+  start with `xai-`; a 56-character key matches the format of a Groq (groq.com) key, a different provider. Waiting for
+  the owner: an xAI API key from console.x.ai, or a decision to support Groq's free tier as the AI provider.
 
 **Docs fix:** the M08 README edit had removed the Alerts, Tests, Layout, Runtime versions and Attribution sections (and
 the M10 journal section was therefore never inserted). All are restored from history, and the journal and Grok sections
