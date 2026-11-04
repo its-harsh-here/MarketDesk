@@ -454,6 +454,16 @@ design.
 Fixture data: a synthetic `SX:USDINR` series was added by the generator with its own seed; every existing series is
 byte-identical. No new environment variables.
 
+**Live verification after deploying da3c882 (4 Nov 2026).**
+- CI green; the schema migrated to `0005` and is up to date; the owner-data fingerprint is identical before and after
+  (the production ledger has no transactions yet, so nothing else changed).
+- `/api/portfolio/summary` (INR and USD), `/api/portfolio/overview` and the USD transaction filter return 200.
+- The Yahoo valuation rate `USDINR=X` resolves (94.64 INR per USD, quoted in INR, status available) when queried
+  from this environment; the live overview requests it only once a USD account has transactions.
+- The live Portfolio page renders at 1440 and 390 px with no overflow or console errors; "Convert currency" opens the
+  FX form (read-only check, cancelled). Follow-up: the account switcher is now shown even on an empty ledger.
+- The pre-deploy backup and the scratch rehearsal database have been deleted.
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.

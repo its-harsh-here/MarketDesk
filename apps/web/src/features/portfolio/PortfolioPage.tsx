@@ -235,7 +235,7 @@ export function PortfolioPage() {
     </div>
   );
 
-  const switcher = anyAccount && (
+  const switcher = (
     <Segmented<View>
       label="Portfolio account"
       size="md"
@@ -291,7 +291,7 @@ export function PortfolioPage() {
           >
             {ccy === "USD"
               ? "Fund the USD account with an FX conversion from INR (rate, source, time and fees are recorded), or a USD deposit. US-listed stocks and ETFs are recorded here, in USD."
-              : "Record a deposit first, then your buys and sells. Holdings, cash and P&L are computed from this INR ledger."}
+              : "Record a deposit first, then your buys and sells. Holdings, cash and P&L are computed from this INR ledger; US-listed stocks and ETFs belong in the USD account."}
           </EmptyState>
         </Panel>
       </div>
@@ -303,7 +303,7 @@ export function PortfolioPage() {
   return (
     <div className="space-y-4 p-4 md:space-y-5 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {switcher || <span />}
+        {switcher}
         <div className="flex flex-wrap gap-2">
           {actions}
           <a className="inline-flex h-9 items-center gap-2 rounded-[var(--radius-control)] border border-line bg-elevated px-3 text-sm text-fg hover:bg-hover max-md:h-11" href="/api/portfolio/export/transactions.csv">
