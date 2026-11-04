@@ -526,6 +526,17 @@ evidence (none was captured at the time); entry rows are not rewritten (tested).
 
 No new environment variables.
 
+**Live verification after deploying b43bdc1 (4 Nov 2026).**
+- CI: all jobs green, including the browser journeys and the OpenAPI types check.
+- The schema migrated to `0006` and is up to date; the owner-data fingerprint is identical; the new tables are empty
+  (production had no journal notes).
+- `/api/journal`, the review queue (`?due=true`) and a missing note (404) respond correctly. The live Journal page and
+  its new-note form (decision, conviction, horizon) render at 1440 and 390 px with no overflow or console errors
+  (read-only check; no note was written to the live journal).
+- Real-data evidence capture was exercised on a local Yahoo-mode copy instead: a RELIANCE.NS note stored an INR price,
+  and an SMR note stored a USD price with its market time and Yahoo fundamentals (no P/E: earnings are negative).
+- The pre-deploy backup and the scratch rehearsal database have been deleted.
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
