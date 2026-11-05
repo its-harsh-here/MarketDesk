@@ -32,6 +32,7 @@ from marketdesk.api import (
     routes_system,
     routes_valuation,
     routes_watchlists,
+    routes_workspace,
     timing,
 )
 from marketdesk.api.errors import error_body, install_error_handlers
@@ -174,6 +175,7 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
         routes_earnings,
         routes_macro,
         routes_lab,
+        routes_workspace,
     ):
         app.include_router(r.router)
 
@@ -191,6 +193,9 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
         async def spa(path: str):
             candidate = (static / path).resolve()
             if path and candidate.is_file() and static.resolve() in candidate.parents:
+                if path in ("sw.js", "manifest.webmanifest"):  # always revalidated, so updates arrive promptly
+                    media = "application/manifest+json" if path.endswith(".webmanifest") else "text/javascript"
+                    return FileResponse(candidate, media_type=media, headers={"Cache-Control": "no-cache"})
                 return FileResponse(candidate)
             return FileResponse(index, headers={"Cache-Control": "no-cache"})
 

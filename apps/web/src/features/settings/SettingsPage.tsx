@@ -1,4 +1,6 @@
 import { Download, RotateCcw, SkipForward, Zap, ZapOff } from "lucide-react";
+import { useEffect } from "react";
+import { useSearchParams } from "react-router";
 import { Panel } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Field, Select } from "@/components/ui/Form";
@@ -10,6 +12,7 @@ import { errorMessage, type Prefs } from "@/lib/api/client";
 import { formatInstant, formatRelative, formatSessionDate } from "@/lib/format";
 import { useWatchlists } from "@/features/watchlists/api";
 import { useAiStatus } from "@/features/ai/api";
+import { OfflinePanel, UsagePanel, WorkspacesPanel } from "@/features/workspace/SettingsPanels";
 import { applyDensity, applyTheme, useFixture, useFixtureAction, usePatchPrefs, usePrefs, useSession, useStatus } from "./api";
 
 const TIMEZONES = ["Asia/Kolkata", "UTC", "Asia/Singapore", "Asia/Dubai", "Europe/London", "America/New_York"];
@@ -25,6 +28,11 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 export function SettingsPage() {
   const { data: prefs, isLoading } = usePrefs();
+  if (isLoading || !prefs) return <div className="p-6"><SkeletonRows rows={8} /></div>;
+  return <SettingsBody prefs={prefs} />;
+}
+
+function SettingsBody({ prefs }: { prefs: Prefs }) {
   const patch = usePatchPrefs();
   const { data: lists } = useWatchlists();
   const { data: status } = useStatus();
@@ -33,12 +41,17 @@ export function SettingsPage() {
   const action = useFixtureAction();
   const toast = useToast();
   const readOnly = Boolean(session?.read_only);
-  const tz = prefs?.display_timezone ?? "Asia/Kolkata";
+  const tz = prefs.display_timezone ?? "Asia/Kolkata";
+  const [params] = useSearchParams();
+  const section = params.get("s");
+  useEffect(() => {
+    const el = section ? document.getElementById(`s-${section}`) : null;
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 88 }); // clear the sticky top bar
+  }, [section]);
 
   const save = (p: Partial<Prefs>, msg = "Preference saved.") =>
     patch.mutate(p, { onSuccess: () => toast("success", msg), onError: (e) => toast("error", errorMessage(e)) });
 
-  if (isLoading || !prefs) return <div className="p-6"><SkeletonRows rows={8} /></div>;
   const health = (status?.provider_health ?? {}) as { circuit?: string; consecutive_failures?: number; last_success_at?: string | null; last_failure_at?: string | null; last_error?: { kind?: string; message?: string } | null; endpoints?: Record<string, { circuit: string; consecutive_failures: number }> };
 
   return (
@@ -95,6 +108,8 @@ export function SettingsPage() {
         </div>
         <p className="mt-3 text-xs text-fg-3">Overview chart symbol: {prefs.chart_symbol ? <span className="num text-fg-2">{prefs.chart_symbol}</span> : <span className="text-fg-2">first symbol of the default watchlist</span>} (change it from the chart header).</p>
       </Panel>
+
+      <WorkspacesPanel />
 
       <Panel title="Data status" titleId="s-data">
         {!status ? (
@@ -185,6 +200,10 @@ export function SettingsPage() {
       </Panel>
 
       <AiPanel />
+
+      <UsagePanel />
+
+      <OfflinePanel />
 
       <Panel title="Export and backup" titleId="s-backup">
         <div className="flex flex-wrap gap-2">

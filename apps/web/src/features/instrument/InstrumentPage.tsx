@@ -1,4 +1,4 @@
-import { Bell, NotebookPen, Plus, Sparkles } from "lucide-react";
+import { Bell, Download, NotebookPen, Plus, Sparkles } from "lucide-react";
 import { useRef } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { Link } from "react-router";
@@ -191,6 +191,9 @@ export function InstrumentPage() {
             </Button>
             <Button size="sm" variant="ghost" icon={<NotebookPen className="size-3.5" aria-hidden />} disabled={readOnly} onClick={() => open({ kind: "journal", symbol })}>
               Note
+            </Button>
+            <Button size="sm" variant="ghost" icon={<Download className="size-3.5" aria-hidden />} onClick={() => open({ kind: "export", symbol })}>
+              Export
             </Button>
             <Button
               size="sm"

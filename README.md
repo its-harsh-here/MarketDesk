@@ -269,6 +269,27 @@ Portfolio → **Rebalance**: target weights per holding (saved), then a **simula
 shares and an assumed fee; the proposed share counts are editable and recalculate on the page. Nothing is submitted
 or recorded.
 
+## Workspaces, offline copy, exports and usage
+
+- **Workspaces** (label above the page title; More menu on phones; command palette "Workspace: …"): Market, Research
+  and Portfolio presets, editable, plus your own (up to 8; *Settings → Workspaces → Save the current layout*). A
+  workspace opens its start page and applies its density, default watchlist and chart symbol; stored on the server.
+- **Install and offline copy:** MarketDesk is an installable app (manifest + service worker). The service worker
+  caches only the app's code and icons, never `/api` responses. *Settings → Offline copy* (off by default, per device)
+  keeps your first five watchlists with their last observed prices and your holdings in the browser; when the server
+  cannot be reached it is shown read-only as "Offline copy · read-only · not live" with its sync time. It is erased at
+  sign-out, when the session ends and when you turn it off.
+- **Research export** (Instrument → Export, or the palette): a Markdown file with the last observed quote,
+  fundamentals (with units), corporate actions and — for US listings — SEC filings, each with source and fetch time,
+  plus saved AI answers with their retrieved sources. Your journal entries and holding are private sections, off by
+  default; the file's header lists any private sections it contains.
+- **Usage, quotas and refresh** (*Settings*): provider requests by kind (asked, from cache, upstream, failed, cache
+  life) since the web process started, endpoint circuits, SEC status, AI use today against limits; your own lower
+  daily AI limits (they can only tighten the server caps and are enforced before each request); and the browser
+  refresh interval for quotes and valuations (30 s – 5 min, or manual).
+- **Keyboard:** Ctrl/Cmd+K palette (pages, actions, workspaces, theme, density, export), `/` search, `?` shortcuts,
+  `N` new transaction, `G` + O/W/F/M/P/A/J/L/S to go to a page.
+
 ## Research lab (simulated)
 
 **Lab** (G L) — everything here is labelled *simulated*; no order is sent anywhere and nothing enters the real ledger.

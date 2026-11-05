@@ -12,7 +12,8 @@ export type DialogState =
   | { kind: "journal-detail"; id: number; section?: "history" | "evidence" | "reviews" }
   | { kind: "ai"; symbol: string; question?: string; task?: "results" | "catalysts" | "brief" }
   | { kind: "add-symbol"; watchlistId: number }
-  | { kind: "new-watchlist" };
+  | { kind: "new-watchlist" }
+  | { kind: "export"; symbol: string };
 
 interface Ctx {
   state: DialogState;

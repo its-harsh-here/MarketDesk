@@ -32,7 +32,7 @@ from sqlalchemy.orm import Session
 
 from marketdesk.api.errors import AppError
 from marketdesk.config import Settings
-from marketdesk.models import AiAnswer, Instrument
+from marketdesk.models import AiAnswer, AppSetting, Instrument
 from marketdesk.providers.base import ProviderError
 from marketdesk.providers.groq import GroqClient
 from marketdesk.providers.xai import XaiClient, XaiError, usage_cost_usd
@@ -44,6 +44,7 @@ CERTAINTIES = ("confirmed", "scheduled", "possible")
 CHARS_PER_TOKEN = 3.4  # JSON evidence measured at ~3.5 characters per token on gpt-oss (4 Nov 2026); slightly lower
 USABLE = {"sample", "available", "cached", "stale"}
 STALE_JOB = timedelta(minutes=15)
+QUOTA_KEY = "ai_quotas"  # AppSetting holding the owner's lower daily limits
 _BUDGET_LOCK = threading.Lock()
 
 # USD per 1M tokens (input, cached input, output) from docs.x.ai/docs/models, checked 4 Nov 2026 (<200k prompt tier).
@@ -712,6 +713,23 @@ class AnalystService:
         return self.problem is None
 
     # ------------------------------------------------------------------ budget
+    def limits(self, db: Session) -> dict:
+        """Effective daily limits: the server caps (environment), lowered by the owner's quotas where set (M14).
+        The owner can only tighten a limit, never raise it above the server cap."""
+        row = db.get(AppSetting, QUOTA_KEY)
+        own = row.value if row is not None and isinstance(row.value, dict) else {}
+        caps = {
+            "requests": self.settings.ai_daily_requests,
+            "tokens": self.settings.ai_daily_tokens,
+            "usd": Decimal(str(self.settings.ai_daily_budget_usd)),
+        }
+        out = dict(caps)
+        for k, cast in (("requests", int), ("tokens", int), ("usd", lambda v: Decimal(str(v)))):
+            v = own.get(k)
+            if v is not None:
+                out[k] = min(caps[k], cast(v))
+        return {"effective": out, "server": caps, "owner": {k: own.get(k) for k in caps}}
+
     def _usage_today(self, db: Session, day: date, exclude: int | None = None) -> tuple[Decimal, Decimal, int, int]:
         """(spent USD, reserved USD, answers counted, tokens counted incl. reservations) for one UTC day."""
         spent = reserved = Decimal(0)
@@ -735,6 +753,7 @@ class AnalystService:
         self.recover_stale(db)
         day = datetime.now(UTC).date()
         spent, reserved, count, tokens = self._usage_today(db, day)
+        lim = self.limits(db)["effective"]
         return {
             "enabled": self.enabled,
             "reason": self.problem,
@@ -747,14 +766,14 @@ class AnalystService:
             "provider_limits": getattr(self.client, "last_limits", None) or None,
             "budget": {
                 "day": day,
-                "limit_usd": None if self.free_tier else _num(self.settings.ai_daily_budget_usd),
+                "limit_usd": None if self.free_tier else _num(lim["usd"]),
                 "spent_usd": _num(spent),
                 "reserved_usd": _num(reserved),
                 "tokens_used": tokens,
-                "tokens_limit": self.settings.ai_daily_tokens if self.free_tier else None,
+                "tokens_limit": lim["tokens"] if self.free_tier else None,
                 "request_tokens_limit": self.settings.ai_request_tokens if self.free_tier else None,
                 "requests_used": count,
-                "requests_limit": self.settings.ai_daily_requests,
+                "requests_limit": lim["requests"],
                 "max_output_tokens": self.settings.ai_max_output_tokens,
                 "max_tool_calls": 0 if self.free_tier else self.settings.ai_max_tool_calls,
             },
@@ -777,11 +796,12 @@ class AnalystService:
             if db.get_bind().dialect.name == "postgresql":
                 db.execute(text("SELECT pg_advisory_xact_lock(724301)"))
             spent, reserved, count, used_tokens = self._usage_today(db, answer.day, exclude=answer.id)
-            if count >= self.settings.ai_daily_requests:
+            lim = self.limits(db)["effective"]
+            if count >= lim["requests"]:
                 db.rollback()
-                return f"Daily request limit reached ({self.settings.ai_daily_requests} answers per UTC day)."
+                return f"Daily request limit reached ({lim['requests']} answers per UTC day)."
             if self.free_tier:
-                cap = self.settings.ai_daily_tokens
+                cap = lim["tokens"]
                 if used_tokens + tokens > cap:
                     db.rollback()
                     return (
@@ -792,7 +812,7 @@ class AnalystService:
                 answer.reserved_usd = Decimal(0)
                 db.commit()
                 return None
-            limit = Decimal(str(self.settings.ai_daily_budget_usd))
+            limit = lim["usd"]
             if spent + reserved + estimate > limit:
                 db.rollback()
                 return (

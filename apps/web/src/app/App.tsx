@@ -21,6 +21,9 @@ import { LabPage } from "@/features/lab/LabPage";
 import { JournalDialog } from "@/features/journal/JournalDialog";
 import { JournalDetailDialog } from "@/features/journal/JournalDetailDialog";
 import { AiDialog } from "@/features/ai/AiDialog";
+import { ExportDialog } from "@/features/workspace/ExportDialog";
+import { OfflineView } from "@/features/workspace/OfflineView";
+import { clearOffline, readSnapshot } from "@/lib/offline";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { CommandPalette } from "@/features/search/CommandPalette";
@@ -53,7 +56,10 @@ function AuthGate({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
   const session = useSession();
   useEffect(() => {
-    setUnauthorizedHandler(() => qc.invalidateQueries({ queryKey: ["session"] }));
+    setUnauthorizedHandler(() => {
+      clearOffline(); // the session ended: no private copy stays on this device
+      qc.invalidateQueries({ queryKey: ["session"] });
+    });
   }, [qc]);
   useEffect(() => {
     setCsrfToken(session.data?.csrf_token);
@@ -66,6 +72,10 @@ function AuthGate({ children }: { children: ReactNode }) {
     );
   }
   if (session.isError) {
+    const err = session.error;
+    const unreachable = err instanceof ApiError && (err.status === 0 || err.code === "server_unavailable");
+    const snap = unreachable ? readSnapshot() : null;
+    if (snap) return <OfflineView snapshot={snap} reason="The MarketDesk server cannot be reached, so this device's last copy is shown." onRetry={() => session.refetch()} />;
     return (
       <main className="flex min-h-dvh items-center justify-center p-4">
         <ErrorState title="MarketDesk server is unreachable" message={errorMessage(session.error)} onRetry={() => session.refetch()} offline />
@@ -92,6 +102,7 @@ function GlobalDialogs() {
       <JournalDialog />
       <JournalDetailDialog />
       <AiDialog />
+      <ExportDialog />
       <NewWatchlistDialog />
       <AddSymbolDialog />
     </>

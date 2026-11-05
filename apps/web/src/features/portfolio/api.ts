@@ -1,4 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuoteRefreshMs } from "@/features/workspace/api";
 import {
   api,
   type AccountCurrency,
@@ -17,10 +18,11 @@ export interface TransactionPage {
 }
 
 export function usePortfolioSummary(enabled = true, currency: AccountCurrency = "INR") {
+  const refetchInterval = useQuoteRefreshMs();
   return useQuery({
     queryKey: ["portfolio", "summary", currency],
     queryFn: () => api.get<PortfolioSummary>("/api/portfolio/summary", { currency }),
-    refetchInterval: 60_000,
+    refetchInterval,
     placeholderData: keepPreviousData,
     enabled,
   });
@@ -28,10 +30,11 @@ export function usePortfolioSummary(enabled = true, currency: AccountCurrency = 
 
 /** Every account in its own currency plus a display-only conversion to INR at the current valuation rate. */
 export function usePortfolioOverview(enabled = true) {
+  const refetchInterval = useQuoteRefreshMs();
   return useQuery({
     queryKey: ["portfolio", "overview"],
     queryFn: () => api.get<PortfolioOverview>("/api/portfolio/overview"),
-    refetchInterval: 60_000,
+    refetchInterval,
     placeholderData: keepPreviousData,
     enabled,
   });

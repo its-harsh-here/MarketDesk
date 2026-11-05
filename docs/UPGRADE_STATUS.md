@@ -810,6 +810,31 @@ window (Yahoo returns all-time dividends: AAPL showed 92), and an unfinished lat
 (its "close" is only the latest price); paper fills keep the conservative rule (an order placed during a session fills
 at the next session's open).
 
+## M14 — Workspaces, offline copy, exports, usage (5 Nov 2026)
+- **Workspaces** (`services/workspaces.py`, `app_settings`): presets with start page, density, default watchlist and
+  chart symbol; switch from the top bar, the phone More sheet or the palette; "save the current layout"; a deleted
+  default watchlist is reported, not recreated; at least one workspace is kept.
+- **PWA:** manifest, icons, `sw.js` (network-first shell, cache-first hashed assets, never `/api`; served
+  `no-cache`). **Offline copy:** opt-in per device, first five watchlists + holdings, refreshed every 10 minutes while
+  open; shown only when the server is unreachable as "Offline copy · read-only · not live" with its sync time; erased
+  on sign-out, on 401 and when turned off. A banner explains when the browser reports no network.
+- **Research export** (`/api/export/research`, Markdown, `no-store`): quote, fundamentals with units, corporate
+  actions, SEC filings (US), saved AI answers with retrieved sources; journal and holding are opt-in private sections
+  named in the header.
+- **Usage** (`/api/usage`): provider requests by kind since process start (asked, cache hits, upstream, failed, stale
+  served), circuits, cache lives, SEC status, AI use vs effective limits. **Quotas** (`PUT /api/usage/quotas`): the
+  owner's daily answer/token/USD limits, only below the server caps, enforced in the reservation step.
+  **Refresh preference:** quotes and valuations every 30 s – 5 min or manual.
+- **Keyboard:** palette actions for workspaces, theme, density, export, usage; existing G-shortcuts.
+- **Schema:** none (preferences and presets are `app_settings` rows, included in backups).
+
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 17 | 291 passed, 3 skipped / 293 passed, 1 skipped (M14: 6 — presets persist/apply/validate, refresh preference, usage counters and quotas that only tighten, quota enforced at reservation, export private sections off by default, sign-in required) |
+| tsc, eslint, vitest | clean; 35 (new: offline copy off by default, erased on clear/turn-off, corrupt copies ignored) |
+| Playwright | 25 journeys pass (new: workspaces switch/reload/save/palette; research export with and without private sections; offline copy served by the service worker while offline, labelled, then erased) |
+| Visual QA | Settings (workspaces, usage) at 1440 and 390, workspace menu, export dialog, offline view at 390 inspected; fixed: section scroll under the sticky bar, stretched notice, cramped offline header on phones |
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -817,4 +842,4 @@ at the next session's open).
 - Portfolio has INR and USD accounts; returns (M09) use daily closes, benchmarks are price indices, and cash earns no interest.
 
 ## Next concrete action
-Phase 15 — **M14 Workspaces + offline**, then the final release check (see `docs/UPGRADE_PLAN.md`). M04 (streaming) waits for the owner's Alpaca key/secret and feed choice. Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
+Phase 16 — the **final release check** (see `docs/UPGRADE_PLAN.md`). M04 (streaming) waits for the owner's Alpaca key/secret and feed choice. Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.

@@ -154,6 +154,9 @@ class MarketDataService:
             for group in set(CIRCUIT_GROUPS.values())
         }
         self._writes = 0
+        # Request counters since this process started (each process — web, worker — counts its own requests).
+        self.started_at = datetime.now(UTC)
+        self.counters: dict[str, dict[str, int]] = {}
         self.ttl = {
             "quote": settings.quote_ttl_seconds,
             "history": settings.history_ttl_seconds,
@@ -208,6 +211,15 @@ class MarketDataService:
         for c in self.circuits.values():
             c.failures = 0
             c.open_until = 0.0
+
+    def _count(self, kind: str, what: str) -> None:
+        c = self.counters.setdefault(
+            kind, {"requests": 0, "cache_hits": 0, "upstream_calls": 0, "upstream_failures": 0, "stale_served": 0}
+        )
+        c[what] += 1
+
+    def usage(self) -> dict:
+        return {"since": self.started_at.isoformat(), "by_kind": {k: dict(v) for k, v in sorted(self.counters.items())}}
 
     def health(self) -> dict:
         c = self.circuit
@@ -273,8 +285,10 @@ class MarketDataService:
         else:
             key, bypass = self._key_and_bypass(kind, ident)
         now_mono = time.monotonic()
+        self._count(kind, "requests")
         entry = self._mem.get(key)
         if entry is not None and entry.expires_at > now_mono and not bypass:
+            self._count(kind, "cache_hits")
             self._mem.move_to_end(key)
             if entry.error is not None:
                 return Result(None, self._error_meta(entry.error))
@@ -285,6 +299,7 @@ class MarketDataService:
             value, fetched_at = persisted
             age = (datetime.now(UTC) - fetched_at).total_seconds()
             if age < self.ttl[kind]:
+                self._count(kind, "cache_hits")
                 self._mem_put(key, _MemEntry(value, fetched_at, now_mono + (self.ttl[kind] - age)))
                 return Result(value, self._meta_for(kind, value, "cached", fetched_at))
 
@@ -311,8 +326,11 @@ class MarketDataService:
                     "Provider requests are paused briefly after repeated failures.",
                     retryable=False,
                 )
+            self._count(kind, "upstream_calls")
             value = await self._run_with_retry(fn)
         except ProviderError as err:
+            if err.kind != "upstream_unavailable" or circuit.allow():
+                self._count(kind, "upstream_failures")
             # Only transient failures (timeouts, 429, 5xx, network) trip the breaker; a refused or unknown
             # symbol is not an outage and must never pause every other request.
             if err.retryable and circuit.allow():
@@ -329,6 +347,7 @@ class MarketDataService:
                 meta = self._meta_for(kind, value, "stale", fetched_at, message=msg)
                 meta.status = "stale"
                 meta.error_kind = err.kind
+                self._count(kind, "stale_served")
                 return Result(value, meta)
             if err.kind in ("missing", "unsupported"):
                 self._mem_put(key, _MemEntry(None, datetime.now(UTC), time.monotonic() + 300, error=err))

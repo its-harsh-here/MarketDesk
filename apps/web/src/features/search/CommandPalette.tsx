@@ -1,11 +1,13 @@
 import { listingLabel } from "@/lib/markets";
 import * as RD from "@radix-ui/react-dialog";
-import { Bell, BookOpen, Briefcase, CornerDownLeft, FileUp, FlaskConical, Funnel, Globe, Keyboard, LayoutDashboard, ListChecks, NotebookPen, Plus, Search, Settings, SunMoon } from "lucide-react";
+import { Bell, BookOpen, Briefcase, CornerDownLeft, Download, FileUp, FlaskConical, Funnel, Gauge, Globe, Keyboard, LayoutDashboard, LayoutGrid, ListChecks, NotebookPen, Plus, Rows3, Search, Settings, SunMoon } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useDialogs } from "@/app/dialogs";
 import { useSymbolSearch } from "@/features/market/api";
-import { applyTheme, usePatchPrefs, usePrefs, useSession } from "@/features/settings/api";
+import { applyDensity, applyTheme, usePatchPrefs, usePrefs, useSession } from "@/features/settings/api";
+import { useWorkspaces } from "@/features/workspace/api";
+import { useSwitchWorkspace } from "@/features/workspace/WorkspaceMenu";
 import { useDebounced } from "@/lib/hooks";
 import { cn } from "@/lib/cn";
 
@@ -31,6 +33,10 @@ export function CommandPalette() {
   const patch = usePatchPrefs();
   const { data: session } = useSession();
   const readOnly = Boolean(session?.read_only);
+  const { data: ws } = useWorkspaces(isOpen);
+  const switchTo = useSwitchWorkspace();
+  const loc = useLocation();
+  const here = loc.pathname.startsWith("/instrument/") ? decodeURIComponent(loc.pathname.slice("/instrument/".length)) : null;
 
   const go = (path: string) => () => {
     close();
@@ -49,6 +55,8 @@ export function CommandPalette() {
       { id: "p-journal", group: "Pages", label: "Journal", icon: <BookOpen />, run: go("/journal") },
       { id: "p-lab", group: "Pages", label: "Research lab", icon: <FlaskConical />, run: go("/lab") },
       { id: "p-settings", group: "Pages", label: "Settings", icon: <Settings />, run: go("/settings") },
+      { id: "p-usage", group: "Pages", label: "Usage, quotas and refresh", icon: <Gauge />, run: go("/settings?s=usage") },
+      { id: "p-workspaces", group: "Pages", label: "Manage workspaces", icon: <LayoutGrid />, run: go("/settings?s=workspaces") },
     ];
     const actions: Item[] = [
       { id: "a-txn", group: "Actions", label: "Add transaction", icon: <Plus />, writes: true, run: () => open({ kind: "transaction" }) },
@@ -68,6 +76,30 @@ export function CommandPalette() {
           close();
         },
       },
+      {
+        id: "a-density",
+        group: "Actions",
+        label: `Switch to ${prefs?.density === "compact" ? "comfortable" : "compact"} density`,
+        icon: <Rows3 />,
+        run: () => {
+          const next = prefs?.density === "compact" ? "comfortable" : "compact";
+          applyDensity(next);
+          if (!readOnly) patch.mutate({ density: next });
+          close();
+        },
+      },
+      ...(ws?.items ?? []).map((w) => ({
+        id: `a-ws-${w.id}`,
+        group: "Actions" as const,
+        label: `Workspace: ${w.name}${w.id === ws?.active ? " (active)" : ""}`,
+        icon: <LayoutGrid />,
+        writes: true,
+        run: () => {
+          close();
+          switchTo(w.id);
+        },
+      })),
+      ...(here ? [{ id: "a-export", group: "Actions" as const, label: `Export research for ${here}`, icon: <Download />, run: () => open({ kind: "export", symbol: here }) }] : []),
       { id: "a-keys", group: "Actions", label: "Keyboard shortcuts", icon: <Keyboard />, run: () => open({ kind: "shortcuts" }) },
     ].filter((a) => !(readOnly && a.writes)) as Item[];
     const match = (i: Item) => !ql || i.label.toLowerCase().includes(ql);
@@ -82,7 +114,7 @@ export function CommandPalette() {
       : [];
     return [...instruments, ...pages.filter(match), ...actions.filter(match)];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, search.data, prefs?.theme, readOnly]);
+  }, [q, search.data, prefs?.theme, prefs?.density, readOnly, ws, here]);
 
   const groups = ["Instruments", "Pages", "Actions"] as const;
   const safeActive = Math.min(active, Math.max(items.length - 1, 0));

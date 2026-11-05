@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuoteRefreshMs } from "@/features/workspace/api";
 import { api, type ActionsResponse, type CompareResponse, type Fundamentals, type HistoryResponse, type Instrument, type DataMeta, type MarketSession, type Snapshot } from "@/lib/api/client";
 
 export type Range = "1M" | "3M" | "6M" | "1Y" | "5Y";
@@ -6,21 +7,23 @@ export const RANGES: Range[] = ["1M", "3M", "6M", "1Y", "5Y"];
 
 export function useSnapshots(symbols: string[], enabled = true) {
   const key = symbols.join(",");
+  const refetchInterval = useQuoteRefreshMs();
   return useQuery({
     queryKey: ["snapshots", key],
     queryFn: ({ signal }) => api.get<Snapshot[]>("/api/market/snapshots", { symbols: key }, signal),
     enabled: enabled && symbols.length > 0,
-    refetchInterval: 60_000, // paused automatically while the tab is hidden
+    refetchInterval, // owner's refresh preference; paused automatically while the tab is hidden
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
 }
 
 export function useBenchmarks() {
+  const refetchInterval = useQuoteRefreshMs();
   return useQuery({
     queryKey: ["benchmarks"],
     queryFn: ({ signal }) => api.get<Snapshot[]>("/api/market/benchmarks", undefined, signal),
-    refetchInterval: 60_000,
+    refetchInterval,
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   });

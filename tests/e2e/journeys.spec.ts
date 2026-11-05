@@ -647,3 +647,79 @@ test("research lab: rule test executes after its signal, run ledger reproduces, 
   await page.getByRole("radio", { name: "Read me" }).click();
   await expect(page.getByRole("heading", { name: "Survivorship bias" })).toBeVisible();
 });
+
+test("workspaces: switch from the top bar, survives reload, saved from the current layout, palette action", async ({ page }) => {
+  await page.goto("/");
+  await ready(page);
+  await page.getByRole("button", { name: /Switch workspace/ }).click();
+  await page.getByRole("menuitem", { name: /Research/ }).click();
+  await expect(page).toHaveURL(/\/screener$/);
+  await expect(page.locator("html")).toHaveAttribute("data-density", "compact");
+  await page.reload();
+  await ready(page);
+  await expect(page.getByRole("button", { name: "Workspace: Research. Switch workspace" })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-density", "compact");
+  await page.goto("/settings?s=workspaces");
+  const panel = page.getByRole("region", { name: "Workspaces" });
+  await panel.getByLabel("Name").fill("Evening review");
+  await panel.getByLabel("Start page").selectOption({ label: "Journal" });
+  await panel.getByRole("button", { name: "Save as workspace" }).click();
+  await expect(panel.getByText("Evening review")).toBeVisible();
+  await page.keyboard.press("Control+k");
+  await page.getByRole("combobox").fill("Workspace: Market");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator("html")).not.toHaveAttribute("data-density", "compact");
+});
+
+test("research export: private sections off by default, file states sources and what is private", async ({ page }) => {
+  await page.goto("/instrument/SX:AURORA");
+  await ready(page);
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: /Export research/ });
+  await expect(dialog.getByLabel("My journal entries")).not.toBeChecked();
+  await expect(dialog.getByLabel("My holding")).not.toBeChecked();
+  let download = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Download .md" }).click();
+  let text = await (await download).createReadStream().then(async (s) => {
+    const chunks: Buffer[] = [];
+    for await (const c of s) chunks.push(c as Buffer);
+    return Buffer.concat(chunks).toString("utf8");
+  });
+  expect(text).toContain("**Private sections included:** none.");
+  expect(text).toMatch(/source fixture; status sample/);
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  await dialog.getByLabel("My holding").check();
+  await expect(dialog.getByText(/This file will contain private data \(holdings\)/)).toBeVisible();
+  download = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Download .md" }).click();
+  text = await (await download).createReadStream().then(async (s) => {
+    const chunks: Buffer[] = [];
+    for await (const c of s) chunks.push(c as Buffer);
+    return Buffer.concat(chunks).toString("utf8");
+  });
+  expect(text).toContain("**Private sections included:** holdings.");
+});
+
+test("offline: opt-in copy is shown labelled read-only and not live when the server is unreachable", async ({ page, context }) => {
+  await page.goto("/settings?s=offline");
+  await ready(page);
+  await page.getByLabel("Keep a read-only offline copy on this device").check();
+  await expect(page.getByText(/Last synced: \d/)).toBeVisible();
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+  });
+  await page.reload(); // now controlled by the service worker
+  await ready(page);
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Offline copy · read-only · not live" })).toBeVisible();
+  await expect(page.getByText(/Synced from this device on/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add transaction" })).toHaveCount(0);
+  await context.setOffline(false);
+  await page.getByRole("button", { name: "Try the server again" }).click();
+  await ready(page);
+  await page.goto("/settings?s=offline");
+  await page.getByLabel("Keep a read-only offline copy on this device").uncheck();
+  expect(await page.evaluate(() => localStorage.getItem("md-offline-snapshot"))).toBeNull();
+});

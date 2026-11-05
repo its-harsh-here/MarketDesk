@@ -24,7 +24,7 @@ Legend: ✅ done · 🟡 partly exists (see `docs/UPGRADE_STATUS.md` capability 
 | 12 | **M04** Streaming dashboard | 🟡 polling dashboard | Alpaca adapter (entitled feed), central upstream + SSE/WebSocket fan-out, gap backfill, feed labels, workstation layout | 🔑 Alpaca key/secret + feed choice |
 | 13 | **M12** Macro + sector | ⬜ | Verified sources, normalized series with vintages, watchboard, sector-relative view | 🔑 depends on chosen sources |
 | 14 | **M13** Paper investing + research tests | ✅ | Isolated paper ledger, daily-bar engine with conservative fills, reproducible runs | needs a verified historical dataset |
-| 15 | **M14** Workspaces + offline | 🟡 command palette, density | Presets, PWA read-only offline snapshot, exports, usage panel | none |
+| 15 | **M14** Workspaces + offline | ✅ | Presets, PWA read-only offline snapshot, exports, usage panel | none |
 | 16 | Final release check | — | Audit all completed milestones, run every check, update docs | — |
 
 Order rationale: the roadmap's sequence (M00 → M01 → M02 → M03 → M04 → M05), adjusted so that credential-free,
@@ -55,7 +55,8 @@ earlier as soon as their credentials exist.
   source), tested and deployed; live checks in `docs/UPGRADE_STATUS.md`.
 - Phase 14 (M13): ✅ implemented, tested (hand-checked execution and cost vectors; migration rehearsed on a
   production copy) and deployed; live checks in `docs/UPGRADE_STATUS.md`.
-- Phase 15 (M14): next.
+- Phase 15 (M14): ✅ implemented, tested and deployed; live checks in `docs/UPGRADE_STATUS.md`.
+- Phase 16 (final release check): next.
 
 ## After the final check
 The owner asked (4 Nov 2026) for a follow-on roadmap toward a terminal-style view with every piece of information about

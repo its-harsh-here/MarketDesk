@@ -241,3 +241,11 @@ Consequential choices, newest last. Routine choices live in code comments.
     of its bars and dividends so a re-run can prove whether it saw the same data. The paper portfolio is a separate
     table set (not the ledger) replayed on read: an order fills at the first session after the latest known session at
     placement, or stays pending. Historical fundamentals are not available, so no fundamental rules exist.
+49. **Workspace polish without new private storage risks (M14, 5 Nov 2026).** Workspace presets live in
+    `app_settings` (no migration) and only set existing preferences. The PWA's service worker caches the shell and
+    hashed assets only and never `/api`, so no authentication or data response is cached by it. The offline copy is a
+    separate, opt-in, per-device snapshot in browser storage, shown only when the server is unreachable and always
+    labelled with its sync time as read-only and not live; it is erased at sign-out, on any 401 and when turned off.
+    Research exports are Markdown downloads (`Cache-Control: no-store`), not shareable links; private sections
+    (journal, holdings) are opt-in per export and named in the file header. Owner AI quotas can only lower the
+    environment caps and are applied in the same locked reservation step as the caps.

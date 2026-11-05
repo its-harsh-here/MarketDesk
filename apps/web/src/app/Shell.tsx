@@ -1,7 +1,7 @@
 import * as DM from "@radix-ui/react-dropdown-menu";
 import * as RD from "@radix-ui/react-dialog";
 import { Bell, BookOpen, Briefcase, Ellipsis, FlaskConical, Funnel, Globe, Keyboard, LayoutDashboard, ListChecks, LogOut, Moon, Search, Settings, Sun, UserRound } from "lucide-react";
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDialogs } from "./dialogs";
@@ -18,6 +18,10 @@ import { api } from "@/lib/api/client";
 import { formatInstant, formatMoney, formatRelative, formatSessionDate } from "@/lib/format";
 import { isTypingTarget, useGlobalKeys } from "@/lib/hooks";
 import { cn } from "@/lib/cn";
+import { useSwitchWorkspace, WorkspaceMenu } from "@/features/workspace/WorkspaceMenu";
+import { useWorkspaces } from "@/features/workspace/api";
+import { OfflineBanner } from "@/features/workspace/OfflineView";
+import { clearOffline, syncSnapshot } from "@/lib/offline";
 
 const NAV = [
   { to: "/", label: "Overview", icon: LayoutDashboard, end: true },
@@ -226,6 +230,7 @@ function UserMenu() {
               className={item}
               onSelect={async () => {
                 await api.post("/api/auth/logout").catch(() => undefined);
+                clearOffline();
                 qc.clear();
                 window.location.assign("/");
               }}
@@ -249,7 +254,7 @@ function Topbar() {
       <div className="flex h-14 items-center gap-2 px-4 md:h-16 md:gap-3 md:px-6">
         <span className="md:hidden"><Logo compact /></span>
         <div className="min-w-0 max-md:hidden">
-          <div className="text-[11px] font-medium tracking-wider text-fg-3 uppercase">Personal workspace</div>
+          <WorkspaceMenu />
           <div className="truncate text-[15px] font-semibold text-fg">{title}</div>
         </div>
         <button
@@ -347,6 +352,8 @@ function MoreSheet() {
   const patch = usePatchPrefs();
   const { data: session } = useSession();
   const { open } = useDialogs();
+  const { data: ws } = useWorkspaces();
+  const switchTo = useSwitchWorkspace();
   const links: { to: string; label: string; icon: ReactNode }[] = [
     { to: "/screener", label: "Screener", icon: <Funnel className="size-5" aria-hidden /> },
     { to: "/macro", label: "Macro", icon: <Globe className="size-5" aria-hidden /> },
@@ -399,6 +406,26 @@ function MoreSheet() {
               </RD.Close>
             </li>
           </ul>
+          {ws && ws.items.length > 0 && (
+            <div className="mt-2 border-t border-line-subtle pt-2">
+              <div className="px-3 pb-1 text-xs text-fg-3">Workspace</div>
+              <div className="flex flex-wrap gap-2 px-2">
+                {ws.items.map((w) => (
+                  <RD.Close asChild key={w.id}>
+                    <button
+                      type="button"
+                      disabled={session?.read_only}
+                      aria-pressed={w.id === ws.active}
+                      onClick={() => switchTo(w.id)}
+                      className={cn("h-11 rounded-lg border px-3 text-[14px]", w.id === ws.active ? "border-accent bg-elevated text-fg" : "border-line text-fg-2")}
+                    >
+                      {w.name}
+                    </button>
+                  </RD.Close>
+                ))}
+              </div>
+            </div>
+          )}
           <RD.Close ref={closeRef} className="mt-2 h-11 w-full rounded-lg border border-line text-sm text-fg-2">
             Close
           </RD.Close>
@@ -408,7 +435,23 @@ function MoreSheet() {
   );
 }
 
+/** Keeps this device's opt-in offline copy current (every 10 minutes while visible and online). */
+function useOfflineSync() {
+  const { data: prefs } = usePrefs();
+  const tz = prefs?.display_timezone;
+  useEffect(() => {
+    if (!tz) return;
+    const run = () => {
+      if (!document.hidden && navigator.onLine) syncSnapshot(tz).catch(() => undefined);
+    };
+    run();
+    const t = window.setInterval(run, 10 * 60_000);
+    return () => window.clearInterval(t);
+  }, [tz]);
+}
+
 export function Shell() {
+  useOfflineSync();
   const { open, state } = useDialogs();
   const navigate = useNavigate();
   const gPending = useRef<number | null>(null);
@@ -450,6 +493,7 @@ export function Shell() {
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
+        <OfflineBanner />
         <main id="main" className="min-w-0 flex-1 pb-24 md:pb-8">
           <Outlet />
         </main>

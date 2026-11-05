@@ -18,6 +18,7 @@ PREF_DEFAULTS = {
     "default_watchlist_id": None,
     "chart_symbol": None,
     "display_timezone": "Asia/Kolkata",
+    "quote_refresh_seconds": 60,  # browser polling of quotes and valuations; 0 = manual refresh only
 }
 FIXTURE_KEY = "fixture_state"
 

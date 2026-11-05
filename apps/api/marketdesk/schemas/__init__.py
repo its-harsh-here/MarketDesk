@@ -612,6 +612,7 @@ class PrefsOut(Model):
     default_watchlist_id: int | None = None
     chart_symbol: str | None = None
     display_timezone: str = "Asia/Kolkata"
+    quote_refresh_seconds: Literal[0, 30, 60, 120, 300] = 60
 
 
 class PrefsPatch(Model):
@@ -620,6 +621,31 @@ class PrefsPatch(Model):
     default_watchlist_id: int | None = None
     chart_symbol: str | None = Field(default=None, max_length=32)
     display_timezone: str | None = Field(default=None, max_length=64)
+    quote_refresh_seconds: Literal[0, 30, 60, 120, 300] | None = None
+
+
+class WorkspaceIn(Model):
+    name: str = Field(min_length=1, max_length=40)
+    start: str = Field(default="/", max_length=32)
+    density: Literal["comfortable", "compact"] = "comfortable"
+    default_watchlist_id: int | None = None  # None: keep the current default
+    chart_symbol: str | None = Field(default=None, max_length=32)  # None: keep the current chart symbol
+
+
+class WorkspaceOut(WorkspaceIn):
+    id: str
+
+
+class WorkspacesOut(Model):
+    active: str | None
+    items: list[WorkspaceOut]
+    start_pages: list[dict[str, str]]
+
+
+class WorkspaceApplied(Model):
+    workspace: WorkspaceOut
+    prefs: PrefsOut
+    notes: list[str]
 
 
 class SessionOut(Model):
