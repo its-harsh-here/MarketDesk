@@ -889,6 +889,12 @@ CSP present; session cookie Secure and HttpOnly; schema 0012 current; worker run
 | Playwright | 26 journeys pass (new: description tiles and coverage, `glasswing fa`, `?`, `dvd`, `hds` → coverage) |
 | Visual QA | Description at 1440 and 390 px, palette code list, mobile coverage and identity inspected |
 
+**Live (Render + Neon, Yahoo + SEC):** AAPL — business quoted from the 10-K filed 2026-11-03 (Item 1, with link),
+SEC CIK 320193, SIC 3571, fiscal year end 09-26, all 18 statistics present; SMR — 10-K (filed 2026-02-26) quoted,
+P/E, dividend yield and debt/equity missing with reasons; RELIANCE.NS — no business text (Yahoo refuses its company
+summary from the server; the reason is shown), statistics present, coverage marks filings/insiders/holders as needing
+a permitted Indian source and results dates as the SEBI deadline. Each response took about 2 s.
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
