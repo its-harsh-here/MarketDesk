@@ -37,10 +37,22 @@ def _accession(value: str) -> str:
     return value
 
 
+_HTML_RE = re.compile(r"<(html|body|div|p|span|table|br)\b", re.IGNORECASE)
+_SCRIPT_RE = re.compile(r"<(script|style)[^>]*>.*?</\1>", re.IGNORECASE | re.DOTALL)
+_BLOCK_RE = re.compile(
+    r"<(?:br|hr|/?(?:p|div|li|tr|h[1-6]|table|section|article|blockquote|ul|ol|center|dt|dd))\b[^>]*>", re.IGNORECASE
+)
+
+
 def html_to_text(markup: str) -> str:
-    """Readable text from filing HTML: tags removed, entities decoded, whitespace collapsed."""
+    """Readable text from a filing: tags removed, entities decoded, one line per block (paragraph, division, list
+    item, table row, heading). In HTML, line breaks in the source are ordinary spaces, so paragraphs wrapped in the
+    source stay whole and inline-XBRL reports (few source line breaks) still split into paragraphs. Plain-text
+    documents keep their own lines."""
+    if _HTML_RE.search(markup):
+        markup = _BLOCK_RE.sub("\n", re.sub(r"\s+", " ", _SCRIPT_RE.sub(" ", markup)))
     text = html.unescape(_TAG_RE.sub(" ", markup))
-    return re.sub(r"[ \t\r\f\v]+", " ", re.sub(r"\s*\n\s*", "\n", text)).strip()
+    return re.sub(r"[ \t\r\f\v\xa0]+", " ", re.sub(r"\s*\n\s*", "\n", text)).strip()
 
 
 def user_agent_problem(ua: str | None) -> str | None:

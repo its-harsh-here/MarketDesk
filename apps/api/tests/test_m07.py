@@ -212,3 +212,21 @@ def test_risk_diff_stays_fast_on_annual_report_sized_sections():
     edited = [p.replace(p.split()[3], "changed", 1) for p in old[:40]] + old[40:]
     d = er.diff_paragraphs(old, edited)
     assert d["counts"]["reworded"] == 40 and d["counts"]["added"] == 0 and d["counts"]["removed"] == 0
+
+
+def test_filing_html_keeps_paragraphs():
+    """Inline-XBRL reports have few source line breaks: blocks must become paragraphs, and source wrapping must not."""
+    from marketdesk.providers.sec import html_to_text
+
+    long_a = "Our business depends on regulatory approval of our design, which may be delayed or denied. " * 2
+    long_b = "We will need substantial additional capital, which may not be available on acceptable terms. " * 2
+    ix = (
+        "<html><body><div><span>Item 1A.</span></div><div><span>Risk Factors</span></div>"
+        f"<div><span>{long_a[:60]}</span><span>{long_a[60:]}</span></div><div>{long_b}</div>"
+        "<div>Item 1B. Unresolved Staff Comments</div></body></html>"
+    )
+    paras = er.paragraphs(er.risk_section(html_to_text(ix)))
+    assert len(paras) == 2 and paras[1].startswith("We will need")
+    wrapped = "<html><p>A paragraph wrapped\nin the HTML source\nover lines.</p><p>Next.</p></html>"
+    assert html_to_text(wrapped) == "A paragraph wrapped in the HTML source over lines.\nNext."
+    assert html_to_text("plain\ntext") == "plain\ntext"
