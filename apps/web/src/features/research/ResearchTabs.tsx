@@ -1,10 +1,11 @@
 import { ExternalLink } from "lucide-react";
 import { useState } from "react";
+import { FinancialAnalysis } from "@/features/terminal/FinancialAnalysis";
 import { Panel } from "@/components/ui/Panel";
 import { Segmented } from "@/components/ui/Segmented";
 import { EmptyState, ErrorState, InlineNotice, SkeletonRows } from "@/components/ui/States";
 import { errorMessage } from "@/lib/api/client";
-import { formatLargeMoney, formatMoney, formatPercent, formatRatio, formatRelative, formatSessionDate } from "@/lib/format";
+import { formatLargeMoney, formatMoney, formatPercent, formatRatio, formatRelative, formatSessionDate, formatCompact } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { useActions } from "@/features/market/api";
 import { useFilings, useFinancials, useResearchEvents, type FactValue, type ResearchEnvelope, type StatementLine } from "./api";
@@ -46,7 +47,7 @@ function DatasetStatus<T>({ env }: { env: ResearchEnvelope<T> }) {
 
 function cell(v: FactValue | undefined, line: StatementLine) {
   if (!v) return <span className="text-fg-3">{DASH}</span>;
-  const amount = line.key === "eps_diluted" ? formatMoney(v.value, v.unit.split("/")[0]) : formatLargeMoney(v.value, v.unit);
+  const amount = line.key === "eps_diluted" ? formatMoney(v.value, v.unit.split("/")[0]) : v.unit === "shares" ? `${formatCompact(v.value)} sh` : formatLargeMoney(v.value, v.unit);
   const period = v.start ? `${formatSessionDate(v.start)} – ${formatSessionDate(v.end)}` : `as of ${formatSessionDate(v.end)}`;
   const prior = v.prior.length ? ` Earlier filings: ${v.prior.map((p) => `${p.value} (${p.form} filed ${p.filed})`).join("; ")}.` : "";
   const title = `${v.taxonomy}:${v.tag} · ${v.unit} · ${period} · ${v.form} filed ${v.filed} · accession ${v.accession}.${prior}`;
@@ -64,10 +65,11 @@ function cell(v: FactValue | undefined, line: StatementLine) {
 
 export function FinancialsTab({ symbol }: { symbol: string }) {
   const [period, setPeriod] = useState<"annual" | "quarterly">("annual");
-  const q = useFinancials(symbol, period);
+  const q = useFinancials(symbol, period, true, period === "annual" ? 10 : 12); // ten years / twelve quarters where filed
   const env = q.data;
   const st = env?.data;
   return (
+    <>
     <Panel title="Financial statements" titleId="fin-title" className="lg:col-span-12" refreshing={q.isFetching && !q.isLoading} wrapHeader
       meta={st ? `${st.taxonomy === "ifrs-full" ? "IFRS" : "US GAAP"} · reported in ${st.currency ?? "?"} · ${st.template === "financial" ? "financial-company template" : "industrial template"}` : undefined}
       actions={<Segmented label="Statement period" value={period} onChange={setPeriod} options={[{ value: "annual", label: "Annual" }, { value: "quarterly", label: "Quarterly" }]} />}
@@ -159,6 +161,8 @@ export function FinancialsTab({ symbol }: { symbol: string }) {
         </div>
       ) : null}
     </Panel>
+    <FinancialAnalysis symbol={symbol} period={period} />
+    </>
   );
 }
 

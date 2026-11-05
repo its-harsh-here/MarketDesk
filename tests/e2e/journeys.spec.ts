@@ -760,3 +760,18 @@ test("description: tiles with sources, coverage with reasons, function codes fro
   await expect(page).toHaveURL(/#coverage$/);
   await expect(page.getByRole("heading", { name: "Coverage for this listing" })).toBeInViewport();
 });
+
+test("financial analysis: margins, growth, returns with formulas; unofficial provider data labelled; bands explain gaps", async ({ page }) => {
+  await page.goto("/instrument/SX%3AAURORA?tab=financials");
+  await ready(page);
+  const fa = page.getByRole("region", { name: "Financial analysis" });
+  await expect(fa.getByText("Unofficial", { exact: true })).toBeVisible();
+  await expect(fa.getByRole("table", { name: /Margins/ })).toBeVisible();
+  await expect(fa.getByRole("table", { name: /Growth/ })).toBeVisible();
+  await expect(fa.getByText(/Compound annual growth: Fewer than 3 years reported/)).toBeVisible(); // sample has 3 years
+  await expect(fa.getByText(/Not available from this source \(per share\)/)).toBeVisible();
+  await expect(fa.getByRole("rowheader", { name: /Net margin \(Net income ÷ revenue × 100\)/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Valuation bands" }).getByText(/need reported EPS/)).toBeVisible();
+  await page.getByRole("radio", { name: "Quarterly" }).click();
+  await expect(fa.getByText(/annual provider statements only/)).toBeVisible();
+});

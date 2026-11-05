@@ -78,7 +78,7 @@ known events, latest three filings, peers strip, ownership summary (when T3 exis
 **Function keys:** typing `RELIANCE.NS FA`, `AAPL HDS`, `TCS.NS RV` in the command palette jumps to that view; `?`
 lists codes. Done when every tile shows source and date, and the codes are keyboard- and screen-reader-usable.
 
-### T2 — Financial analysis depth
+### T2 — Financial analysis depth — ✅ done 5 Nov 2026 (segments remain a stretch goal)
 Ten-year annual and twelve-quarter statements where the source has them; per-share series; common-size statements;
 CAGR and margin trend tables; cash-conversion and ROIC with stated formulas; restatement history (already captured
 for SEC facts); historical valuation bands (P/E and EV/EBITDA ranges from daily prices and reported earnings).
@@ -133,7 +133,7 @@ plus the owner's own annotations. Marked low confidence by design; never present
 | Order | Phase | Depends on | Owner input |
 | --- | --- | --- | --- |
 | 1 | T1 Description + function keys ✅ | M06, M14 | none |
-| 2 | T2 Financial depth | M02, M11 | none (India stays unofficial until a source is chosen) |
+| 2 | T2 Financial depth ✅ | M02, M11 | none (India stays unofficial until a source is chosen) |
 | 3 | T6 Relative value and risk | M06, M09 | FINRA developer credentials if the API needs them |
 | 4 | T4 Earnings and events | M07 | optional estimates provider (paid) |
 | 5 | T5 News and filings | M03, M07 | none |

@@ -214,7 +214,9 @@ class ResearchService:
 
         return self.envelope(db, inst, build)
 
-    def financials(self, db: Session, inst: Instrument, period: str, price=None, price_date=None, price_ccy=None):
+    def financials(
+        self, db: Session, inst: Instrument, period: str, price=None, price_date=None, price_ccy=None, max_periods=None
+    ):
         def build(cik):
             sub, _, _, _ = self._submissions(db, inst, cik)
             latest = _latest_periodic(sub)
@@ -228,7 +230,8 @@ class ResearchService:
                 raise
             self._check(db, inst, "sec_companyfacts", cik, note, latest)
             try:
-                st = normalize_statements(facts, sub.get("sic"), period, 5 if period == "annual" else 8)
+                n = max_periods or (5 if period == "annual" else 8)
+                st = normalize_statements(facts, sub.get("sic"), period, n)
             except ValueError as exc:
                 raise ProviderError("malformed", f"SEC company facts could not be normalized: {exc}") from exc
             st["ratios"] = compute_ratios(st, price, price_date, price_ccy)

@@ -895,6 +895,25 @@ P/E, dividend yield and debt/equity missing with reasons; RELIANCE.NS — no bus
 summary from the server; the reason is shown), statistics present, coverage marks filings/insiders/holders as needing
 a permitted Indian source and results dates as the SEBI deadline. Each response took about 2 s.
 
+## Terminal T2 — Financial analysis depth (5 Nov 2026)
+- **Statements:** ten annual / twelve quarterly columns where filed (`/api/research/financials?periods=`); new SEC
+  lines: income before tax, income tax, diluted weighted-average shares, current debt, depreciation and amortization.
+- **Analysis** (`services/fin_analysis.py`, pure; `GET /api/terminal/financial-analysis`): margins, YoY growth,
+  3/5/10-year CAGR, ROE/ROIC/tax rate/cash conversion, per-share, common-size; every row carries its formula and
+  every gap its reason. Provider statements (non-SEC listings) run the same analysis, labelled unofficial.
+- **Valuation bands:** daily P/E and EV/EBITDA over five years, point in time by filing date, split-aware, never
+  mixing currencies; min/quartiles/median/max/latest/percentile.
+- **UI:** Financial analysis and Valuation bands panels under the statements; measures a source never reports are
+  listed by name rather than shown as empty rows.
+- **Schema:** none.
+
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 17 | 303 passed, 3 skipped / 305 passed, 1 skipped (T2: 5 hand vectors — per-share/common-size/margins, growth and CAGR rules, ROE/ROIC with the tax-rate rule, point-in-time bands across a 2-for-1 split, provider path via the API) |
+| tsc, `eslint .`, vitest | clean; 37 |
+| Playwright | 27 journeys pass (new: financial analysis on sample data — margins, growth, CAGR reason, absent measures listed, unofficial label, bands reason, quarterly note) |
+| Visual QA | Financial analysis at 1440 and 390 px (tables scroll inside; source line moved into the body) |
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -902,4 +921,4 @@ a permitted Indian source and results dates as the SEBI deadline. Each response 
 - Portfolio has INR and USD accounts; returns (M09) use daily closes, benchmarks are price indices, and cash earns no interest.
 
 ## Next concrete action
-The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Terminal roadmap: T1 done; next T2 (financial analysis depth) per `docs/TERMINAL_ROADMAP.md`. Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
+The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Terminal roadmap: T1 and T2 done; next T6 (relative value and risk) per the sequencing in `docs/TERMINAL_ROADMAP.md`. Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.

@@ -89,6 +89,13 @@ export function formatLargeMoney(v: Num, ccy: string | null | undefined = "INR")
   return `${currencySymbol(ccy)}${nf("cmp", { notation: "compact", maximumFractionDigits: 2 }, "en-US").format(n)}`;
 }
 
+/** A count in international compact notation (e.g. 15.4B shares), for SEC filers' share counts. */
+export function formatCompact(v: Num): string {
+  const n = toNumber(v);
+  if (n === null) return DASH;
+  return nf("cmp", { notation: "compact", maximumFractionDigits: 2 }, "en-US").format(n);
+}
+
 export function formatVolume(v: Num): string {
   const n = toNumber(v);
   if (n === null) return DASH;

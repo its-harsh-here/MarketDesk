@@ -33,7 +33,7 @@ class Line:
     label: str
     statement: str  # income | balance | cashflow
     kind: str  # duration | instant
-    unit: str  # currency | per_share
+    unit: str  # currency | per_share | shares
     gaap: tuple[str, ...]
     ifrs: tuple[str, ...] = ()
     industrial_only: bool = False  # not mapped for banks/insurers
@@ -86,6 +86,27 @@ LINES: tuple[Line, ...] = (
         industrial_only=True,
     ),
     Line(
+        "pretax_income",
+        "Income before tax",
+        "income",
+        "duration",
+        "currency",
+        (
+            "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
+            "IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments",
+        ),
+        ("ProfitLossBeforeTax",),
+    ),
+    Line(
+        "income_tax",
+        "Income tax expense",
+        "income",
+        "duration",
+        "currency",
+        ("IncomeTaxExpenseBenefit",),
+        ("IncomeTaxExpenseContinuingOperations",),
+    ),
+    Line(
         "net_income",
         "Net income",
         "income",
@@ -102,6 +123,15 @@ LINES: tuple[Line, ...] = (
         "per_share",
         ("EarningsPerShareDiluted",),
         ("DilutedEarningsLossPerShare",),
+    ),
+    Line(
+        "shares_diluted",
+        "Diluted weighted-average shares",
+        "income",
+        "duration",
+        "shares",
+        ("WeightedAverageNumberOfDilutedSharesOutstanding",),
+        ("AdjustedWeightedAverageShares",),
     ),
     Line(
         "cash",
@@ -136,6 +166,16 @@ LINES: tuple[Line, ...] = (
         industrial_only=True,
     ),
     Line(
+        "current_debt",
+        "Current debt",
+        "balance",
+        "instant",
+        "currency",
+        ("LongTermDebtCurrent", "DebtCurrent"),
+        ("CurrentPortionOfNoncurrentBorrowings",),
+        industrial_only=True,
+    ),
+    Line(
         "operating_cash_flow",
         "Operating cash flow",
         "cashflow",
@@ -143,6 +183,20 @@ LINES: tuple[Line, ...] = (
         "currency",
         ("NetCashProvidedByUsedInOperatingActivities",),
         ("CashFlowsFromUsedInOperatingActivities",),
+    ),
+    Line(
+        "depreciation",
+        "Depreciation and amortization",
+        "cashflow",
+        "duration",
+        "currency",
+        (
+            "DepreciationDepletionAndAmortization",
+            "DepreciationAndAmortization",
+            "DepreciationAmortizationAndAccretionNet",
+        ),
+        ("DepreciationAndAmortisationExpense",),
+        industrial_only=True,
     ),
     Line(
         "capex",

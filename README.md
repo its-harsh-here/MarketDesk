@@ -284,6 +284,19 @@ The former overview (chart, fundamentals, actions, your alerts and notes, compar
 or just the code on an instrument page; `?` lists them. Security codes: DES, GP, FA, CN, DVD, ERN, RV, DCF, HDS, ANR,
 ASK, EXP. Section codes: TOP, WL, EQS, ECO, PORT, ALRT, JRNL, LAB. The codes are a familiar checklist only.
 
+## Financial analysis (terminal T2)
+
+Instrument → **Financials** (code `FA`) now shows up to **ten fiscal years** or **twelve quarters** of SEC statements
+(US registrants; every value links to its filing and keeps earlier, restated values), plus **Financial analysis**:
+margins (gross, operating, EBITDA, net, free-cash-flow), growth against the previous year (or the same quarter a year
+earlier), compound annual growth over 3/5/10 years, returns and cash conversion (ROE, ROIC, effective tax rate,
+OCF ÷ net income, FCF ÷ net income), per-share figures (diluted weighted-average shares) and common-size statements.
+Hover a measure for its formula and a dash for the reason it is missing; measures a source never reports are listed
+by name instead of shown as empty rows. **Valuation bands** give the range of daily P/E and EV/EBITDA over five
+years (min, middle half, median, max, latest and its percentile), using for each day only the annual report already
+filed by then and converting per-share figures to today's share basis with the split history. Listings without SEC
+data use the provider's annual statements, labelled **Unofficial**; bands need filed EPS and are not shown for them.
+
 ## Workspaces, offline copy, exports and usage
 
 - **Workspaces** (label above the page title; More menu on phones; command palette "Workspace: …"): Market, Research

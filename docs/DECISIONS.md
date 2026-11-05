@@ -256,3 +256,10 @@ Consequential choices, newest last. Routine choices live in code comments.
     Coverage states for every domain whether it is available, estimated, planned, licensed or has no source, with the
     reason. Function codes are a client-side mapping to existing views. Loading several panels at once exposed races
     when a new listing or snapshot was stored by two requests; both writes now retry against the stored row.
+51. **Financial analysis from filed figures with stated formulas; valuation bands point-in-time by filing date
+    (terminal T2, 5 Nov 2026).** Ratios use same-period values and ending balances; growth needs a positive earlier
+    value; CAGR needs positive ends; ROIC uses the effective tax rate only between 0% and 50% and never treats missing
+    debt as zero. Bands use split-adjusted daily closes and, per day, the latest annual report filed by that day; a
+    year's value is the latest filed one (restatements included), converted to today's share basis by the splits after
+    its filing date. Statements in another currency than the price are not combined. Provider statements (non-SEC)
+    run the same analysis where lines exist and are labelled unofficial.

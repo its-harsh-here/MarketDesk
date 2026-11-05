@@ -75,6 +75,7 @@ async def events(
 async def financials(
     symbol: str = Query(min_length=1, max_length=32),
     period: Literal["annual", "quarterly"] = Query(default="annual"),
+    periods: int | None = Query(default=None, ge=2, le=12, description="Columns (default 5 annual, 8 quarterly)"),
     db: Session = Depends(get_db),
     market: MarketDataService = Depends(market_dep),
     research: ResearchService = Depends(research_dep),
@@ -89,4 +90,5 @@ async def financials(
         price=q.last_price if q else None,
         price_date=q.session_date if q else None,
         price_ccy=q.instrument.currency if q else None,
+        max_periods=periods,
     )
