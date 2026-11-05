@@ -11,6 +11,14 @@ export default tseslint.config(
     languageOptions: { globals: { process: "readonly", console: "readonly", URL: "readonly" } },
   },
   {
+    // The service worker runs in its own global scope (self, caches, fetch), not the page's.
+    files: ["public/sw.js"],
+    languageOptions: {
+      sourceType: "script",
+      globals: { self: "readonly", caches: "readonly", fetch: "readonly", URL: "readonly", Response: "readonly" },
+    },
+  },
+  {
     files: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
     plugins: { "react-hooks": reactHooks },
     rules: {
