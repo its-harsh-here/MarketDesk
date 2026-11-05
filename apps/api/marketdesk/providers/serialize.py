@@ -108,6 +108,7 @@ def fundamentals_to(f: Fundamentals) -> dict:
         last_fiscal_year_end=f.last_fiscal_year_end.isoformat() if f.last_fiscal_year_end else None,
         most_recent_quarter=f.most_recent_quarter.isoformat() if f.most_recent_quarter else None,
         notes=list(f.notes),
+        summary=f.summary,
     )
     return out
 
@@ -121,6 +122,7 @@ def fundamentals_from(d: dict) -> Fundamentals:
         last_fiscal_year_end=_date(d["last_fiscal_year_end"]),
         most_recent_quarter=_date(d["most_recent_quarter"]),
         notes=list(d["notes"]),
+        summary=d.get("summary"),  # absent in entries cached before T1
     )
 
 

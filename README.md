@@ -269,6 +269,21 @@ Portfolio → **Rebalance**: target weights per holding (saved), then a **simula
 shares and an assumed fee; the proposed share counts are editable and recalculate on the page. Nothing is submitted
 or recorded.
 
+## Description view and function codes (terminal T1)
+
+An instrument opens on **Description**: price chart; **key statistics** (price, liquidity, valuation, growth and
+profitability, leverage, risk — each with its as-of date and formula); **business** (US registrants: quoted from the
+latest 10-K Item 1 with filing date and link; other listings: the provider's profile marked "not verified"); **identity**
+(listing, sector/industry with source, fiscal year end, identifiers, SEC CIK/SIC and every SEC-listed ticker);
+**events** (next results date as an estimate or SEBI deadline, last results, last dividend or split); **latest
+filings**; **peers**; and **coverage** — which kinds of data exist for this listing, from which source, and why the
+others don't (e.g. consensus estimates are licensed data; insider transactions are planned for US issuers).
+The former overview (chart, fundamentals, actions, your alerts and notes, compare) is the **Chart** tab.
+
+**Function codes** in the command palette: type a symbol and a code — `RELIANCE.NS FA`, `AAPL ERN`, `TCS.NS RV` —
+or just the code on an instrument page; `?` lists them. Security codes: DES, GP, FA, CN, DVD, ERN, RV, DCF, HDS, ANR,
+ASK, EXP. Section codes: TOP, WL, EQS, ECO, PORT, ALRT, JRNL, LAB. The codes are a familiar checklist only.
+
 ## Workspaces, offline copy, exports and usage
 
 - **Workspaces** (label above the page title; More menu on phones; command palette "Workspace: …"): Market, Research

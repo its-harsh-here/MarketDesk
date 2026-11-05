@@ -6,6 +6,7 @@ import re
 from datetime import UTC, datetime
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from marketdesk.api.errors import AppError
@@ -128,8 +129,15 @@ async def resolve_instrument(db: Session, market: MarketDataService, symbol: str
                     {"suggestions": [suggested]},
                 )
             raise AppError(status, "symbol_unverified", f"Could not verify {sym}: {reason}")
-    inst = upsert_instrument(db, market.source, ref)
-    db.commit()
+    try:
+        inst = upsert_instrument(db, market.source, ref)
+        db.commit()
+    except IntegrityError:
+        # Another request registered the same listing at the same moment (a page loads several panels at once):
+        # use that row, then apply this verification to it.
+        db.rollback()
+        inst = upsert_instrument(db, market.source, ref)
+        db.commit()
     return inst
 
 

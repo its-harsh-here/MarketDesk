@@ -30,6 +30,7 @@ from marketdesk.api import (
     routes_research,
     routes_screener,
     routes_system,
+    routes_terminal,
     routes_valuation,
     routes_watchlists,
     routes_workspace,
@@ -176,6 +177,7 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
         routes_macro,
         routes_lab,
         routes_workspace,
+        routes_terminal,
     ):
         app.include_router(r.router)
 

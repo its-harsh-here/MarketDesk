@@ -98,6 +98,7 @@ async def fundamentals_payload(market: MarketDataService, symbol: str) -> dict:
             "last_fiscal_year_end": f.last_fiscal_year_end,
             "most_recent_quarter": f.most_recent_quarter,
             "notes": f.notes,
+            "summary": f.summary,
         }
     return {
         "symbol": symbol,

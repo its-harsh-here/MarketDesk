@@ -865,6 +865,30 @@ CSP present; session cookie Secure and HttpOnly; schema 0012 current; worker run
    (f894efc, 00cd85b; tests for both). Live after the fix: SMR 10-K 300 vs 283 paragraphs (79 added, 96 removed,
    112 reworded) in 5 s; AAPL 99 vs 115 (28 added, 13 removed, 53 reworded) in 4 s, all quoted from the filings.
 
+## Terminal T1 — Description view and function codes (5 Nov 2026)
+- **API** `GET /api/terminal/description?symbol=` (`services/description.py`): identity (listing, identifiers,
+  related listings sharing a CIK/ISIN, SEC profile with all tickers, fiscal year end), business summary (10-K Item 1
+  opening paragraphs, quoted, cached per accession; else the provider profile marked "not verified"; else the reason),
+  key statistics from the M06 snapshot (rebuilt when stale) with as-of dates and formulas, and a coverage list for
+  15 domains with status, source and reason.
+- **Provider:** `Fundamentals.summary` (Yahoo `longBusinessSummary` when Yahoo serves it; the sample dataset says its
+  companies are fictitious). Cached entries without it still decode.
+- **UI:** Description is the landing tab (chart, key statistics, business, identity, events, latest filings, peers,
+  coverage; coverage becomes a stacked list on phones); the former overview is the Chart tab (`?tab=overview` links
+  still work). Function codes in the palette (`SYMBOL CODE`, the code alone on an instrument page, `?` to list) and
+  in the shortcuts dialog.
+- **Fixes found on the way:** two requests registering the same new listing, or storing the same snapshot, at once
+  raised unique-constraint errors (the landing view loads several panels together); both now retry against the
+  stored row.
+- **Schema:** none.
+
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 17 | 298 passed, 3 skipped / 300 passed, 1 skipped (T1: 5 — Item 1 extraction skips the table of contents and quotes whole paragraphs, SEC summary cached per accession, API on sample data with reasons for every gap, country-specific coverage, old cache entries decode) |
+| tsc, `eslint .`, vitest | clean; 37 (new: function-code parsing and URLs) |
+| Playwright | 26 journeys pass (new: description tiles and coverage, `glasswing fa`, `?`, `dvd`, `hds` → coverage) |
+| Visual QA | Description at 1440 and 390 px, palette code list, mobile coverage and identity inspected |
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -872,4 +896,4 @@ CSP present; session cookie Secure and HttpOnly; schema 0012 current; worker run
 - Portfolio has INR and USD accounts; returns (M09) use daily closes, benchmarks are price indices, and cash earns no interest.
 
 ## Next concrete action
-The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Next: the terminal roadmap (`docs/TERMINAL_ROADMAP.md`, T1–T10), one phase at a time. Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
+The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Terminal roadmap: T1 done; next T2 (financial analysis depth) per `docs/TERMINAL_ROADMAP.md`. Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.

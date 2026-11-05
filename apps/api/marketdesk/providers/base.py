@@ -106,6 +106,7 @@ class Fundamentals:
     last_fiscal_year_end: date | None
     most_recent_quarter: date | None
     notes: list[str] = field(default_factory=list)
+    summary: str | None = None  # the provider's business description, as supplied (not verified)
 
 
 @dataclass(frozen=True)

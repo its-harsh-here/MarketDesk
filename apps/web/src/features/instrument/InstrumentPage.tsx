@@ -28,6 +28,7 @@ import { ComparePanel } from "@/features/market/ComparePanel";
 import { EventsTab, FilingsTab, FinancialsTab } from "@/features/research/ResearchTabs";
 import { PeersTab } from "@/features/screener/PeersTab";
 import { EarningsTab } from "@/features/earnings/EarningsTab";
+import { DescriptionTab } from "@/features/terminal/DescriptionTab";
 import { ValuationTab } from "@/features/valuation/ValuationTab";
 import { useAiStatus } from "@/features/ai/api";
 import { REGION_LABEL, sessionFor, sessionText } from "@/lib/markets";
@@ -92,10 +93,11 @@ export function InstrumentPage() {
   const s = snap.data?.[0];
   const sessions = useSessions();
   const [params, setParams] = useSearchParams();
-  const tab = (TABS.find((t) => t.value === params.get("tab"))?.value ?? "overview") as Tab;
+  const rawTab = params.get("tab") === "overview" ? "chart" : params.get("tab"); // links saved before T1
+  const tab = (TABS.find((t) => t.value === rawTab)?.value ?? "description") as Tab;
   const setTab = (t: Tab) => setParams((p) => {
     const next = new URLSearchParams(p);
-    if (t === "overview") next.delete("tab");
+    if (t === "description") next.delete("tab");
     else next.set("tab", t);
     return next;
   }, { replace: true });
@@ -222,6 +224,8 @@ export function InstrumentPage() {
         <PeersTab symbol={symbol} />
       ) : tab === "valuation" ? (
         <ValuationTab symbol={symbol} />
+      ) : tab === "description" ? (
+        <DescriptionTab symbol={symbol} currency={ccy} />
       ) : (
         <>
       <ChartPanel symbol={symbol} currency={ccy} title="Price history" className="lg:col-span-8" height={400} defaultRange="1Y" />
@@ -327,7 +331,8 @@ export function InstrumentPage() {
 }
 
 const TABS = [
-  { value: "overview", label: "Overview" },
+  { value: "description", label: "Description" },
+  { value: "chart", label: "Chart" },
   { value: "financials", label: "Financials" },
   { value: "filings", label: "Filings" },
   { value: "events", label: "Events" },

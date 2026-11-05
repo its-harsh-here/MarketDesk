@@ -23,6 +23,7 @@ from typing import Any
 
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from marketdesk.api.errors import AppError
@@ -402,15 +403,24 @@ async def build_snapshot(db: Session, market: MarketDataService, inst: Instrumen
     if not excluded:
         fundamentals, statements = await asyncio.gather(market.fundamentals(sym), market.statements(sym))
     values = compute_snapshot(inst.kind, quote, history, fundamentals, statements)
-    row = db.get(ScreenMetric, inst.id)
-    now = datetime.now(UTC)
-    if row is None:
-        row = ScreenMetric(instrument_id=inst.id, provider=market.source, computed_at=now, values=values)
-        db.add(row)
-    else:
-        row.provider, row.computed_at, row.values = market.source, now, values
-    row.errors = {k: v.get("message") for k, v in values["_inputs"].items() if v.get("message")} or None
-    db.commit()
+    errors = {k: v.get("message") for k, v in values["_inputs"].items() if v.get("message")} or None
+    for attempt in range(2):
+        row = db.get(ScreenMetric, inst.id)
+        now = datetime.now(UTC)
+        if row is None:
+            row = ScreenMetric(instrument_id=inst.id, provider=market.source, computed_at=now, values=values)
+            db.add(row)
+        else:
+            row.provider, row.computed_at, row.values = market.source, now, values
+        row.errors = errors
+        try:
+            db.commit()
+            return row
+        except IntegrityError:
+            # Another request (e.g. a second panel of the same page) stored this snapshot first: update that row.
+            db.rollback()
+            if attempt:
+                raise
     return row
 
 

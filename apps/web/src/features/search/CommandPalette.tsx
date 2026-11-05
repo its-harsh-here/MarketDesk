@@ -1,19 +1,20 @@
 import { listingLabel } from "@/lib/markets";
 import * as RD from "@radix-ui/react-dialog";
-import { Bell, BookOpen, Briefcase, CornerDownLeft, Download, FileUp, FlaskConical, Funnel, Gauge, Globe, Keyboard, LayoutDashboard, LayoutGrid, ListChecks, NotebookPen, Plus, Rows3, Search, Settings, SunMoon } from "lucide-react";
+import { Bell, BookOpen, Briefcase, CornerDownLeft, Download, FileUp, FlaskConical, Funnel, Gauge, Globe, Keyboard, LayoutDashboard, LayoutGrid, ListChecks, NotebookPen, Plus, Rows3, Search, Settings, SquareFunction, SunMoon } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useDialogs } from "@/app/dialogs";
 import { useSymbolSearch } from "@/features/market/api";
 import { applyDensity, applyTheme, usePatchPrefs, usePrefs, useSession } from "@/features/settings/api";
 import { useWorkspaces } from "@/features/workspace/api";
+import { GLOBAL_CODES, parseCommand, SECURITY_CODES, securityPath, type SecurityCode } from "@/lib/codes";
 import { useSwitchWorkspace } from "@/features/workspace/WorkspaceMenu";
 import { useDebounced } from "@/lib/hooks";
 import { cn } from "@/lib/cn";
 
 interface Item {
   id: string;
-  group: "Instruments" | "Pages" | "Actions";
+  group: "Functions" | "Instruments" | "Pages" | "Actions";
   label: string;
   hint?: string;
   icon?: ReactNode;
@@ -27,7 +28,10 @@ export function CommandPalette() {
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
   const navigate = useNavigate();
-  const debounced = useDebounced(q, 180);
+  const cmd = parseCommand(q);
+  // "AAPL FA": search for the symbol part so a partial ticker (RELIANCE) resolves to a listing (RELIANCE.NS)
+  const term = cmd?.kind === "security" && cmd.symbol ? cmd.symbol : q;
+  const debounced = useDebounced(term, 180);
   const search = useSymbolSearch(isOpen ? debounced : "");
   const { data: prefs } = usePrefs();
   const patch = usePatchPrefs();
@@ -45,6 +49,33 @@ export function CommandPalette() {
 
   const items = useMemo<Item[]>(() => {
     const ql = q.trim().toLowerCase();
+    const runCode = (symbol: string, def: SecurityCode) => () => {
+      close();
+      navigate(securityPath(symbol, def));
+      if (def.action === "ai") open({ kind: "ai", symbol });
+      if (def.action === "export") open({ kind: "export", symbol });
+    };
+    const functions: Item[] = [];
+    if (ql === "?") {
+      for (const c of SECURITY_CODES) {
+        functions.push(
+          here
+            ? { id: `f-${c.code}`, group: "Functions", label: `${here} ${c.code}`, hint: c.label, icon: <SquareFunction />, run: runCode(here, c) }
+            : { id: `f-${c.code}`, group: "Functions", label: `SYMBOL ${c.code}`, hint: `${c.label} — type a symbol before the code`, icon: <SquareFunction />, run: () => setQ(` ${c.code}`) },
+        );
+      }
+      for (const c of GLOBAL_CODES) functions.push({ id: `f-${c.code}`, group: "Functions", label: c.code, hint: c.label, icon: <SquareFunction />, run: go(c.to) });
+    } else if (cmd?.kind === "global") {
+      functions.push({ id: `f-${cmd.def.code}`, group: "Functions", label: cmd.def.code, hint: cmd.def.label, icon: <SquareFunction />, run: go(cmd.def.to) });
+    } else if (cmd?.kind === "security") {
+      const typed = cmd.symbol ?? "";
+      const results = typed ? (search.data?.results ?? []) : [];
+      const best = results.find((r) => r.symbol.toUpperCase() === typed) ?? results.find((r) => r.symbol.toUpperCase().startsWith(`${typed}.`)) ?? results.find((r) => r.symbol.toUpperCase().includes(typed));
+      const symbol = typed ? (best?.symbol ?? typed) : here;
+      if (symbol) {
+        functions.push({ id: `f-${cmd.def.code}`, group: "Functions", label: `${symbol} ${cmd.def.code}`, hint: `${cmd.def.label}${best && typed ? ` · ${best.name ?? ""}` : ""}`, icon: <SquareFunction />, run: runCode(symbol, cmd.def) });
+      }
+    }
     const pages: Item[] = [
       { id: "p-overview", group: "Pages", label: "Overview", icon: <LayoutDashboard />, run: go("/") },
       { id: "p-watch", group: "Pages", label: "Watchlists", icon: <ListChecks />, run: go("/watchlists") },
@@ -112,11 +143,11 @@ export function CommandPalette() {
           run: go(`/instrument/${encodeURIComponent(r.symbol)}`),
         }))
       : [];
-    return [...instruments, ...pages.filter(match), ...actions.filter(match)];
+    return [...functions, ...(cmd?.kind === "security" && cmd.symbol ? [] : instruments), ...pages.filter(match), ...actions.filter(match)];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, search.data, prefs?.theme, prefs?.density, readOnly, ws, here]);
 
-  const groups = ["Instruments", "Pages", "Actions"] as const;
+  const groups = ["Functions", "Instruments", "Pages", "Actions"] as const;
   const safeActive = Math.min(active, Math.max(items.length - 1, 0));
 
   return (
@@ -144,7 +175,7 @@ export function CommandPalette() {
               aria-expanded
               aria-controls="palette-list"
               aria-activedescendant={items[safeActive] ? `pal-${items[safeActive].id}` : undefined}
-              aria-label="Search instruments, pages and actions"
+              aria-label="Search instruments, pages and actions, or type a function code such as AAPL FA"
               placeholder="Search company, symbol, page or action…"
               className="h-13 flex-1 bg-transparent text-[15px] text-fg placeholder:text-fg-3 focus:outline-none"
               value={q}
@@ -170,7 +201,9 @@ export function CommandPalette() {
           <ul id="palette-list" role="listbox" aria-label="Results" className="scrollbar-thin max-h-[min(420px,60vh)] overflow-y-auto py-2">
             {items.length === 0 && (
               <li className="px-4 py-6 text-center text-[13px] text-fg-3">
-                {q && search.data?.meta?.message ? search.data.meta.message : "No matches."}
+                {cmd?.kind === "security" && !cmd.symbol
+                  ? `Type a symbol before ${cmd.def.code}, e.g. "AAPL ${cmd.def.code}".`
+                  : q && search.data?.meta?.message ? search.data.meta.message : "No matches."}
               </li>
             )}
             {groups.map((g) => {
@@ -196,7 +229,7 @@ export function CommandPalette() {
                           )}
                         >
                           {it.icon && <span className="text-fg-3 [&_svg]:size-4">{it.icon}</span>}
-                          <span className={cn("shrink-0", it.group === "Instruments" && "num font-semibold text-fg")}>{it.label}</span>
+                          <span className={cn("shrink-0", (it.group === "Instruments" || it.group === "Functions") && "num font-semibold text-fg")}>{it.label}</span>
                           {it.hint && <span className="min-w-0 truncate text-fg-3">{it.hint}</span>}
                           {idx === safeActive && <CornerDownLeft aria-hidden className="ml-auto size-3.5 text-fg-3" />}
                         </li>
@@ -211,6 +244,7 @@ export function CommandPalette() {
             <span><Kbd>↑</Kbd> <Kbd>↓</Kbd> navigate</span>
             <span><Kbd>Enter</Kbd> open</span>
             <span><Kbd>Esc</Kbd> close</span>
+            <span><Kbd>?</Kbd> function codes, e.g. <span className="num">AAPL FA</span></span>
           </div>
         </RD.Content>
       </RD.Portal>

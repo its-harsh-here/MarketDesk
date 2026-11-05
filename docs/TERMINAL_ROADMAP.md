@@ -70,7 +70,7 @@ Legend: ✅ have · 🟡 partial · ⬜ missing · 🔒 needs licensed data or a
 Each phase follows the upgrade rules: one at a time, fixtures first, migration rehearsal on a production copy, live
 verification reported separately, docs updated.
 
-### T1 — Security description page and function keys
+### T1 — Security description page and function keys — ✅ done 5 Nov 2026 (see `docs/UPGRADE_STATUS.md`)
 A single **Description** view per instrument (the landing tab): identity (all listings, ISIN/CIK where known, sector,
 fiscal year end), business summary (US: 10-K Item 1 excerpt with a link; elsewhere: provider profile marked as
 such), key stats grid (price, ranges, valuation, growth, leverage — from the M06 snapshot with as-of dates), next
@@ -132,7 +132,7 @@ plus the owner's own annotations. Marked low confidence by design; never present
 
 | Order | Phase | Depends on | Owner input |
 | --- | --- | --- | --- |
-| 1 | T1 Description + function keys | M06, M14 | none |
+| 1 | T1 Description + function keys ✅ | M06, M14 | none |
 | 2 | T2 Financial depth | M02, M11 | none (India stays unofficial until a source is chosen) |
 | 3 | T6 Relative value and risk | M06, M09 | FINRA developer credentials if the API needs them |
 | 4 | T4 Earnings and events | M07 | optional estimates provider (paid) |

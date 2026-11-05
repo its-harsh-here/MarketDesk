@@ -634,6 +634,7 @@ def fundamentals_from_info(symbol: str, info: dict) -> Fundamentals:
         last_fiscal_year_end=_epoch_date(info.get("lastFiscalYearEnd")),
         most_recent_quarter=_epoch_date(info.get("mostRecentQuarter")),
         notes=notes,
+        summary=(str(info.get("longBusinessSummary") or "").strip() or None),
     )
 
 

@@ -149,6 +149,7 @@ class FundamentalsValues(Model):
     last_fiscal_year_end: date | None = None
     most_recent_quarter: date | None = None
     notes: list[str] = []
+    summary: str | None = None  # provider's business description, as supplied
 
 
 class FundamentalsOut(Model):

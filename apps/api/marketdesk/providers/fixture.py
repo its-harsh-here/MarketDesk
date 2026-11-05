@@ -261,6 +261,11 @@ class FixtureProvider:
             last_fiscal_year_end=date.fromisoformat(fiscal["last_fiscal_year_end"]) if fiscal else None,
             most_recent_quarter=date.fromisoformat(fiscal["most_recent_quarter"]) if fiscal else None,
             notes=notes,
+            summary=(
+                f"{inst.get('name') or symbol} is a fictitious company in MarketDesk's sample dataset"
+                + (f" ({inst['industry']}, {inst['sector']})." if inst.get("industry") and inst.get("sector") else ".")
+                + " Its figures are synthetic and describe no real business."
+            ),
         )
 
     def annual_statements(self, symbol: str) -> AnnualStatements:

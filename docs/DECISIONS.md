@@ -249,3 +249,10 @@ Consequential choices, newest last. Routine choices live in code comments.
     Research exports are Markdown downloads (`Cache-Control: no-store`), not shareable links; private sections
     (journal, holdings) are opt-in per export and named in the file header. Owner AI quotas can only lower the
     environment caps and are applied in the same locked reservation step as the caps.
+50. **Description as the instrument landing view; business text quoted, never generated (terminal T1, 5 Nov 2026).**
+    The landing tab gathers identity, key statistics (the M06 snapshot, rebuilt when older than
+    `SCREENER_SNAPSHOT_HOURS`), events, filings, peers and a coverage list. The business summary is quoted from the
+    latest 10-K Item 1 (US, cached per accession) or is the provider's profile labelled "not verified"; no model text.
+    Coverage states for every domain whether it is available, estimated, planned, licensed or has no source, with the
+    reason. Function codes are a client-side mapping to existing views. Loading several panels at once exposed races
+    when a new listing or snapshot was stored by two requests; both writes now retry against the stored row.

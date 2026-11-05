@@ -400,7 +400,7 @@ test("instrument header: a long symbol never overlaps the price at any width", a
 });
 
 test("compare: two instruments rebased to 100 with method, table alternative and limits", async ({ page }) => {
-  await page.goto("/instrument/SX%3AAURORA");
+  await page.goto("/instrument/SX%3AAURORA?tab=chart");
   const cmp = page.getByRole("region", { name: "Compare" });
   await expect(cmp.getByText(/Add one or two instruments/)).toBeVisible();
   await cmp.getByRole("combobox").fill("BANYAN");
@@ -419,7 +419,8 @@ test("compare: two instruments rebased to 100 with method, table alternative and
 test("research tabs: keyboard navigation, URL state, and an explicit reason when SEC data does not apply", async ({ page }) => {
   await page.goto("/instrument/SX%3AAURORA");
   const tabs = page.getByRole("tablist", { name: "Instrument sections" });
-  await tabs.getByRole("tab", { name: "Overview" }).focus();
+  await tabs.getByRole("tab", { name: "Chart" }).click();
+  await tabs.getByRole("tab", { name: "Chart" }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(tabs.getByRole("tab", { name: "Financials" })).toHaveAttribute("aria-selected", "true");
   await expect(page).toHaveURL(/tab=financials/);
@@ -428,7 +429,7 @@ test("research tabs: keyboard navigation, URL state, and an explicit reason when
   await expect(page.getByRole("tab", { name: "Financials" })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tab", { name: "Events" }).click();
   await expect(page.getByRole("heading", { name: "Corporate actions" })).toBeVisible();
-  await page.getByRole("tab", { name: "Overview" }).click();
+  await page.getByRole("tab", { name: "Description" }).click();
   await expect(page.getByRole("heading", { name: "Price history" })).toBeVisible();
   await expect(page).not.toHaveURL(/tab=/);
 });
@@ -722,4 +723,40 @@ test("offline: opt-in copy is shown labelled read-only and not live when the ser
   await page.goto("/settings?s=offline");
   await page.getByLabel("Keep a read-only offline copy on this device").uncheck();
   expect(await page.evaluate(() => localStorage.getItem("md-offline-snapshot"))).toBeNull();
+});
+
+test("description: tiles with sources, coverage with reasons, function codes from the palette", async ({ page }) => {
+  await page.goto("/instrument/SX%3AAURORA");
+  await ready(page);
+  await expect(page.getByRole("tab", { name: "Description" })).toHaveAttribute("aria-selected", "true");
+  const biz = page.getByRole("region", { name: "Business" });
+  await expect(biz.getByText(/fictitious company in MarketDesk's sample dataset/)).toBeVisible();
+  await expect(biz.getByText(/company profile, as supplied by the provider \(not verified\)/)).toBeVisible();
+  const stats = page.getByRole("region", { name: "Key statistics" });
+  await expect(stats.getByText("Last price")).toBeVisible();
+  await expect(stats.getByText(/Snapshot computed/)).toBeVisible();
+  await expect(page.getByRole("region", { name: "Identity" }).getByText(/Classification: fixture fundamentals/)).toBeVisible();
+  const cov = page.getByRole("table", { name: /Which kinds of data are available for SX:AURORA/ });
+  await expect(cov.getByRole("row", { name: /Consensus estimates and analyst ratings/ })).toContainText("Licensed data");
+  await expect(cov.getByRole("row", { name: /^Filings/ })).toContainText("No filing source applies");
+  // function codes: "SYMBOL CODE" jumps to that view; "?" lists codes
+  await page.keyboard.press(`${MOD}+k`);
+  const palette = page.getByRole("dialog", { name: "Command palette" });
+  await palette.getByRole("combobox").fill("glasswing fa");
+  await expect(palette.getByRole("option", { name: /SX:GLASSWING FA/ })).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/instrument\/SX%3AGLASSWING\?tab=financials$/);
+  await expect(page.getByRole("tab", { name: "Financials" })).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press(`${MOD}+k`);
+  await palette.getByRole("combobox").fill("?");
+  await expect(palette.getByRole("option", { name: /SX:GLASSWING RV/ })).toBeVisible();
+  await expect(palette.getByRole("option", { name: /EQS/ })).toBeVisible();
+  await palette.getByRole("combobox").fill("dvd");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/tab=events/);
+  await page.keyboard.press(`${MOD}+k`);
+  await palette.getByRole("combobox").fill("hds");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/#coverage$/);
+  await expect(page.getByRole("heading", { name: "Coverage for this listing" })).toBeInViewport();
 });
