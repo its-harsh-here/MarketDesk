@@ -315,22 +315,40 @@ def _norm(p: str) -> str:
     return re.sub(r"[^a-z0-9 ]", "", p.lower())
 
 
+MAX_COMPARE = 400  # paragraphs per side considered for rewording (a 10-K's Item 1A has roughly 100-300)
+
+
+def _bigrams(words: list[str]) -> set[tuple[str, str]]:
+    return set(zip(words, words[1:], strict=False))
+
+
 def diff_paragraphs(old: list[str], new: list[str], limit: int = 12) -> dict:
-    """Added, removed and reworded paragraphs (similarity ≥ 0.6 counts as reworded), quoted."""
+    """Added, removed and reworded paragraphs (similarity ≥ 0.6 counts as reworded), quoted.
+
+    Rewording is found in two steps so that whole annual reports stay fast: a cheap word-pair (bigram) overlap picks
+    the three closest removed paragraphs for each added one, and only those are compared word by word with
+    difflib. Character-level comparison of every pair was quadratic and took minutes on real 10-K sections."""
     old_n = {_norm(p): p for p in old}
     new_n = {_norm(p): p for p in new}
     added = [k for k in new_n if k not in old_n]
     removed = [k for k in old_n if k not in new_n]
+    words = {k: k.split() for k in (*added[:MAX_COMPARE], *removed[:MAX_COMPARE])}
+    grams = {k: _bigrams(w) for k, w in words.items()}
     reworded, used = [], set()
-    for k in list(added):
+    for k in list(added[:MAX_COMPARE]):
+        gk = grams[k]
+        if not gk:
+            continue
+        shortlist = []
+        for r in removed[:MAX_COMPARE]:
+            if r in used or not grams[r]:
+                continue
+            j = len(gk & grams[r]) / len(gk | grams[r])
+            if j >= 0.2:
+                shortlist.append((j, r))
         best, score = None, 0.0
-        for r in removed:
-            if r in used:
-                continue
-            sm = difflib.SequenceMatcher(None, k, r, autojunk=False)
-            if sm.real_quick_ratio() < 0.6 or sm.quick_ratio() < 0.6:
-                continue
-            s = sm.ratio()
+        for _, r in sorted(shortlist, reverse=True)[:3]:
+            s = difflib.SequenceMatcher(None, words[k], words[r], autojunk=False).ratio()
             if s > score:
                 best, score = r, s
         if best is not None and score >= 0.6:
@@ -392,7 +410,7 @@ async def filing_changes(db: Session, research, inst: Instrument, form: str) -> 
         )
     except ProviderError as err:
         return {"available": False, "reason": f"Could not read the filings: {err.message}"}
-    ns, os_ = risk_section(new_t), risk_section(old_t)
+    ns, os_ = await asyncio.gather(asyncio.to_thread(risk_section, new_t), asyncio.to_thread(risk_section, old_t))
     if not ns or not os_:
         return {
             "available": False,
@@ -423,9 +441,9 @@ async def filing_changes(db: Session, research, inst: Instrument, form: str) -> 
             "report_date": old_f.get("report_date"),
             "url": old_url,
         },
-        **diff_paragraphs(paragraphs(os_), paragraphs(ns)),
+        **(await asyncio.to_thread(lambda: diff_paragraphs(paragraphs(os_), paragraphs(ns)))),
         "method": "Paragraphs (80+ characters) of each filing's Item 1A are compared after normalizing case and "
-        "punctuation; pairs at least 60% similar count as reworded. All text is quoted from the filings.",
+        "punctuation; pairs at least 60% similar word by word count as reworded. All text is quoted from the filings.",
     }
     _cache_put(key, out)
     return out

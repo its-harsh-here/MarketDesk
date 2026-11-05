@@ -189,3 +189,26 @@ def test_periodic_reports_use_the_primary_document():
     assert _pick_document(files, "10-K", filing) == "smr-20251231.htm"  # not the certification exhibit
     release = [{"name": "smr-ex991.htm"}, {"name": "smr-8k.htm"}]
     assert _pick_document(release, "8-K", {"document_url": ".../smr-8k.htm"}) == "smr-ex991.htm"  # releases: exhibit 99
+
+
+def test_risk_diff_stays_fast_on_annual_report_sized_sections():
+    """Real 10-K Item 1A sections have hundreds of long paragraphs; the comparison must stay well under a second
+    (character-level comparison of every pair took minutes on the live server)."""
+    import random
+    import time
+
+    rnd = random.Random(3)
+    vocab = [f"w{i}" for i in range(400)]
+
+    def para():
+        return " ".join(rnd.choice(vocab) for _ in range(150))
+
+    old = [para() for _ in range(250)]
+    new = [para() for _ in range(250)]  # nothing in common
+    t = time.perf_counter()
+    d = er.diff_paragraphs(old, new)
+    assert time.perf_counter() - t < 5
+    assert d["counts"]["reworded"] == 0 and d["counts"]["added"] == 250
+    edited = [p.replace(p.split()[3], "changed", 1) for p in old[:40]] + old[40:]
+    d = er.diff_paragraphs(old, edited)
+    assert d["counts"]["reworded"] == 40 and d["counts"]["added"] == 0 and d["counts"]["removed"] == 0
