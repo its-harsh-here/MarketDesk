@@ -21,7 +21,7 @@ interface Risk {
   sensitivity?: Record<"1Y" | "3Y", Sens> | { why: string };
   volatility?: Record<"1Y" | "3Y", { value: number | null; n: number; why: string | null }>;
   drawdowns?: { current?: number; high?: { date: string; close: number }; windows?: Record<string, { max: number | null; peak?: string; trough?: string; recovered?: string | null; why?: string }>; episodes?: Episode[]; why?: string };
-  liquidity?: { adv_20: string | null; adv_60: string | null; value_20: string | null; spread_estimate_pct: number | null; sessions: number };
+  liquidity?: { adv_20: string | null; adv_60: string | null; value_20: string | null; median_range_pct: number | null; sessions: number };
   relative?: { universe: { label: string; members: number; with_snapshot: number }; rows: { key: string; label: string; unit: string; value: string | null; n: number; mean?: string; median?: string; z?: string | null; percentile?: string; why: string | null }[]; note: string };
   peer_valuation?: { source: string; rows: { symbol: string; n?: number; min?: number; median?: number; max?: number; current?: number | null; percentile?: number | null; why?: string | null }[] };
   short_interest?: { status: string; reason?: string | null; source: string; fetched_at?: string | null; rows?: { settlement_date: string; short_position: number; change_pct: number; avg_daily_volume: number; days_to_cover: number; revised: boolean; split: boolean }[]; note?: string };
@@ -130,9 +130,9 @@ export function RiskTab({ symbol, currency }: { symbol: string; currency: string
           <div className="flex justify-between gap-2 py-1"><dt className="text-fg-2">Avg volume (20 sessions)</dt><dd className="num">{d.liquidity?.adv_20 ? formatCompact(d.liquidity.adv_20) : DASH}</dd></div>
           <div className="flex justify-between gap-2 py-1"><dt className="text-fg-2">Avg volume (60 sessions)</dt><dd className="num">{d.liquidity?.adv_60 ? formatCompact(d.liquidity.adv_60) : DASH}</dd></div>
           <div className="flex justify-between gap-2 py-1"><dt className="text-fg-2">Avg traded value (20)</dt><dd className="num">{d.liquidity?.value_20 ? formatLargeMoney(d.liquidity.value_20, currency) : DASH}</dd></div>
-          <div className="flex justify-between gap-2 py-1"><dt className="text-fg-2">Spread estimate</dt><dd className="num">{d.liquidity?.spread_estimate_pct === null || d.liquidity?.spread_estimate_pct === undefined ? DASH : `≈ ${d.liquidity.spread_estimate_pct.toFixed(2)}%`}</dd></div>
+          <div className="flex justify-between gap-2 py-1"><dt className="text-fg-2">Median daily range</dt><dd className="num">{d.liquidity?.median_range_pct === null || d.liquidity?.median_range_pct === undefined ? DASH : `${d.liquidity.median_range_pct.toFixed(2)}%`}</dd></div>
         </dl>
-        <p className="mt-2 text-xs leading-4 text-fg-3">The spread is estimated from daily high, low and close over the last {d.liquidity?.sessions ?? 60} sessions (Abdi–Ranaldo); it is not a quoted bid-ask spread.</p>
+        <p className="mt-2 text-xs leading-4 text-fg-3">Daily range = (high − low) ÷ close, median of the last {d.liquidity?.sessions ?? 60} sessions. No bid-ask spread is shown: MarketDesk has no quotes to measure one, and estimates from daily prices are unreliable for liquid stocks.</p>
       </Panel>
 
       <Panel title="Within your universe" titleId="rel-title" className="lg:col-span-8">

@@ -302,8 +302,8 @@ data use the provider's annual statements, labelled **Unofficial**; bands need f
 Instrument → **Risk** (code `BETA`): **beta, correlation and R²** against the market benchmark or one you choose
 (daily returns when both trade in the same time zone, weekly otherwise; 1 and 3 years); **volatility**; **drawdowns**
 (current decline from the high, maximum over 1/3/5 years, and the deepest declines with their recovery dates);
-**liquidity** (20- and 60-session average volume and traded value, and a bid-ask spread *estimate* from daily high,
-low and close — Abdi–Ranaldo — clearly not a quoted spread); **position within your universe** (z-score and
+**liquidity** (20- and 60-session average volume and traded value, and the median daily high–low range; no bid-ask
+spread, since there are no quotes to measure one); **position within your universe** (z-score and
 percentile on valuation, growth, profitability, leverage and risk metrics, from stored snapshots of all watchlists,
 holdings or one watchlist); **peer P/E history** (five-year range per peer from filed EPS, US registrants); and
 **short interest** (US, FINRA; code `SI`). Short interest is off until you set `FINRA_CLIENT_ID` and

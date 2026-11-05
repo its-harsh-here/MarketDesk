@@ -924,7 +924,7 @@ unavailable (tax rate not meaningful). RELIANCE.NS — Yahoo's four fiscal years
 ## Terminal T6 — Relative value and risk (5 Nov 2026)
 - **API** `GET /api/terminal/risk?symbol=&benchmark=&universe=` (`services/security_risk.py`): beta, correlation
   and R² (1 y, 3 y; daily in one time zone, weekly across), volatility, drawdown profile (current, 1/3/5-year maximum,
-  deepest declines with recovery), liquidity (20/60-session volume, traded value, Abdi–Ranaldo spread estimate),
+  deepest declines with recovery), liquidity (20/60-session volume, traded value, median daily high–low range),
   z-scores and percentiles within a declared universe (stored snapshots), peer P/E history (US, from T2 bands), and
   short interest.
 - **Short interest:** `providers/finra.py` (OAuth client credentials; JSON; symbol filter; local sort; 12-hour cache;
@@ -937,10 +937,19 @@ unavailable (tax rate not meaningful). RELIANCE.NS — Yahoo's four fiscal years
 
 | Check | Result |
 | --- | --- |
-| pytest SQLite / PostgreSQL 17 | 312 passed, 3 skipped / 314 passed, 1 skipped (T6: 9 — beta 2.0/correlation 1 hand vector and weekly fallback, drawdown episodes with recovery, flat-price spread = 0, z-score/percentile vector, FINRA token (Basic) → Bearer JSON query with fallback spelling and token caching, credential gate, API on sample data, universe validation) |
+| pytest SQLite / PostgreSQL 17 | 312 passed, 3 skipped / 314 passed, 1 skipped (T6: 9 — beta 2.0/correlation 1 hand vector and weekly fallback, drawdown episodes with recovery, median daily range vector, z-score/percentile vector, FINRA token (Basic) → Bearer JSON query with fallback spelling and token caching, credential gate, API on sample data, universe validation) |
 | tsc, `eslint .`, vitest | clean; 37 |
-| Playwright | 28 journeys pass (new: risk — `beta` code, benchmark sensitivity, deepest declines, spread estimate, universe position, short interest reason, benchmark changed to SX:BANYAN) |
+| Playwright | 28 journeys pass (new: risk — `beta` code, benchmark sensitivity, deepest declines, liquidity note, universe position, short interest reason, benchmark changed to SX:BANYAN) |
 | Visual QA | Risk tab at 1440 and 390 px (small universes show one notice; drawdown figures in two columns) |
+
+**Live (Yahoo + SEC):** AAPL vs ^GSPC — beta 0.63 (1 y, 250 daily returns) / 1.06 (3 y), correlation 0.34 / 0.59;
+volatility 24.9% / 27.0%; deepest decline −33.4% from 26 Dec 2024 to 8 Apr 2025, recovered 20 Oct 2025; peer P/E
+ranges for AAPL, NVDA and PANW from filed EPS. RELIANCE.NS vs ^NSEI — beta 0.99 / 1.11; decline of −27.7% since
+8 Jul 2024 not yet recovered. SMR — beta 3.8 (1 y), volatility 94%, −91.7% from its October 2025 high; P/E history
+not meaningful (losses). Short interest: "not configured" (US) / "not applicable" (India) as intended. The owner's
+watchlists hold 2–3 instruments, so z-scores show the "at least 5 members" notice. The first version showed an
+Abdi–Ranaldo spread estimate (≈0.8% for RELIANCE.NS, 0% for AAPL — unrealistic); it was replaced by the median
+daily high–low range before release.
 
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.

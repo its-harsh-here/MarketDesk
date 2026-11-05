@@ -3,8 +3,9 @@
 Pure functions first (tested with hand vectors), then the builder that fetches prices, snapshots and peers.
 Conventions: returns come from the provider's split-adjusted daily closes (dividends not included); beta and
 correlation use daily returns when the security and benchmark trade in the same time zone and weekly (Friday) returns
-otherwise; drawdowns are measured from the running high of closes; the spread figure is an estimate from daily high,
-low and close (Abdi and Ranaldo, 2017), not a quoted bid-ask spread.
+otherwise; drawdowns are measured from the running high of closes. Liquidity is shown as traded volume and value and the
+median daily high-low range; no bid-ask spread is shown because MarketDesk has no quotes to measure one (a spread
+estimated from daily prices proved unreliable for liquid stocks).
 """
 
 from __future__ import annotations
@@ -134,16 +135,12 @@ def volatility(closes: dict[date, Decimal], end: date) -> dict:
     return out
 
 
-def abdi_ranaldo(bars: list) -> float | None:
-    """Spread estimate (fraction of price) from daily close, high and low: s² = 4·mean[(c_t − η_t)(c_t − η_{t+1})],
-    with c the log close and η the mean of log high and log low. Negative estimates are reported as zero."""
-    pts = [(math.log(b.close), (math.log(b.high) + math.log(b.low)) / 2) for b in bars
-           if b.close and b.high and b.low and b.close > 0 and b.high > 0 and b.low > 0]  # fmt: skip
-    if len(pts) < 20:
-        return None
-    prods = [(c - e0) * (c - e1) for (c, e0), (_, e1) in zip(pts, pts[1:], strict=False)]
-    s2 = 4 * sum(prods) / len(prods)
-    return math.sqrt(s2) if s2 > 0 else 0.0
+def daily_range(bars: list) -> float | None:
+    """Median of (high − low) ÷ close over the sessions given, as a fraction. A plain measure of how far the price
+    typically moves within a day; it is not a bid-ask spread (MarketDesk has no quotes to measure one)."""
+    r = sorted(float((b.high - b.low) / b.close) for b in bars
+               if b.close and b.high is not None and b.low is not None and b.close > 0)  # fmt: skip
+    return statistics.median(r) if len(r) >= 20 else None
 
 
 def liquidity(bars: list) -> dict:
@@ -154,8 +151,8 @@ def liquidity(bars: list) -> dict:
         out[f"adv_{n}"] = (sum(Decimal(b.volume) for b in last) / len(last)) if len(last) == n else None
     last20 = with_vol[-20:]
     out["value_20"] = sum(Decimal(b.volume) * b.close for b in last20) / len(last20) if len(last20) == 20 else None
-    est = abdi_ranaldo(bars[-60:])
-    out["spread_estimate_pct"] = None if est is None else est * 100
+    rng = daily_range(bars[-60:])
+    out["median_range_pct"] = None if rng is None else rng * 100
     out["sessions"] = len(bars[-60:])
     return out
 

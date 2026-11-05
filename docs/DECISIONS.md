@@ -270,5 +270,6 @@ Consequential choices, newest last. Routine choices live in code comments.
     free Individual account → Public credential), caches results for 12 hours (published twice a month), sorts
     records locally (server-side sorting needs a settlement-date filter) and stays off without credentials; it is
     unverified against live data until the owner configures it. Beta/correlation use daily returns within one time
-    zone and weekly across; z-scores use stored universe snapshots (no bulk refresh on page load); the spread is the
-    Abdi–Ranaldo estimate, labelled as an estimate.
+    zone and weekly across; z-scores use stored universe snapshots (no bulk refresh on page load). A bid-ask spread
+    estimated from daily prices (Abdi–Ranaldo) was tried and dropped after the live check: it gave about 0.8% for
+    RELIANCE.NS and 0% for AAPL, far from real spreads; the median daily high–low range is shown instead.

@@ -58,12 +58,14 @@ class Bar:
     volume: int | None
 
 
-def test_liquidity_and_spread_estimate():
+def test_liquidity_and_daily_range():
     flat = [Bar(date(2026, 1, 1) + timedelta(days=i), D(10), D(10), D(10), 1000 + i) for i in range(60)]
     liq = sr.liquidity(flat)
-    assert liq["adv_20"] == D(sum(1000 + i for i in range(40, 60))) / 20 and liq["spread_estimate_pct"] == 0.0
+    assert liq["adv_20"] == D(sum(1000 + i for i in range(40, 60))) / 20 and liq["median_range_pct"] == 0.0
     assert liq["value_20"] == liq["adv_20"] * 10
-    assert sr.abdi_ranaldo(flat[:10]) is None  # too few sessions
+    ranged = [Bar(date(2026, 1, 1) + timedelta(days=i), D(100), D(101 + i % 3), D(99), 10) for i in range(21)]
+    assert abs(sr.daily_range(ranged) - 0.03) < 1e-12  # ranges 2%, 3%, 4% repeating → median 3%
+    assert sr.daily_range(flat[:10]) is None  # too few sessions
 
 
 def test_zscores_within_a_universe():
@@ -132,7 +134,7 @@ def test_risk_api_on_sample_data(api):
     one = r["sensitivity"]["1Y"]
     assert one["method"] == "daily" and one["beta"] is not None and one["n"] >= 200
     assert r["volatility"]["1Y"]["value"] is not None and r["drawdowns"]["episodes"]
-    assert r["liquidity"]["adv_20"] is not None and r["liquidity"]["spread_estimate_pct"] is not None
+    assert r["liquidity"]["adv_20"] is not None and r["liquidity"]["median_range_pct"] is not None
     assert r["relative"]["universe"]["label"] == "All watchlists" and all(x["why"] for x in r["relative"]["rows"])
     assert r["short_interest"]["status"] == "not_applicable"
     assert api.get("/api/terminal/risk", params={"symbol": "SX:AURORA", "universe": "bogus"}).status_code == 422

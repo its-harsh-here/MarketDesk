@@ -787,7 +787,7 @@ test("risk: beta against the benchmark (changeable), drawdowns, liquidity estima
   await expect(sens.getByRole("table", { name: /against SX:SX50/ })).toBeVisible();
   await expect(sens.getByText(/daily returns \(same trading time zone\)/)).toBeVisible();
   await expect(page.getByRole("region", { name: "Volatility and drawdowns" }).getByRole("table", { name: /Deepest declines/ })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Liquidity" }).getByText(/Abdi–Ranaldo/)).toBeVisible();
+  await expect(page.getByRole("region", { name: "Liquidity" }).getByText(/No bid-ask spread is shown/)).toBeVisible();
   await expect(page.getByRole("region", { name: "Within your universe" }).getByText(/\d+ members · \d+ with data/)).toBeVisible();
   await expect(page.getByRole("table", { name: /Where SX:AURORA sits within All watchlists/ })).toBeVisible();
   await expect(page.getByRole("region", { name: "Short interest" }).getByText(/US-traded securities/)).toBeVisible();
