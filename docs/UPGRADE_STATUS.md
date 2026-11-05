@@ -12,22 +12,16 @@ Roadmap: `docs/MARKETDESK_ROADMAP.txt`. Older history and decisions: `docs/STATU
 - The roadmap's "Unexpected server error during login" was the first deploy's missing-migration 500, fixed by the
   self-migrating startup (DECISIONS #26). Sign-in on the live service works.
 
-## Capability map (what exists today)
-| Area | Implemented | Not implemented / roadmap gap |
+## Capability map (updated at the final release check, 5 Nov 2026)
+| Area | Implemented | Not implemented / gap |
 | --- | --- | --- |
-| Frontend routes | `/` Overview, `/watchlists`, `/instrument/:symbol`, `/portfolio`, `/alerts`, `/journal`, `/settings`, 404; login screen; Ctrl/Cmd+K palette; shortcut help; dark/light; responsive shell (sidebar → rail → bottom nav) | No onboarding flow; no dedicated status page (Settings → Data status serves that role) |
-| API routes | `/api/health`, `/api/readiness`, `/api/status`, `/api/auth/{login,logout,session}`, `/api/settings`, `/api/briefing`, `/api/workspace/starter-watchlist`, `/api/market/{search,snapshots,benchmarks,history,fundamentals,actions}`, `/api/watchlists…` (CRUD, items, order, membership), `/api/portfolio/{summary,transactions…,import/preview,import/{token}/commit,export/*.csv}`, `/api/alerts…` (+ rearm), `/api/alert-events…` (+ read), `/api/journal…`; `/api/fixture/*` only in fixture mode | No request IDs on errors/logs |
-| Auth | Single owner: `OWNER_USERNAME` + argon2 `OWNER_PASSWORD_HASH`; HMAC-signed cookie (`SESSION_SECRET`), 90-day sliding; CSRF token + Origin check; login rate limit; sign-out revocation, `revoke-sessions` epoch (applies within 15 s); dev bypass only in development; production refuses missing secrets | — |
-| Database | SQLAlchemy 2.1 + Alembic, one revision `0001_initial_schema`; 15 tables (settings, instruments, watchlists/items, ledger, import batches, alerts/events, quote observations, journal/tags, login attempts, market cache, worker status, unused legacy `auth_sessions`); SQLite WAL or PostgreSQL; `ensure_migrated` at startup under a file lock | PostgreSQL backup/restore is provider-side only (no app-level verified restore) |
-| Market data | `MarketDataProvider` protocol (search, quote, history, fundamentals, corporate actions, validate); `YahooProvider` (yfinance 1.7; derived fundamentals when Yahoo refuses `quoteSummary`); `FixtureProvider` (test harness, refused in production); `MarketDataService` (memory + persisted cache, TTLs, de-duplication, retries, per-endpoint circuit breakers, stale fallback) | No SEC EDGAR, no streaming/Alpaca, no exchange calendars (market status is always "unavailable") |
-| India + US | Any Yahoo symbol can be searched, charted and watchlisted in its native currency (USD shown as $); bare NSE/BSE names get a `.NS`/`.BO` suggestion | No region/currency filters, security-type/symbol-mapping validation, or comparison chart |
-| Portfolio | INR and USD long-only accounts (DEPOSIT, WITHDRAWAL, BUY, SELL, DIVIDEND, confirmed SPLIT) plus explicit FX conversions; Decimal replay of both accounts on every edit; average cost, realized/unrealized P&L; all-accounts view in INR at a stated current rate (withheld when incomplete); CSV preview/import/export with formula-injection defence | No historical FX or consolidated returns; no broker CSV mapping presets |
-| Alerts + worker | Price, crossing, completed-session volume/volatility and SEC filing rules; cooldown auto-rearm; quiet hours; unique event and delivery keys; unified inbox with scheduled morning/end-of-session briefings (exchange calendars); single worker every `ALERT_POLL_SECONDS` (300 s), started 45 s after the web server at nice 10 in single-container mode | No email/Telegram/push delivery; filing rules need `SEC_USER_AGENT` |
-| Briefing | Rule-based: largest watchlist moves, distance to alert thresholds, recent alert events, journal reviews due | No Grok narrative (optional, M03/M05) |
-| Journal | Thesis, risks, invalidation, decision, conviction, horizon, tags; immutable versions with change notes and evidence snapshots; then-vs-now comparison; review queue and history; plain-text rendering; filters | No Grok counterargument yet |
-| AI research | Evidence-first cited answers (results, catalysts, compare, ask) on Groq's free tier (default) or xAI, with code-side checks, token/dollar and request caps, reuse, saved answers | No web search; Groq answers use one call without extra filing lookups |
-| Settings/diagnostics | Theme, density, default watchlist, timezone, data status (provider health, storage, DB round trip, created-at, worker), backup guidance, attribution; `Server-Timing` header on `/api` responses | — |
-| AI | None. No xAI/Grok code or keys | M03 |
+| Pages | Overview, Watchlists, Screener, Macro, Portfolio (holdings, ledger, performance, rebalance, stress), Alerts + inbox, Journal, Lab, Settings, Instrument (overview, financials, filings, events, earnings, valuation, peers, compare), login; palette, shortcuts, workspaces, dark/light, responsive shell | No onboarding wizard (Settings → Data status covers status) |
+| Data | Yahoo (yfinance) with cache, de-duplication, retries, per-endpoint circuits, stale fallback; SEC EDGAR (submissions, company facts, filings); exchange calendars (NSE/BSE, NYSE/Nasdaq); fixture provider for tests only | No streaming (M04 waits for Alpaca credentials); official macro statistics (FRED key / Indian source) |
+| Portfolio | INR and USD long-only accounts, FX conversions, Decimal replay, CSV import/export; TWR, XIRR, drawdowns, volatility, beta, correlations, rebalance and stress | No broker CSV presets; cash earns no interest |
+| Research | Statements and ratios with sources; screener + peers + heatmap; earnings calendar, reported changes, filing diffs, guidance quotes; valuation lab (DCF, multiples, sensitivity); macro watchboard; research lab (rule tests, paper portfolio); research export | No historical fundamentals (no point-in-time tests); no consensus estimates |
+| Alerts + worker | Price, cross, volume, volatility, filing and earnings rules; cooldown/rearm, quiet hours, unique keys; inbox; scheduled briefings; single worker | No email/Telegram/push |
+| AI | Evidence-first cited answers (ask, results, catalysts, compare, brief) on Groq's free tier (or xAI), with code checks, server caps, owner quotas, reuse | No web search |
+| Ops | Owner login (argon2, signed cookie, CSRF, rate limit), request IDs, health/readiness/status, backup/restore, migrations 0001–0012 rehearsed on production copies, PWA shell, usage panel | Render Free sleeps when idle (alerts only while awake) |
 
 ## Commands (verified in this repository)
 Setup and local run (Python 3.13 + uv 0.11, Node 22):
@@ -835,6 +829,42 @@ at the next session's open).
 | Playwright | 25 journeys pass (new: workspaces switch/reload/save/palette; research export with and without private sections; offline copy served by the service worker while offline, labelled, then erased) |
 | Visual QA | Settings (workspaces, usage) at 1440 and 390, workspace menu, export dialog, offline view at 390 inspected; fixed: section scroll under the sticky bar, stretched notice, cramped offline header on phones |
 
+## Final release check (5 Nov 2026)
+Every milestone's "Done when" from `docs/MARKETDESK_ROADMAP.txt`, against the evidence recorded above.
+
+| Milestone | Done when | Result | Evidence |
+| --- | --- | --- | --- |
+| M00 Operational foundation | Login and persistence work in production; no secrets in errors; backup restores to a separate database | ✅ | Live login, request IDs, backups restored to local PostgreSQL before every schema change (0002–0012) |
+| M01 India + US | Symbols disambiguated; native currency; holidays/DST give no false "open" | ✅ | Calendar tests incl. DST; live identity checks |
+| M02 Company workspace | Every figure traceable to period, unit, source, update date; missing explicit | ✅ | SEC companyfacts with periods/units/forms; live SEC verification |
+| M03 Cited analyst | Answers tied to evidence; maths in code; unsupported claims flagged; no key → AI off | ✅ | Validation tests (unknown sources, figures not in sources); live Groq answers |
+| M04 Streaming | Disconnects, gaps, duplicates, limits; IEX not called consolidated | ⏸ not started | Needs the owner's Alpaca key/secret and feed choice |
+| M05 Alerts and review | Restarts don't duplicate; stale data can't trigger; failed delivery visible | ✅ | Idempotency and stale-quote tests; live worker cycles |
+| M06 Discovery and peers | Cached normalized data; missing ≠ pass/zero; universe named | ✅ | Screener tests; live snapshot refresh |
+| M07 Earnings and filings | Annual/quarterly/YTD never mixed; restatements distinguishable | ✅ | Period tests; live calendar, changes, SEBI deadline, 10-K risk-factor diff (after the fixes below) |
+| M08 USD and FX | INR holdings unchanged; no relabelling; missing FX → no unqualified total | ✅ | Migration fingerprints identical; FX tests |
+| M09 Risk and performance | Documented formulas, test vectors, enough observations, stated policies | ✅ | Hand vectors (TWR, XIRR, beta tz rule) |
+| M10 Decision journal | Originals immutable/versioned; edits explicit; snapshots not replaced | ✅ | Version/snapshot tests |
+| M11 Valuation lab | Deterministic, tested, labelled inputs, invalid assumptions rejected, hypothetical | ✅ | DCF/sensitivity vectors; live refusal for banks |
+| M12 Macro and sector | Provider, frequency, observation date, release date where available, revision status | ✅ (market series); official statistics not configured | 15 live Yahoo series; FRED/RBI/MOSPI listed as not configured, not approximated |
+| M13 Research simulation | Simulated labels; signal before execution; splits/dividends; reproducible | ✅ | Hand vectors; live RELIANCE.NS/AAPL runs reproduced identically |
+| M14 Workspace polish | Presets survive reload; offline can't pass as live; private caches clear on logout; keyboard/mobile usable | ✅ | Journeys (reload, offline via service worker, palette); 390 px QA; sign-out/401/turn-off erase the copy |
+
+**Checks run at release:** ruff; pytest SQLite 293 passed / 3 skipped (after the fixes) and PostgreSQL 17 293 passed / 1 skipped (before them);
+migrations match models (SQLite, PostgreSQL); tsc, `eslint .` (as CI), vitest 35; production build; Playwright 25
+journeys; tracked-secret scan (only fake test strings and `.env.example`); no TODO/placeholder handlers.
+**Production smoke (Render + Neon):** health and readiness 200; unknown `/api` route → JSON 404; SPA deep links serve
+the shell; private endpoints 401 without a session (portfolio, workspaces, usage, export, lab); anonymous writes 401;
+CSP present; session cookie Secure and HttpOnly; schema 0012 current; worker running (yahoo, 234 cycles, no error).
+**Defects found by the check and fixed:**
+1. CI failed on the M14 commit: ESLint ran over `public/sw.js` without service-worker globals (fixed in 2156509).
+2. The live 10-K risk-factor comparison timed out (> 280 s for AAPL and SMR). Two causes: filing HTML lost its
+   paragraph breaks (inline-XBRL reports have few source line breaks and every tag became a space, so a whole
+   Item 1A was one "paragraph"), and rewording was found by character-level matching of every paragraph pair.
+   Block tags now end lines (source wrapping does not), and a word-pair shortlist feeds a word-level comparison
+   (f894efc, 00cd85b; tests for both). Live after the fix: SMR 10-K 300 vs 283 paragraphs (79 added, 96 removed,
+   112 reworded) in 5 s; AAPL 99 vs 115 (28 added, 13 removed, 53 reworded) in 4 s, all quoted from the filings.
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -842,4 +872,4 @@ at the next session's open).
 - Portfolio has INR and USD accounts; returns (M09) use daily closes, benchmarks are price indices, and cash earns no interest.
 
 ## Next concrete action
-Phase 16 — the **final release check** (see `docs/UPGRADE_PLAN.md`). M04 (streaming) waits for the owner's Alpaca key/secret and feed choice. Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
+The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Next: the terminal roadmap (`docs/TERMINAL_ROADMAP.md`, T1–T10), one phase at a time. Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
