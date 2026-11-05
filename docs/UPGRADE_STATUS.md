@@ -914,6 +914,13 @@ a permitted Indian source and results dates as the SEBI deadline. Each response 
 | Playwright | 27 journeys pass (new: financial analysis on sample data — margins, growth, CAGR reason, absent measures listed, unofficial label, bands reason, quarterly note) |
 | Visual QA | Financial analysis at 1440 and 390 px (tables scroll inside; source line moved into the body) |
 
+**Live (SEC + Yahoo):** AAPL — 10 fiscal years and 12 quarters; diluted EPS FY2023 6.13, FY2024 6.08, FY2025 7.46,
+FY2026 8.98; gross margin FY2025 46.9%; revenue CAGR 7.7% (3 y) / 5.5% (5 y), 10 y "fewer than 10 years reported";
+P/E band over 1,255 sessions 20.5–46.8× (median 31.7×, latest 38.3×, 82nd percentile); EV/EBITDA 16.3–36.5×
+(latest 29.8×). SMR — 7 fiscal years; losses, so P/E and EV/EBITDA bands and EPS CAGR show their reasons; ROIC
+unavailable (tax rate not meaningful). RELIANCE.NS — Yahoo's four fiscal years labelled unofficial (net margin
+7.6%, ROE 8.9%, revenue CAGR 6.4% over 3 y); bands not shown with the reason. Each call took 0–3 s.
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
