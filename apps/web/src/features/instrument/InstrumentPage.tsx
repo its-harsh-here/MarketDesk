@@ -29,6 +29,7 @@ import { EventsTab, FilingsTab, FinancialsTab } from "@/features/research/Resear
 import { PeersTab } from "@/features/screener/PeersTab";
 import { EarningsTab } from "@/features/earnings/EarningsTab";
 import { DescriptionTab } from "@/features/terminal/DescriptionTab";
+import { RiskTab } from "@/features/terminal/RiskTab";
 import { ValuationTab } from "@/features/valuation/ValuationTab";
 import { useAiStatus } from "@/features/ai/api";
 import { REGION_LABEL, sessionFor, sessionText } from "@/lib/markets";
@@ -224,6 +225,8 @@ export function InstrumentPage() {
         <PeersTab symbol={symbol} />
       ) : tab === "valuation" ? (
         <ValuationTab symbol={symbol} />
+      ) : tab === "risk" ? (
+        <RiskTab symbol={symbol} currency={ccy} />
       ) : tab === "description" ? (
         <DescriptionTab symbol={symbol} currency={ccy} />
       ) : (
@@ -338,6 +341,7 @@ const TABS = [
   { value: "events", label: "Events" },
   { value: "earnings", label: "Earnings" },
   { value: "peers", label: "Peers" },
+  { value: "risk", label: "Risk" },
   { value: "valuation", label: "Valuation" },
 ] as const;
 type Tab = (typeof TABS)[number]["value"];

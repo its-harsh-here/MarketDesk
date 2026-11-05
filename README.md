@@ -297,6 +297,19 @@ years (min, middle half, median, max, latest and its percentile), using for each
 filed by then and converting per-share figures to today's share basis with the split history. Listings without SEC
 data use the provider's annual statements, labelled **Unofficial**; bands need filed EPS and are not shown for them.
 
+## Risk and relative value (terminal T6)
+
+Instrument → **Risk** (code `BETA`): **beta, correlation and R²** against the market benchmark or one you choose
+(daily returns when both trade in the same time zone, weekly otherwise; 1 and 3 years); **volatility**; **drawdowns**
+(current decline from the high, maximum over 1/3/5 years, and the deepest declines with their recovery dates);
+**liquidity** (20- and 60-session average volume and traded value, and a bid-ask spread *estimate* from daily high,
+low and close — Abdi–Ranaldo — clearly not a quoted spread); **position within your universe** (z-score and
+percentile on valuation, growth, profitability, leverage and risk metrics, from stored snapshots of all watchlists,
+holdings or one watchlist); **peer P/E history** (five-year range per peer from filed EPS, US registrants); and
+**short interest** (US, FINRA; code `SI`). Short interest is off until you set `FINRA_CLIENT_ID` and
+`FINRA_CLIENT_SECRET` from a free FINRA API Console account (FINRA's terms require credentials; the data is for
+personal, non-commercial use and FINRA is named as its source).
+
 ## Workspaces, offline copy, exports and usage
 
 - **Workspaces** (label above the page title; More menu on phones; command palette "Workspace: …"): Market, Research

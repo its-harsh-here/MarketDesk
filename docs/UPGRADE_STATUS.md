@@ -921,6 +921,27 @@ P/E band over 1,255 sessions 20.5–46.8× (median 31.7×, latest 38.3×, 82nd p
 unavailable (tax rate not meaningful). RELIANCE.NS — Yahoo's four fiscal years labelled unofficial (net margin
 7.6%, ROE 8.9%, revenue CAGR 6.4% over 3 y); bands not shown with the reason. Each call took 0–3 s.
 
+## Terminal T6 — Relative value and risk (5 Nov 2026)
+- **API** `GET /api/terminal/risk?symbol=&benchmark=&universe=` (`services/security_risk.py`): beta, correlation
+  and R² (1 y, 3 y; daily in one time zone, weekly across), volatility, drawdown profile (current, 1/3/5-year maximum,
+  deepest declines with recovery), liquidity (20/60-session volume, traded value, Abdi–Ranaldo spread estimate),
+  z-scores and percentiles within a declared universe (stored snapshots), peer P/E history (US, from T2 bands), and
+  short interest.
+- **Short interest:** `providers/finra.py` (OAuth client credentials; JSON; symbol filter; local sort; 12-hour cache;
+  FINRA named as source). FINRA's terms require credentials, so it is **off and unverified** until the owner sets
+  `FINRA_CLIENT_ID` / `FINRA_CLIENT_SECRET` (free Individual account → Public credential). One anonymous test request
+  showed the dataset exists; the adapter never uses anonymous access.
+- **UI:** Risk tab (codes `BETA`, `SI`), benchmark picker and universe selector in the URL; Description coverage
+  links short interest to the Risk tab and shows whether FINRA is configured.
+- **Schema:** none (short interest is cached in the existing market cache table).
+
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 17 | 312 passed, 3 skipped / 314 passed, 1 skipped (T6: 9 — beta 2.0/correlation 1 hand vector and weekly fallback, drawdown episodes with recovery, flat-price spread = 0, z-score/percentile vector, FINRA token (Basic) → Bearer JSON query with fallback spelling and token caching, credential gate, API on sample data, universe validation) |
+| tsc, `eslint .`, vitest | clean; 37 |
+| Playwright | 28 journeys pass (new: risk — `beta` code, benchmark sensitivity, deepest declines, spread estimate, universe position, short interest reason, benchmark changed to SX:BANYAN) |
+| Visual QA | Risk tab at 1440 and 390 px (small universes show one notice; drawdown figures in two columns) |
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -928,4 +949,4 @@ unavailable (tax rate not meaningful). RELIANCE.NS — Yahoo's four fiscal years
 - Portfolio has INR and USD accounts; returns (M09) use daily closes, benchmarks are price indices, and cash earns no interest.
 
 ## Next concrete action
-The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Terminal roadmap: T1 and T2 done; next T6 (relative value and risk) per the sequencing in `docs/TERMINAL_ROADMAP.md`. Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
+The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Terminal roadmap: T1, T2 and T6 done; next T4 (earnings and corporate events) per `docs/TERMINAL_ROADMAP.md`. Owner inputs open: FINRA API credentials (short interest), Alpaca (M04), FRED key (M12/T8). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.

@@ -105,7 +105,7 @@ releases, deduplicated and timestamped; optional cited AI summaries using the M0
 uncited. Indian exchange announcements gated as in T3. No scraping of article bodies (headlines and links only, per
 `CLAUDE.md`).
 
-### T6 — Relative value and risk
+### T6 — Relative value and risk — ✅ done 5 Nov 2026 (short interest waits for the owner's FINRA credentials)
 Peer multiples over time, z-scores within the declared universe, beta and correlation to a chosen benchmark (from
 aligned daily returns), drawdown profile, liquidity (ADV, spread proxy), and US short interest with days to cover
 (FINRA). Builds on M06 snapshots and M09 risk calculations.
@@ -134,7 +134,7 @@ plus the owner's own annotations. Marked low confidence by design; never present
 | --- | --- | --- | --- |
 | 1 | T1 Description + function keys ✅ | M06, M14 | none |
 | 2 | T2 Financial depth ✅ | M02, M11 | none (India stays unofficial until a source is chosen) |
-| 3 | T6 Relative value and risk | M06, M09 | FINRA developer credentials if the API needs them |
+| 3 | T6 Relative value and risk ✅ | M06, M09 | FINRA API credentials (required by FINRA's terms; free Individual account) |
 | 4 | T4 Earnings and events | M07 | optional estimates provider (paid) |
 | 5 | T5 News and filings | M03, M07 | none |
 | 6 | T3 Ownership | M02 | India source choice (BSE licence or verified NSE terms) |

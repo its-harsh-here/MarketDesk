@@ -12,7 +12,16 @@ from marketdesk.db.migrations import upgrade
 from marketdesk.services.auth import hash_password
 
 # Real credentials in the developer's environment must never reach a test (or a real provider from one).
-_REAL_SECRETS = ("GROK_API", "GROQ_API_KEY", "XAI_API_KEY", "AI_PROVIDER", "AI_MODEL", "SEC_USER_AGENT")
+_REAL_SECRETS = (
+    "GROK_API",
+    "GROQ_API_KEY",
+    "XAI_API_KEY",
+    "AI_PROVIDER",
+    "AI_MODEL",
+    "SEC_USER_AGENT",
+    "FINRA_CLIENT_ID",
+    "FINRA_CLIENT_SECRET",
+)
 
 
 @pytest.fixture(autouse=True)

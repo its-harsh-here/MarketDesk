@@ -11,6 +11,8 @@ export const SECURITY_CODES: SecurityCode[] = [
   { code: "DVD", label: "Dividends, splits and events", tab: "events" },
   { code: "ERN", label: "Earnings and results", tab: "earnings" },
   { code: "RV", label: "Peers and relative value", tab: "peers" },
+  { code: "BETA", label: "Risk: beta, drawdowns, liquidity, universe position", tab: "risk" },
+  { code: "SI", label: "Short interest (US, FINRA)", tab: "risk", hash: "short-interest" },
   { code: "DCF", label: "Valuation scenarios", tab: "valuation" },
   { code: "HDS", label: "Holders and insiders (coverage)", tab: "description", hash: "coverage" },
   { code: "ANR", label: "Analyst views (coverage)", tab: "description", hash: "coverage" },

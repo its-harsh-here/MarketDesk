@@ -1783,6 +1783,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/terminal/risk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Risk
+         * @description Benchmark sensitivity, volatility, drawdowns, liquidity, position within a universe, peer P/E history and
+         *     short interest (T6).
+         */
+        get: operations["risk_api_terminal_risk_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7452,6 +7473,39 @@ export interface operations {
             query: {
                 symbol: string;
                 period?: "annual" | "quarterly";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    risk_api_terminal_risk_get: {
+        parameters: {
+            query: {
+                symbol: string;
+                benchmark?: string | null;
+                universe?: string;
             };
             header?: never;
             path?: never;

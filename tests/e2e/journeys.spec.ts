@@ -775,3 +775,23 @@ test("financial analysis: margins, growth, returns with formulas; unofficial pro
   await page.getByRole("radio", { name: "Quarterly" }).click();
   await expect(fa.getByText(/annual provider statements only/)).toBeVisible();
 });
+
+test("risk: beta against the benchmark (changeable), drawdowns, liquidity estimate, universe position, gated short interest", async ({ page }) => {
+  await page.goto("/instrument/SX%3AAURORA");
+  await ready(page);
+  await page.keyboard.press(`${MOD}+k`);
+  await page.getByRole("dialog", { name: "Command palette" }).getByRole("combobox").fill("beta");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/tab=risk/);
+  const sens = page.getByRole("region", { name: "Benchmark sensitivity" });
+  await expect(sens.getByRole("table", { name: /against SX:SX50/ })).toBeVisible();
+  await expect(sens.getByText(/daily returns \(same trading time zone\)/)).toBeVisible();
+  await expect(page.getByRole("region", { name: "Volatility and drawdowns" }).getByRole("table", { name: /Deepest declines/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Liquidity" }).getByText(/Abdi–Ranaldo/)).toBeVisible();
+  await expect(page.getByRole("region", { name: "Within your universe" }).getByText(/\d+ members · \d+ with data/)).toBeVisible();
+  await expect(page.getByRole("table", { name: /Where SX:AURORA sits within All watchlists/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Short interest" }).getByText(/US-traded securities/)).toBeVisible();
+  await pickSymbol(page, "Benchmark", "BANYAN", "SX:BANYAN");
+  await expect(page).toHaveURL(/bench=SX%3ABANYAN/);
+  await expect(sens.getByRole("table", { name: /against SX:BANYAN/ })).toBeVisible();
+});

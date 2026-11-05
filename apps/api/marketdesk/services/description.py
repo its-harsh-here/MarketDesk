@@ -220,7 +220,9 @@ async def _key_stats(db: Session, market: MarketDataService, inst: Instrument, h
     }
 
 
-def _coverage(inst: Instrument, market: MarketDataService, research, ai_enabled: bool, stats: dict) -> list[dict]:
+def _coverage(
+    inst: Instrument, market: MarketDataService, research, ai_enabled: bool, stats: dict, finra_enabled: bool = False
+) -> list[dict]:
     us = inst.country == "US"
     india = inst.country == "IN"
     sec_on = research is not None and research.client.enabled
@@ -324,12 +326,13 @@ def _coverage(inst: Instrument, market: MarketDataService, research, ai_enabled:
         ),
         row(
             "Short interest",
-            None,
-            "planned" if us else "not_available",
-            "FINRA" if us else None,
-            "Planned (terminal roadmap T6)."
+            "SI",
+            ("available" if finra_enabled else "not_configured") if us else "not_available",
+            "FINRA consolidated short interest" if us else None,
+            (None if finra_enabled else "Needs FINRA API credentials (FINRA_CLIENT_ID, FINRA_CLIENT_SECRET).")
             if us
             else ("Not published comparably for Indian listings." if india else "No short-interest source applies."),
+            "risk",
         ),
         row(
             "Options",
@@ -350,7 +353,13 @@ def _coverage(inst: Instrument, market: MarketDataService, research, ai_enabled:
 
 
 async def describe(
-    db: Session, market: MarketDataService, research, settings, inst: Instrument, ai_enabled: bool
+    db: Session,
+    market: MarketDataService,
+    research,
+    settings,
+    inst: Instrument,
+    ai_enabled: bool,
+    finra_enabled: bool = False,
 ) -> dict:
     fund = await fundamentals_payload(market, inst.symbol)
     profile = None
@@ -364,7 +373,7 @@ async def describe(
         "identity": _identity(db, inst, fund, profile),
         "summary": summary,
         "key_stats": stats,
-        "coverage": _coverage(inst, market, research, ai_enabled, stats),
+        "coverage": _coverage(inst, market, research, ai_enabled, stats, finra_enabled),
         "metric_groups": list(dict.fromkeys(m.group for m in screener.METRICS)),
         "catalog": [asdict(m) for m in screener.METRICS],
     }

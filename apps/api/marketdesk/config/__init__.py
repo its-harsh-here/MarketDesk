@@ -73,6 +73,10 @@ class Settings(BaseSettings):
     sec_user_agent: str | None = None
     sec_max_requests_per_second: float = 5.0  # SEC fair-access limit is 10/s
     research_refresh_hours: int = 24  # how often tracked companies are re-checked for new filings
+    # FINRA short interest (terminal T6): optional; FINRA's terms require API credentials (free Individual account,
+    # "Public" credential in the FINRA API Console). Without both values the short-interest panel says so.
+    finra_client_id: str | None = None
+    finra_client_secret: str | None = None
     worker_heartbeat_stale_seconds: int = 900
 
     # AI research analyst: optional, server-side only. Providers: Groq (free tier, open models) or xAI Grok (paid).

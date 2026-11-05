@@ -39,6 +39,7 @@ from marketdesk.api import (
 from marketdesk.api.errors import error_body, install_error_handlers
 from marketdesk.config import REPO_ROOT, Settings, get_settings, validate_settings
 from marketdesk.db import init_engine, session_factory
+from marketdesk.providers.finra import FinraClient
 from marketdesk.services.market import MarketDataService
 from marketdesk.services.runtime import build_market_service
 
@@ -121,6 +122,7 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
     from marketdesk.services.analyst import AnalystService
 
     app.state.analyst = AnalystService(settings)
+    app.state.finra = FinraClient(settings.finra_client_id, settings.finra_client_secret)
     install_error_handlers(app)
 
     if settings.extra_origins:

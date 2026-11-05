@@ -263,3 +263,12 @@ Consequential choices, newest last. Routine choices live in code comments.
     year's value is the latest filed one (restatements included), converted to today's share basis by the splits after
     its filing date. Statements in another currency than the price are not combined. Provider statements (non-SEC)
     run the same analysis where lines exist and are labelled unofficial.
+52. **Short interest only through FINRA credentials; risk measures with stated methods (terminal T6, 5 Nov 2026).**
+    FINRA's consolidated short-interest endpoint answered an anonymous test request, but FINRA's API terms require
+    access "solely using access credentials provided … by FINRA" and limit the data to non-commercial use with FINRA
+    named as source. The adapter therefore uses OAuth client credentials (`FINRA_CLIENT_ID`, `FINRA_CLIENT_SECRET`,
+    free Individual account → Public credential), caches results for 12 hours (published twice a month), sorts
+    records locally (server-side sorting needs a settlement-date filter) and stays off without credentials; it is
+    unverified against live data until the owner configures it. Beta/correlation use daily returns within one time
+    zone and weekly across; z-scores use stored universe snapshots (no bulk refresh on page load); the spread is the
+    Abdi–Ranaldo estimate, labelled as an estimate.

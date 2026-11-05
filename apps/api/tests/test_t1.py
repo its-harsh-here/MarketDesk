@@ -116,6 +116,9 @@ def test_coverage_notes_follow_the_listing_country():
     us = {c["domain"]: c for c in ds._coverage(SimpleNamespace(country="US"), mk, _R(), True, stats)}
     india = {c["domain"]: c for c in ds._coverage(SimpleNamespace(country="IN"), mk, _R(), True, stats)}
     assert us["Filings"]["status"] == "available" and us["Insider transactions"]["status"] == "planned"
+    assert us["Short interest"]["status"] == "not_configured" and "FINRA_CLIENT_ID" in us["Short interest"]["note"]
+    on = {c["domain"]: c for c in ds._coverage(SimpleNamespace(country="US"), mk, _R(), True, stats, True)}
+    assert on["Short interest"]["status"] == "available" and on["Short interest"]["tab"] == "risk"
     assert us["Results dates"]["source"] == "SEC 8-K Item 2.02 history"
     assert india["Filings"]["status"] == "not_available" and "BSE licence" in india["Filings"]["note"]
     assert india["Results dates"]["status"] == "estimated" and "deadline" in india["Results dates"]["note"]
