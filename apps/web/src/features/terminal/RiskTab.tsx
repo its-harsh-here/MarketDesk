@@ -63,7 +63,7 @@ export function RiskTab({ symbol, currency }: { symbol: string; currency: string
           <Field label="Benchmark" className="w-64">
             {({ id }) => <SymbolPicker id={id} value={bench ?? ""} placeholder={d.benchmark.symbol} onChange={(s) => set("bench", s || null)} />}
           </Field>
-          {bench && <button type="button" className="h-9 text-xs text-info hover:underline" onClick={() => set("bench", null)}>Use the default</button>}
+          {bench && <button type="button" className="h-9 text-xs text-info underline decoration-info/40 underline-offset-2 hover:decoration-info" onClick={() => set("bench", null)}>Use the default</button>}
         </div>
         {!sens ? (
           <p className="text-[13px] text-fg-3">{(d.sensitivity as { why?: string } | undefined)?.why}</p>
@@ -150,10 +150,10 @@ export function RiskTab({ symbol, currency }: { symbol: string; currency: string
         </div>
         {few && (
           <InlineNotice className="mb-3">
-            z-scores and percentiles need at least 5 members with data; {d.relative?.universe.label ?? "this universe"} has {d.relative?.universe.with_snapshot ?? 0}. Add comparable instruments to a watchlist and load their data on the <Link to="/screener" className="text-info hover:underline">Screener</Link>.
+            z-scores and percentiles need at least 5 members with data; {d.relative?.universe.label ?? "this universe"} has {d.relative?.universe.with_snapshot ?? 0}. Add comparable instruments to a watchlist and load their data on the <Link to="/screener" className="text-info underline decoration-info/40 underline-offset-2 hover:decoration-info">Screener</Link>.
           </InlineNotice>
         )}
-        <div className="scrollbar-thin overflow-x-auto">
+        <div tabIndex={0} className="scroll-x scrollbar-thin overflow-x-auto">
           <table className="w-full text-[13px]" style={{ minWidth: few ? 0 : 520 }}>
             <caption className="sr-only">Where {symbol} sits within {d.relative?.universe.label}</caption>
             <thead><tr className="border-b border-line-subtle text-xs text-fg-3"><th scope="col" className="py-1.5 text-left font-medium">Metric</th><th scope="col" className="py-1.5 text-right font-medium">{symbol}</th>{!few && <><th scope="col" className="py-1.5 text-right font-medium">Median</th><th scope="col" className="py-1.5 text-right font-medium">z-score</th><th scope="col" className="py-1.5 text-right font-medium">At or above</th></>}</tr></thead>
@@ -174,7 +174,7 @@ export function RiskTab({ symbol, currency }: { symbol: string; currency: string
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs leading-4 text-fg-3">z = (value − universe mean) ÷ standard deviation; "at or above" is the share of members whose value is at or below this security's. {d.relative?.note} <Link to="/screener" className="text-info hover:underline">Open the screener</Link></p>
+        <p className="mt-2 text-xs leading-4 text-fg-3">z = (value − universe mean) ÷ standard deviation; "at or above" is the share of members whose value is at or below this security's. {d.relative?.note} <Link to="/screener" className="text-info underline decoration-info/40 underline-offset-2 hover:decoration-info">Open the screener</Link></p>
       </Panel>
 
       <Panel title="Peer P/E history" titleId="ppe-title" className="lg:col-span-6">
@@ -185,7 +185,7 @@ export function RiskTab({ symbol, currency }: { symbol: string; currency: string
             <tbody>
               {d.peer_valuation.rows.map((r) => (
                 <tr key={r.symbol} className="border-b border-line-subtle/60">
-                  <th scope="row" className="py-1.5 text-left font-normal"><Link to={`/instrument/${encodeURIComponent(r.symbol)}?tab=risk`} className="num text-info hover:underline">{r.symbol}</Link></th>
+                  <th scope="row" className="py-1.5 text-left font-normal"><Link to={`/instrument/${encodeURIComponent(r.symbol)}?tab=risk`} className="num text-info underline decoration-info/40 underline-offset-2 hover:decoration-info">{r.symbol}</Link></th>
                   {!r.n ? <td colSpan={4} className="py-1.5 text-right text-xs text-fg-3">{r.why}</td> : (
                     <>
                       <td className="num py-1.5 text-right">{num(r.min, 1)}×</td>
@@ -207,7 +207,7 @@ export function RiskTab({ symbol, currency }: { symbol: string; currency: string
           <p className="text-[13px] text-fg-3">{d.short_interest?.reason}</p>
         ) : (
           <>
-            <div className="scrollbar-thin overflow-x-auto">
+            <div tabIndex={0} className="scroll-x scrollbar-thin overflow-x-auto">
               <table className="w-full text-[13px]" style={{ minWidth: 440 }}>
                 <caption className="sr-only">Short interest by settlement date</caption>
                 <thead><tr className="border-b border-line-subtle text-xs text-fg-3"><th scope="col" className="py-1.5 text-left font-medium">Settlement</th><th scope="col" className="py-1.5 text-right font-medium">Short position</th><th scope="col" className="py-1.5 text-right font-medium">Change</th><th scope="col" className="py-1.5 text-right font-medium">Days to cover</th></tr></thead>

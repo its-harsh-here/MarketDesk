@@ -1,6 +1,6 @@
 import * as RD from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { Button, IconButton } from "./Button";
 import { errorMessage } from "@/lib/api/client";
@@ -50,11 +50,32 @@ export function Dialog({
               </IconButton>
             </RD.Close>
           </div>
-          <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+          <ScrollBody>{children}</ScrollBody>
           {footer && <div className="safe-bottom flex flex-wrap justify-end gap-2 border-t border-line-subtle px-5 py-3">{footer}</div>}
         </RD.Content>
       </RD.Portal>
     </RD.Root>
+  );
+}
+
+/** The dialog body scrolls when its content is taller than the viewport allows. Only then does it become a tab stop,
+ * so keyboard users can scroll it without an extra stop in short dialogs. */
+function ScrollBody({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [scrolls, setScrolls] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setScrolls(el.scrollHeight > el.clientHeight + 1);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div ref={ref} tabIndex={scrolls ? 0 : undefined} className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-5 py-4">
+      {children}
+    </div>
   );
 }
 

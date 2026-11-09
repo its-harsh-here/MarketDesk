@@ -22,6 +22,7 @@ import { useSwitchWorkspace, WorkspaceMenu } from "@/features/workspace/Workspac
 import { useWorkspaces } from "@/features/workspace/api";
 import { OfflineBanner } from "@/features/workspace/OfflineView";
 import { clearOffline, syncSnapshot } from "@/lib/offline";
+import { clearRecents } from "@/lib/recent";
 
 const NAV = [
   { to: "/", label: "Overview", icon: LayoutDashboard, end: true },
@@ -231,6 +232,7 @@ function UserMenu() {
               onSelect={async () => {
                 await api.post("/api/auth/logout").catch(() => undefined);
                 clearOffline();
+                clearRecents();
                 qc.clear();
                 window.location.assign("/");
               }}
@@ -253,7 +255,7 @@ function Topbar() {
     <header className="safe-top sticky top-0 z-30 border-b border-line-subtle bg-canvas/95 backdrop-blur-sm">
       <div className="flex h-14 items-center gap-2 px-4 md:h-16 md:gap-3 md:px-6">
         <span className="md:hidden"><Logo compact /></span>
-        <div className="min-w-0 max-md:hidden">
+        <div className="min-w-0 shrink-0 max-md:hidden">
           <WorkspaceMenu />
           <div className="truncate text-[15px] font-semibold text-fg">{title}</div>
         </div>

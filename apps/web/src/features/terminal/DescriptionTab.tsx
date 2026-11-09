@@ -124,7 +124,7 @@ function BusinessSummary({ q, tz }: { q: Q; tz: string }) {
             {s.url && (
               <>
                 {" · "}
-                <a href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-info hover:underline">
+                <a href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-info underline decoration-info/40 underline-offset-2 hover:decoration-info">
                   Open the filing <ExternalLink className="size-3" aria-hidden />
                 </a>
               </>
@@ -164,7 +164,7 @@ function Identity({ q, tz }: { q: Q; tz: string }) {
             )}
             {i.related_listings.length > 0 && (
               <Row label="Related in MarketDesk">
-                {i.related_listings.map((r) => <Link key={r.symbol} to={`/instrument/${encodeURIComponent(r.symbol)}`} className="num mr-2 text-info hover:underline">{r.symbol}</Link>)}
+                {i.related_listings.map((r) => <Link key={r.symbol} to={`/instrument/${encodeURIComponent(r.symbol)}`} className="num mr-2 text-info underline decoration-info/40 underline-offset-2 hover:decoration-info">{r.symbol}</Link>)}
               </Row>
             )}
           </dl>
@@ -199,7 +199,7 @@ function NextEvents({ symbol, currency }: { symbol: string; currency: string | n
                 </>
               ) : DASH}
             </Row>
-            <Row label="Last results">{cal?.past[0] ? (cal.past[0].url ? <a href={cal.past[0].url} target="_blank" rel="noreferrer" className="text-info hover:underline">{formatSessionDate(cal.past[0].date)}</a> : formatSessionDate(cal.past[0].date)) : DASH}</Row>
+            <Row label="Last results">{cal?.past[0] ? (cal.past[0].url ? <a href={cal.past[0].url} target="_blank" rel="noreferrer" className="text-info underline decoration-info/40 underline-offset-2 hover:decoration-info">{formatSessionDate(cal.past[0].date)}</a> : formatSessionDate(cal.past[0].date)) : DASH}</Row>
             <Row label="Last dividend or split">
               {lastAction ? `${formatSessionDate(lastAction.date)} · ${lastAction.kind === "SPLIT" ? `split ${lastAction.value}:1` : `dividend ${formatMoney(lastAction.value, currency)}`}` : DASH}
             </Row>
@@ -227,7 +227,7 @@ function LatestFilings({ symbol }: { symbol: string }) {
               <li key={r.accession} className="flex items-baseline gap-3 py-2">
                 <span className="num shrink-0 text-fg-2">{formatSessionDate(r.filing_date)}</span>
                 <span className="num shrink-0 text-fg">{r.form}</span>
-                <a href={r.document_url ?? r.index_url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-info hover:underline">{r.description}</a>
+                <a href={r.document_url ?? r.index_url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-info underline decoration-info/40 underline-offset-2 hover:decoration-info">{r.description}</a>
               </li>
             ))}
           </ul>
@@ -256,7 +256,7 @@ function PeersStrip({ symbol }: { symbol: string }) {
               const ch = r.metrics?.change_1d_pct?.v;
               return (
                 <li key={r.symbol} className="flex items-baseline gap-3 py-1.5">
-                  <Link to={`/instrument/${encodeURIComponent(r.symbol)}`} className="num shrink-0 text-info hover:underline">{r.symbol}</Link>
+                  <Link to={`/instrument/${encodeURIComponent(r.symbol)}`} className="num shrink-0 text-info underline decoration-info/40 underline-offset-2 hover:decoration-info">{r.symbol}</Link>
                   <span className="min-w-0 flex-1 truncate text-fg-3">{r.name}</span>
                   <span className={`num shrink-0 ${ch == null ? "text-fg-3" : Number(ch) >= 0 ? "text-pos" : "text-neg"}`}>{ch == null ? DASH : `${Number(ch) >= 0 ? "+" : ""}${Number(ch).toFixed(2)}%`}</span>
                 </li>
@@ -287,7 +287,7 @@ function Coverage({ q, symbol }: { q: Q; symbol: string }) {
                   <span className="text-fg">{c.domain}</span>
                   <span className="flex shrink-0 items-center gap-2">
                     <Pill tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Pill>
-                    {code && c.tab && <Link to={c.tab === "description" ? "?" : `?tab=${c.tab}`} className="num text-info hover:underline" aria-label={`${code.code}: ${code.label}`}>{code.code}</Link>}
+                    {code && c.tab && <Link to={c.tab === "description" ? "?" : `?tab=${c.tab}`} className="num text-info underline decoration-info/40 underline-offset-2 hover:decoration-info" aria-label={`${code.code}: ${code.label}`}>{code.code}</Link>}
                   </span>
                 </div>
                 {(c.source || c.note) && <p className="mt-0.5 text-xs text-fg-3">{[c.source, c.note].filter(Boolean).join(" · ")}</p>}
@@ -295,7 +295,7 @@ function Coverage({ q, symbol }: { q: Q; symbol: string }) {
             );
           })}
         </ul>
-        <div className="scrollbar-thin overflow-x-auto max-md:hidden">
+        <div tabIndex={0} className="scroll-x scrollbar-thin overflow-x-auto max-md:hidden">
           <table className="w-full text-[13px]">
             <caption className="sr-only">Which kinds of data are available for {symbol}, from which source, and why others are not</caption>
             <thead>
@@ -317,7 +317,7 @@ function Coverage({ q, symbol }: { q: Q; symbol: string }) {
                     <td className="py-1.5 pl-3 text-fg-2">{c.source ?? DASH}</td>
                     <td className="py-1.5 pl-3 text-xs text-fg-3">{c.note ?? ""}</td>
                     <td className="num py-1.5 pl-3">
-                      {code && c.tab ? <Link to={c.tab === "description" ? "?" : `?tab=${c.tab}`} className="text-info hover:underline" aria-label={`${code.code}: ${code.label}`}>{code.code}</Link> : (c.code ?? "")}
+                      {code && c.tab ? <Link to={c.tab === "description" ? "?" : `?tab=${c.tab}`} className="text-info underline decoration-info/40 underline-offset-2 hover:decoration-info" aria-label={`${code.code}: ${code.label}`}>{code.code}</Link> : (c.code ?? "")}
                     </td>
                   </tr>
                 );

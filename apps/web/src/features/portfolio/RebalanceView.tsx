@@ -121,7 +121,7 @@ function SimTable({ s, edits, setEdits }: { s: Simulation; edits: Record<string,
     <div className="space-y-2">
       {s.warnings.map((w) => <InlineNotice key={w} tone="warn">{w}</InlineNotice>)}
       {!s.marks_complete && <InlineNotice tone="warn">Some holdings have no usable price; they are left out of the simulation.</InlineNotice>}
-      <div className="scrollbar-thin relative overflow-x-auto">
+      <div tabIndex={0} className="scroll-x scrollbar-thin relative overflow-x-auto">
         <table className="w-full min-w-[640px] text-[13px]">
           <caption className="sr-only">Hypothetical trades to reach the targets; edit the shares to try other amounts</caption>
           <thead>

@@ -158,7 +158,7 @@ function InboxRow({ item, tz, readOnly }: { item: InboxItem; tz?: string; readOn
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <DeliveryPills item={item.alert} />
               {item.alert.link && (
-                <a href={item.alert.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-accent-text hover:underline">
+                <a href={item.alert.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-accent-text underline decoration-accent/40 underline-offset-2 hover:decoration-accent">
                   Open source document <ExternalLink className="size-3" aria-hidden />
                 </a>
               )}

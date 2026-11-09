@@ -34,8 +34,11 @@ function ReviewQueue({ readOnly }: { readOnly: boolean }) {
       <ul className="divide-y divide-line-subtle" aria-label="Notes due for review">
         {due.data.items.map((e) => (
           <li key={e.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-[13px]">
-            <span className="num font-semibold text-fg">{e.symbol}</span>
-            <span className="min-w-0 flex-1 truncate text-fg-2">{e.title}</span>
+            {/* On phones the symbol and title take the first line, the due date and button the second. */}
+            <span className="flex min-w-0 basis-full items-center gap-3 sm:flex-1 sm:basis-auto">
+              <span className="num shrink-0 font-semibold text-fg">{e.symbol}</span>
+              <span className="min-w-0 flex-1 truncate text-fg-2">{e.title}</span>
+            </span>
             <span className="text-xs text-fg-3">due {formatSessionDate(e.review_date)}</span>
             <Button size="sm" variant={readOnly ? "ghost" : "primary"} icon={<CalendarCheck className="size-3.5" aria-hidden />} onClick={() => open({ kind: "journal-detail", id: e.id, section: "reviews" })}>
               {readOnly ? "View" : "Review"}

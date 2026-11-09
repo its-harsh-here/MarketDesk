@@ -81,3 +81,30 @@ describe("keyboard shortcut guard", () => {
     expect(isTypingTarget(div)).toBe(false);
   });
 });
+
+describe("DataTable keyboard rows", () => {
+  it("lets the keyboard reach, move between and open clickable rows", async () => {
+    const user = userEvent.setup();
+    const onRowClick = vi.fn();
+    const rows = [{ id: "a" }, { id: "b" }, { id: "c" }];
+    render(
+      <DataTable
+        caption="Rows"
+        columns={[{ key: "id", header: "Id", render: (r) => r.id }]}
+        rows={rows}
+        rowKey={(r) => r.id}
+        onRowClick={onRowClick}
+      />,
+    );
+    await user.tab();
+    expect(screen.getByRole("row", { name: "a" })).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getByRole("row", { name: "b" })).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(onRowClick).toHaveBeenCalledWith(rows[1]);
+    await user.keyboard("{ArrowUp}{ArrowUp}"); // stops at the first row
+    expect(screen.getByRole("row", { name: "a" })).toHaveFocus();
+    await user.keyboard(" ");
+    expect(onRowClick).toHaveBeenLastCalledWith(rows[0]);
+  });
+});

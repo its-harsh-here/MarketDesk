@@ -273,3 +273,13 @@ Consequential choices, newest last. Routine choices live in code comments.
     zone and weekly across; z-scores use stored universe snapshots (no bulk refresh on page load). A bid-ask spread
     estimated from daily prices (Abdi–Ranaldo) was tried and dropped after the live check: it gave about 0.8% for
     RELIANCE.NS and 0% for AAPL, far from real spreads; the median daily high–low range is shown instead.
+53. **QA pass: accessibility gate in CI, undo instead of confirmation, route code-splitting (9 Nov 2026).** A sweep of
+    every page, tab and dialog at four widths with axe-core found three WCAG "serious" patterns (scrollable tables
+    unreachable by keyboard, inline links distinguishable by colour only, a `<p>` inside a `<dl>`) and one "critical"
+    (an unlabelled file input); all fixed, and an axe check over the main screens now runs in the Playwright suite so
+    they cannot return. Clickable table rows are keyboard rows (Tab, ↑/↓, Enter). Removing a symbol from a watchlist
+    offers Undo in the toast rather than a confirmation dialog (the roadmap asks for one or the other; undo keeps the
+    one-click action). Pages load as separate chunks (main bundle 662 → 388 kB) with a layout-shaped skeleton while a
+    chunk loads. Horizontal scroll regions show an edge shadow only where columns are hidden (CSS
+    `background-attachment: local`). The one-off sweep stays in the repo (`tests/e2e/qa-sweep.spec.ts`, gated by
+    `QA_SWEEP=1`) for future passes.

@@ -7,9 +7,9 @@ import { ChangeText } from "@/components/ui/Change";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { IconButton } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
-import { errorMessage, type Snapshot, type Watchlist } from "@/lib/api/client";
+import type { Snapshot, Watchlist } from "@/lib/api/client";
 import { DASH, formatMoney, formatVolume, toNumber } from "@/lib/format";
-import { useWatchlistMutations } from "./api";
+import { useRemoveWithUndo } from "./api";
 import { useSession } from "@/features/settings/api";
 import { cn } from "@/lib/cn";
 
@@ -61,8 +61,8 @@ export function sortRows(rows: Row[], sort: SortState | null): Row[] {
 }
 
 export function RemoveStar({ watchlist, symbol }: { watchlist: Watchlist; symbol: string }) {
-  const { removeSymbol } = useWatchlistMutations();
   const toast = useToast();
+  const remove = useRemoveWithUndo(toast); // a real undo rather than a confirmation dialog
   const { data: session } = useSession();
   const disabled = Boolean(session?.read_only);
   return (
@@ -70,13 +70,10 @@ export function RemoveStar({ watchlist, symbol }: { watchlist: Watchlist; symbol
       size="sm"
       label={disabled ? `${symbol} is in ${watchlist.name} (read-only demo)` : `Remove ${symbol} from ${watchlist.name}`}
       active
-      disabled={disabled || removeSymbol.isPending}
+      disabled={disabled || remove.isPending}
       onClick={(e) => {
         e.stopPropagation();
-        removeSymbol.mutate(
-          { id: watchlist.id, symbol },
-          { onSuccess: () => toast("success", `Removed ${symbol} from ${watchlist.name}.`), onError: (err) => toast("error", errorMessage(err)) },
-        );
+        remove.mutate({ id: watchlist.id, symbol, name: watchlist.name });
       }}
     >
       <Star className="size-4 fill-current" aria-hidden />

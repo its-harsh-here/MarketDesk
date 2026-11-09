@@ -30,7 +30,7 @@ export function StressPanel({ account }: { account: PerfAccount }) {
       <div className="space-y-3">
         <div className="flex flex-wrap gap-2" role="group" aria-label="Preset scenarios">
           {PRESETS.map((p) => (
-            <Button key={p.label} size="sm" variant="ghost" onClick={() => { setShocks(p.shocks); run(p.shocks); }}>{p.label}</Button>
+            <Button key={p.label} size="sm" variant="secondary" onClick={() => { setShocks(p.shocks); run(p.shocks); }}>{p.label}</Button>
           ))}
         </div>
         <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); run(); }}>
@@ -50,7 +50,7 @@ export function StressPanel({ account }: { account: PerfAccount }) {
               Value {formatMoney(r.before, r.base)} → {formatMoney(r.after, r.base)}: <PnlText value={r.change} currency={r.base} />{" "}
               <span className="num text-fg-2">({formatPercent(r.change_pct)})</span>
             </p>
-            <div className="scrollbar-thin relative overflow-x-auto">
+            <div tabIndex={0} className="scroll-x scrollbar-thin relative overflow-x-auto">
               <table className="w-full min-w-[520px] text-[13px]">
                 <caption className="sr-only">Effect of the shocks on each holding, in {r.base}</caption>
                 <thead>

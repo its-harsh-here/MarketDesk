@@ -248,7 +248,7 @@ function DcfResultView({ r, currency, axes, onAxes }: { r: DcfResult; currency: 
             {Object.entries(AXIS_LABEL).map(([k, l]) => <option key={k} value={k} disabled={k === axes.rows}>{l}</option>)}
           </Select>
         </div>
-        <div className="scrollbar-thin relative overflow-x-auto">
+        <div tabIndex={0} className="scroll-x scrollbar-thin relative overflow-x-auto">
           <table className="text-[12px]">
             <caption className="sr-only">Value per share by {AXIS_LABEL[r.sensitivity.rows_axis]} (rows) and {AXIS_LABEL[r.sensitivity.cols_axis]} (columns); the centre is your inputs</caption>
             <thead>

@@ -170,10 +170,10 @@ function SectorRelativePanel() {
       ) : q.isError ? (
         <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />
       ) : !q.data?.rows.length ? (
-        <EmptyState title="No members with data">Load data for this universe on the <Link to="/screener" className="text-accent-text hover:underline">Screener</Link>.</EmptyState>
+        <EmptyState title="No members with data">Load data for this universe on the <Link to="/screener" className="text-accent-text underline decoration-accent/40 underline-offset-2 hover:decoration-accent">Screener</Link>.</EmptyState>
       ) : (
         <div className="space-y-2">
-          <div className="scrollbar-thin relative overflow-x-auto">
+          <div tabIndex={0} className="scroll-x scrollbar-thin relative overflow-x-auto">
             <table className="w-full min-w-[560px] text-[13px]">
               <caption className="sr-only">Return against the sector average and the market benchmark</caption>
               <thead>

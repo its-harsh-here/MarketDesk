@@ -1,6 +1,6 @@
 import { listingLabel } from "@/lib/markets";
 import * as RD from "@radix-ui/react-dialog";
-import { Bell, BookOpen, Briefcase, CornerDownLeft, Download, FileUp, FlaskConical, Funnel, Gauge, Globe, Keyboard, LayoutDashboard, LayoutGrid, ListChecks, NotebookPen, Plus, Rows3, Search, Settings, SquareFunction, SunMoon } from "lucide-react";
+import { Bell, BookOpen, Briefcase, CornerDownLeft, Download, FileUp, FlaskConical, Funnel, Gauge, Globe, History, Keyboard, LayoutDashboard, LayoutGrid, ListChecks, NotebookPen, Plus, Rows3, Search, Settings, SquareFunction, SunMoon } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useDialogs } from "@/app/dialogs";
@@ -8,6 +8,7 @@ import { useSymbolSearch } from "@/features/market/api";
 import { applyDensity, applyTheme, usePatchPrefs, usePrefs, useSession } from "@/features/settings/api";
 import { useWorkspaces } from "@/features/workspace/api";
 import { GLOBAL_CODES, parseCommand, SECURITY_CODES, securityPath, type SecurityCode } from "@/lib/codes";
+import { readRecents } from "@/lib/recent";
 import { useSwitchWorkspace } from "@/features/workspace/WorkspaceMenu";
 import { useDebounced } from "@/lib/hooks";
 import { cn } from "@/lib/cn";
@@ -41,6 +42,7 @@ export function CommandPalette() {
   const switchTo = useSwitchWorkspace();
   const loc = useLocation();
   const here = loc.pathname.startsWith("/instrument/") ? decodeURIComponent(loc.pathname.slice("/instrument/".length)) : null;
+  const recents = useMemo(() => (isOpen ? readRecents() : []), [isOpen]);
 
   const go = (path: string) => () => {
     close();
@@ -90,10 +92,11 @@ export function CommandPalette() {
       { id: "p-workspaces", group: "Pages", label: "Manage workspaces", icon: <LayoutGrid />, run: go("/settings?s=workspaces") },
     ];
     const actions: Item[] = [
-      { id: "a-txn", group: "Actions", label: "Add transaction", icon: <Plus />, writes: true, run: () => open({ kind: "transaction" }) },
+      // On an instrument page the actions start with that instrument filled in.
+      { id: "a-txn", group: "Actions", label: here ? `Add transaction for ${here}` : "Add transaction", icon: <Plus />, writes: true, run: () => open({ kind: "transaction", ...(here ? { symbol: here } : {}) }) },
       { id: "a-import", group: "Actions", label: "Import transactions CSV", icon: <FileUp />, writes: true, run: () => open({ kind: "import" }) },
-      { id: "a-alert", group: "Actions", label: "Create price alert", icon: <Bell />, writes: true, run: () => open({ kind: "alert" }) },
-      { id: "a-journal", group: "Actions", label: "New journal note", icon: <NotebookPen />, writes: true, run: () => open({ kind: "journal" }) },
+      { id: "a-alert", group: "Actions", label: here ? `Create alert for ${here}` : "Create price alert", icon: <Bell />, writes: true, run: () => open({ kind: "alert", ...(here ? { symbol: here } : {}) }) },
+      { id: "a-journal", group: "Actions", label: here ? `New note on ${here}` : "New journal note", icon: <NotebookPen />, writes: true, run: () => open({ kind: "journal", ...(here ? { symbol: here } : {}) }) },
       { id: "a-wl", group: "Actions", label: "New watchlist", icon: <ListChecks />, writes: true, run: () => open({ kind: "new-watchlist" }) },
       {
         id: "a-theme",
@@ -142,10 +145,20 @@ export function CommandPalette() {
           hint: [r.name, listingLabel(r)].filter(Boolean).join(" · "),
           run: go(`/instrument/${encodeURIComponent(r.symbol)}`),
         }))
-      : [];
+      : // Nothing typed yet: the instruments viewed most recently on this device, newest first.
+        recents
+          .filter((r) => r.symbol !== here)
+          .map((r) => ({
+            id: `i-${r.symbol}`,
+            group: "Instruments" as const,
+            label: r.symbol,
+            hint: [r.name, "recently viewed"].filter(Boolean).join(" · "),
+            icon: <History />,
+            run: go(`/instrument/${encodeURIComponent(r.symbol)}`),
+          }));
     return [...functions, ...(cmd?.kind === "security" && cmd.symbol ? [] : instruments), ...pages.filter(match), ...actions.filter(match)];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, search.data, prefs?.theme, prefs?.density, readOnly, ws, here]);
+  }, [q, search.data, prefs?.theme, prefs?.density, readOnly, ws, here, recents]);
 
   const groups = ["Functions", "Instruments", "Pages", "Actions"] as const;
   const safeActive = Math.min(active, Math.max(items.length - 1, 0));

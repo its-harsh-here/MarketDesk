@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type Watchlist } from "@/lib/api/client";
+import type { ToastAction } from "@/components/ui/Toast";
+import { api, errorMessage, type Watchlist } from "@/lib/api/client";
 
 export function useWatchlists() {
   return useQuery({ queryKey: ["watchlists"], queryFn: () => api.get<Watchlist[]>("/api/watchlists"), staleTime: 30_000 });
@@ -21,6 +22,32 @@ function useInvalidate() {
     qc.invalidateQueries({ queryKey: ["briefing"] });
     qc.invalidateQueries({ queryKey: ["prefs"] });
   };
+}
+
+type Toast = (tone: "success" | "error" | "info", text: string, action?: ToastAction) => void;
+
+/** Remove a symbol with a real undo (the toast's Undo re-adds it, at the end of the list). The notices are option-level
+ * callbacks on purpose: the star that started the removal unmounts with its row, and callbacks passed to mutate()
+ * would then be dropped. */
+export function useRemoveWithUndo(toast: Toast) {
+  const invalidate = useInvalidate();
+  type V = { id: number; symbol: string; name: string };
+  const restore = useMutation({
+    mutationFn: (v: V) => api.post<Watchlist>(`/api/watchlists/${v.id}/items`, { symbol: v.symbol }),
+    onSuccess: (_w, v) => {
+      invalidate();
+      toast("success", `${v.symbol} is back in ${v.name}.`);
+    },
+    onError: (e) => toast("error", errorMessage(e)),
+  });
+  return useMutation({
+    mutationFn: (v: V) => api.del<Watchlist>(`/api/watchlists/${v.id}/items`, { symbol: v.symbol }),
+    onSuccess: (_w, v) => {
+      invalidate();
+      toast("success", `Removed ${v.symbol} from ${v.name}.`, { label: "Undo", onClick: () => restore.mutate(v) });
+    },
+    onError: (e) => toast("error", errorMessage(e)),
+  });
 }
 
 export function useWatchlistMutations() {

@@ -1,31 +1,51 @@
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { useEffect, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from "react";
 import { Link, Outlet, RouterProvider, createBrowserRouter } from "react-router";
 import { ToastProvider } from "@/components/ui/Toast";
 import { TooltipProvider } from "@/components/ui/Tooltip";
-import { ErrorState } from "@/components/ui/States";
+import { ErrorState, SkeletonRows } from "@/components/ui/States";
 import { ApiError, errorMessage, setCsrfToken, setUnauthorizedHandler } from "@/lib/api/client";
 import { applyDensity, applyTheme, usePrefs, useSession } from "@/features/settings/api";
-import { OverviewPage } from "@/features/overview/OverviewPage";
-import { WatchlistsPage, AddSymbolDialog, NewWatchlistDialog } from "@/features/watchlists/WatchlistsPage";
-import { InstrumentPage } from "@/features/instrument/InstrumentPage";
-import { PortfolioPage } from "@/features/portfolio/PortfolioPage";
+import { AddSymbolDialog, NewWatchlistDialog, WatchlistsPage } from "@/features/watchlists/WatchlistsPage";
 import { TransactionDialog } from "@/features/portfolio/TransactionDialog";
 import { ImportDialog } from "@/features/portfolio/ImportDialog";
-import { AlertsPage } from "@/features/alerts/AlertsPage";
 import { AlertDialog } from "@/features/alerts/AlertDialog";
-import { JournalPage } from "@/features/journal/JournalPage";
-import { ScreenerPage } from "@/features/screener/ScreenerPage";
-import { MacroPage } from "@/features/macro/MacroPage";
-import { LabPage } from "@/features/lab/LabPage";
 import { JournalDialog } from "@/features/journal/JournalDialog";
 import { JournalDetailDialog } from "@/features/journal/JournalDetailDialog";
 import { AiDialog } from "@/features/ai/AiDialog";
 import { ExportDialog } from "@/features/workspace/ExportDialog";
 import { OfflineView } from "@/features/workspace/OfflineView";
 import { clearOffline, readSnapshot } from "@/lib/offline";
-import { SettingsPage } from "@/features/settings/SettingsPage";
+import { clearRecents } from "@/lib/recent";
 import { LoginPage } from "@/features/auth/LoginPage";
+
+// Each page is its own chunk, fetched on first visit: the first paint no longer waits for every screen's code.
+// A page shows a layout-shaped skeleton while its chunk loads (normally only once per deploy; chunks are cached).
+function page<P extends object>(load: () => Promise<Record<string, unknown>>, name: string) {
+  const Component = lazy(() => load().then((m) => ({ default: m[name] as ComponentType<P> })));
+  return (
+    <Suspense
+      fallback={
+        <div className="p-4 md:p-6" role="status" aria-label="Loading page">
+          <SkeletonRows rows={10} />
+        </div>
+      }
+    >
+      <Component {...({} as P)} />
+    </Suspense>
+  );
+}
+const overview = page(() => import("@/features/overview/OverviewPage"), "OverviewPage");
+// The watchlist dialogs are global, so this module is in the main chunk anyway.
+const watchlists = <WatchlistsPage />;
+const screener = page(() => import("@/features/screener/ScreenerPage"), "ScreenerPage");
+const macro = page(() => import("@/features/macro/MacroPage"), "MacroPage");
+const lab = page(() => import("@/features/lab/LabPage"), "LabPage");
+const instrument = page(() => import("@/features/instrument/InstrumentPage"), "InstrumentPage");
+const portfolio = page(() => import("@/features/portfolio/PortfolioPage"), "PortfolioPage");
+const alerts = page(() => import("@/features/alerts/AlertsPage"), "AlertsPage");
+const journal = page(() => import("@/features/journal/JournalPage"), "JournalPage");
+const settings = page(() => import("@/features/settings/SettingsPage"), "SettingsPage");
 import { CommandPalette } from "@/features/search/CommandPalette";
 import { ShortcutsDialog } from "@/features/search/ShortcutsDialog";
 import { DialogProvider } from "./dialogs";
@@ -58,6 +78,7 @@ function AuthGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     setUnauthorizedHandler(() => {
       clearOffline(); // the session ended: no private copy stays on this device
+      clearRecents();
       qc.invalidateQueries({ queryKey: ["session"] });
     });
   }, [qc]);
@@ -138,16 +159,16 @@ const router = createBrowserRouter([
       {
         element: <Shell />,
         children: [
-          { index: true, element: <OverviewPage /> },
-          { path: "watchlists", element: <WatchlistsPage /> },
-          { path: "screener", element: <ScreenerPage /> },
-          { path: "macro", element: <MacroPage /> },
-          { path: "lab", element: <LabPage /> },
-          { path: "instrument/:symbol", element: <InstrumentPage /> },
-          { path: "portfolio", element: <PortfolioPage /> },
-          { path: "alerts", element: <AlertsPage /> },
-          { path: "journal", element: <JournalPage /> },
-          { path: "settings", element: <SettingsPage /> },
+          { index: true, element: overview },
+          { path: "watchlists", element: watchlists },
+          { path: "screener", element: screener },
+          { path: "macro", element: macro },
+          { path: "lab", element: lab },
+          { path: "instrument/:symbol", element: instrument },
+          { path: "portfolio", element: portfolio },
+          { path: "alerts", element: alerts },
+          { path: "journal", element: journal },
+          { path: "settings", element: settings },
           { path: "*", element: <NotFound /> },
         ],
       },

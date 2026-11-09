@@ -207,7 +207,7 @@ export function DatasetBar({ universe, info, dataset }: { universe: UniverseSpec
     });
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]" aria-live="polite">
-      <p className="min-w-0 flex-1 text-fg-2">
+      <p className="min-w-0 basis-full text-fg-2 sm:flex-1 sm:basis-auto">
         {dataset ? (
           <>
             <span className="text-fg">{info?.label}</span> · <span className="num">{dataset.members}</span> member{dataset.members === 1 ? "" : "s"}

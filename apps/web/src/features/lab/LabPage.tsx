@@ -142,7 +142,7 @@ function RunView({ run }: { run: Run }) {
       {r && r.trades.length > 0 && (
         <details className="text-[13px]">
           <summary className="cursor-pointer text-xs text-fg-2">Last {r.trades.length} trades (signal day → execution)</summary>
-          <div className="scrollbar-thin mt-2 max-h-64 overflow-auto">
+          <div tabIndex={0} className="scroll-x scrollbar-thin mt-2 max-h-64 overflow-auto">
             <table className="w-full text-[12px]">
               <caption className="sr-only">Simulated trades</caption>
               <thead><tr className="text-fg-3"><th scope="col" className="text-left font-medium">Signal</th><th scope="col" className="text-left font-medium">Executed</th><th scope="col" className="text-left font-medium">Side</th><th scope="col" className="text-right font-medium">Shares</th><th scope="col" className="text-right font-medium">Price</th><th scope="col" className="text-right font-medium">Fee</th></tr></thead>

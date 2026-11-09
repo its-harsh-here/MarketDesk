@@ -112,7 +112,7 @@ function ChangesPanel({ data, loading }: { data?: NonNullable<ReturnType<typeof 
         <EmptyState title="Not enough periods to compare" />
       ) : (
         <div className="space-y-2">
-          <div className="scrollbar-thin relative overflow-x-auto">
+          <div tabIndex={0} className="scroll-x scrollbar-thin relative overflow-x-auto">
             <table className="w-full min-w-[520px] text-[13px]">
               <caption className="sr-only">Reported figures for {first.latest_end} compared with {first.prior_end ?? "no comparable period"}</caption>
               <thead>

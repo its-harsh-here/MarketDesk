@@ -170,7 +170,7 @@ function PerformanceCharts({ p }: { p: Performance }) {
 function SeriesTable({ p }: { p: Performance }) {
   const rows = p.series.dates.map((_, i) => i).reverse();
   return (
-    <div className="scrollbar-thin relative max-h-[380px] overflow-auto">
+    <div tabIndex={0} className="scroll-x scrollbar-thin relative max-h-[380px] overflow-auto">
       <table className="w-full text-[13px]">
         <caption className="sr-only">Daily portfolio value, time-weighted index, benchmark and drawdown, newest first</caption>
         <thead className="sticky top-0 bg-panel">
@@ -282,7 +282,7 @@ function CorrelationPanel({ account, benchmark }: { account: PerfAccount; benchm
         <EmptyState title="No correlations yet">{c?.reason}</EmptyState>
       ) : (
         <div className="space-y-3">
-          <div className="scrollbar-thin relative overflow-x-auto">
+          <div tabIndex={0} className="scroll-x scrollbar-thin relative overflow-x-auto">
             <table className="text-[12px]">
               <caption className="sr-only">Pairwise correlation of returns; each cell lists r, the number of aligned returns and the method</caption>
               <thead>

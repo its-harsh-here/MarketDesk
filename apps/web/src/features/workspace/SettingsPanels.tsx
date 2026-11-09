@@ -185,7 +185,7 @@ export function UsagePanel() {
             Market data · {u.provider.provider}{" "}
             <Pill tone={u.provider.circuit === "closed" ? "pos" : "neg"}>{u.provider.circuit === "closed" ? "healthy" : `paused (${u.provider.circuit})`}</Pill>
           </h3>
-          <div className="scrollbar-thin overflow-x-auto">
+          <div tabIndex={0} className="scroll-x scrollbar-thin overflow-x-auto">
             <table className="w-full text-[13px]">
               <caption className="sr-only">Provider requests by data kind since the server process started</caption>
               <thead>

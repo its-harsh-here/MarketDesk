@@ -951,6 +951,42 @@ watchlists hold 2–3 instruments, so z-scores show the "at least 5 members" not
 Abdi–Ranaldo spread estimate (≈0.8% for RELIANCE.NS, 0% for AAPL — unrealistic); it was replaced by the median
 daily high–low range before release.
 
+## QA pass and interaction polish (9 Nov 2026)
+Owner request: go through the whole repository once, full QA, and make the front end as interactive and friendly as
+possible. Method: a Playwright sweep (`tests/e2e/qa-sweep.spec.ts`, run with `QA_SWEEP=1`) of 29 views and 11 dialogs
+at 1440/1024/768/390 px — full-page screenshots (inspected), horizontal-overflow check, axe-core WCAG 2.1 A/AA audit,
+console errors, page errors and failed API responses — plus every automated suite.
+
+**Found and fixed**
+- Accessibility: 19 horizontally scrolling tables (statements, analysis, risk, valuation, earnings, performance,
+  usage, dialogs) were not reachable by keyboard → focusable, with an edge shadow where columns are hidden; inline
+  links distinguished by colour only (contrast 1.3:1 with the surrounding text) → underlined; `<p>` inside a `<dl>`
+  on Settings → restructured; the CSV file input had no label → labelled; dialog bodies become a tab stop only when
+  they scroll.
+- Clickable table rows (watchlists, holdings, screener, peers…) could not be opened from the keyboard, and the phone
+  summary rows were plain `div`s → keyboard rows (Tab, ↑/↓, Enter/Space, visible focus), `role=button` on phones.
+- An unknown symbol fired nine failed API requests (every panel queried before the quote resolved) → one.
+- 768 px: the top-bar workspace label wrapped and pushed the title down → single line; the Overview watchlist
+  selector truncated list names → widened; the Journal review queue squeezed titles to a few letters on phones →
+  two-line rows; stress-test presets looked like plain text → buttons; a doubled full stop in analysis notes.
+- Removing a symbol from a watchlist had neither confirmation nor undo → Undo in the toast (a real re-add; the
+  notice is an option-level mutation callback because the row unmounts).
+
+**Interaction improvements**
+- Pages load as separate chunks (main bundle 662 → 388 kB, 119 kB gzipped) with a skeleton while a chunk loads.
+- Command palette: recently viewed instruments (per device, cleared at sign-out) when nothing is typed; actions
+  pre-filled with the current instrument ("Create alert for AAPL", "New note on AAPL", "Add transaction for AAPL").
+- Instrument tab strip on phones: the selected tab scrolls into view, edge fades show hidden tabs, Home/End keys.
+- Toasts can carry an action; an axe accessibility check over 14 main screens is now part of the Playwright suite.
+
+| Check | Result |
+| --- | --- |
+| QA sweep (29 views × 4 widths + 11 dialogs × 2 widths) | no horizontal overflow anywhere; axe: 0 violations of any impact after the fixes (before: 3 serious patterns on 7 views, 1 critical in a dialog); console: only the expected 422 for an unknown symbol, now 1 per load instead of 9 |
+| pytest SQLite / PostgreSQL 17 | 312 passed, 3 skipped / 314 passed, 1 skipped (backend unchanged) |
+| tsc, `eslint .`, vitest | clean; 41 (new: recently-viewed store incl. limit, corrupt storage, forget; DataTable keyboard rows) |
+| Playwright | 30 journeys pass (new: interaction polish — keyboard rows, Undo, palette recents and prefilled action, tab-strip fade; accessibility — no serious/critical axe violations on 14 screens) |
+| Visual QA | before/after captures inspected at 1440, 1024, 768 and 390 px (Overview, Watchlists, Screener and heatmap, Macro, Lab, Instrument tabs, Portfolio and performance, Alerts, Journal, Settings, dialogs) |
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.

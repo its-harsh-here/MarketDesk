@@ -54,6 +54,25 @@ export function DataTable<T>({
   const phone = useMediaQuery("(max-width: 639px)");
   const [open, setOpen] = useState<Record<string, boolean>>({});
 
+  // Clickable rows are also keyboard rows: Tab reaches them, ↑/↓ move between them, Enter or Space opens one.
+  const rowKeys = (row: T, openRow: () => void) => (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.target !== e.currentTarget) return; // a control inside the row (star, details) handles its own keys
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openRow();
+    } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      const items = Array.from(e.currentTarget.parentElement?.querySelectorAll<HTMLElement>('[data-row="1"]') ?? []);
+      const i = items.indexOf(e.currentTarget);
+      const next = items[e.key === "ArrowDown" ? i + 1 : i - 1];
+      if (next) {
+        e.preventDefault();
+        next.focus();
+      }
+    }
+    void row;
+  };
+  const focusRing = "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus)]";
+
   if (phone && mobileSummary) {
     const detailCols = columns.filter((c) => (mobileDetailKeys ? mobileDetailKeys.includes(c.key) : true));
     return (
@@ -64,8 +83,12 @@ export function DataTable<T>({
           return (
             <li key={k} className={rowClassName?.(row)}>
               <div
-                className={cn("flex min-h-14 items-center gap-2 px-4 py-2", onRowClick && "cursor-pointer active:bg-hover")}
+                className={cn("flex min-h-14 items-center gap-2 px-4 py-2", onRowClick && cn("cursor-pointer active:bg-hover", focusRing))}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
+                role={onRowClick ? "button" : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                data-row={onRowClick ? "1" : undefined}
+                onKeyDown={onRowClick ? rowKeys(row, () => onRowClick(row)) : undefined}
               >
                 <div className="min-w-0 flex-1">{mobileSummary(row)}</div>
                 {detailCols.length > 0 && (
@@ -101,7 +124,7 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="scrollbar-thin relative w-full overflow-x-auto">
+    <div className="scroll-x scrollbar-thin relative w-full overflow-x-auto" tabIndex={onRowClick ? undefined : 0}>
       <table className="w-full min-w-full text-[13px]">
         <caption className="sr-only">{caption}</caption>
         <thead>
@@ -149,9 +172,12 @@ export function DataTable<T>({
             <tr
               key={rowKey(row)}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
+              tabIndex={onRowClick ? 0 : undefined}
+              data-row={onRowClick ? "1" : undefined}
+              onKeyDown={onRowClick ? rowKeys(row, () => onRowClick(row)) : undefined}
               className={cn(
                 "border-b border-line-subtle last:border-b-0",
-                onRowClick && "cursor-pointer hover:bg-hover/70",
+                onRowClick && cn("cursor-pointer hover:bg-hover/70 focus-visible:bg-hover/70", focusRing),
                 rowClassName?.(row),
               )}
               style={{ height: "var(--row-h)" }}

@@ -90,6 +90,7 @@ export function ImportDialog() {
             accept=".csv,text/csv"
             className="sr-only"
             id="csv-file"
+            aria-label="CSV file"
             onChange={(e) => {
               const f = e.target.files?.[0] ?? null;
               setFile(f);
@@ -132,7 +133,7 @@ export function ImportDialog() {
               </ul>
             )}
             {result.rows.length > 0 && (
-              <div className="scrollbar-thin max-h-80 overflow-auto rounded-[var(--radius-control)] border border-line-subtle">
+              <div tabIndex={0} className="scrollbar-thin max-h-80 overflow-auto rounded-[var(--radius-control)] border border-line-subtle">
                 <table className="w-full text-[12.5px]">
                   <caption className="sr-only">Import preview</caption>
                   <thead className="sticky top-0 bg-elevated text-xs text-fg-3">

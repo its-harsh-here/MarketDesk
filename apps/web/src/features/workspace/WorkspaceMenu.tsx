@@ -31,7 +31,7 @@ export function WorkspaceMenu() {
   return (
     <DM.Root>
       <DM.Trigger
-        className="flex items-center gap-1 rounded text-[11px] font-medium tracking-wider text-fg-3 uppercase hover:text-fg-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+        className="flex items-center gap-1 rounded text-[11px] font-medium tracking-wider whitespace-nowrap text-fg-3 uppercase hover:text-fg-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
         aria-label={`Workspace: ${active?.name ?? "Personal"}. Switch workspace`}
       >
         {active ? `${active.name} workspace` : "Personal workspace"}

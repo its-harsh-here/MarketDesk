@@ -33,6 +33,7 @@
   --warning: #f2b84b;
   --warning-soft: rgb(242 184 75 / 0.12);
   --focus: #f2b84b;
+  --scroll-shadow: rgb(0 0 0 / 0.55);
   --overlay: rgb(3 5 9 / 0.66);
   --shadow: 0 12px 32px rgb(0 0 0 / 0.45);
   --chart-grid: #1c2531;
@@ -66,6 +67,7 @@
   --warning: #8a5a0c;
   --warning-soft: rgb(242 184 75 / 0.18);
   --focus: #b7791f;
+  --scroll-shadow: rgb(15 23 42 / 0.16);
   --overlay: rgb(15 23 34 / 0.45);
   --shadow: 0 12px 32px rgb(15 23 34 / 0.14);
   --chart-grid: #edf1f5;
@@ -222,4 +224,14 @@
   .skeleton {
     animation: none;
   }
+}
+
+/* Horizontal scroll containers inside panels: a shadow at an edge means more columns lie that way. The two
+   panel-coloured layers scroll with the content (background-attachment: local) and cover the shadows at the ends. */
+.scroll-x {
+  background:
+    linear-gradient(to right, var(--panel) 40%, transparent) left / 32px 100% no-repeat local,
+    linear-gradient(to left, var(--panel) 40%, transparent) right / 32px 100% no-repeat local,
+    linear-gradient(to right, var(--scroll-shadow), transparent) left / 12px 100% no-repeat scroll,
+    linear-gradient(to left, var(--scroll-shadow), transparent) right / 12px 100% no-repeat scroll;
 }

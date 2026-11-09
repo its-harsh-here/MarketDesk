@@ -87,7 +87,7 @@ export function FinancialsTab({ symbol }: { symbol: string }) {
               {STATEMENTS.map((group) => {
                 const lines = st.lines.filter((l) => l.statement === group.key);
                 return (
-                  <div key={group.key} className="scrollbar-thin relative overflow-x-auto">
+                  <div key={group.key} tabIndex={0} className="scroll-x scrollbar-thin relative overflow-x-auto">
                     <table className="w-full text-[13px]" style={{ minWidth: 120 + 88 * st.period_ends.length + 64 }}>
                       <caption className="py-1 text-left text-xs font-medium text-fg-2">
                         {group.title} <span className="font-normal text-fg-3">· {group.note}</span>

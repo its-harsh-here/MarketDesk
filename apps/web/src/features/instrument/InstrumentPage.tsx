@@ -1,5 +1,5 @@
 import { Bell, Download, NotebookPen, Plus, Sparkles } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { Link } from "react-router";
 import { useDialogs } from "@/app/dialogs";
@@ -29,6 +29,7 @@ import { EventsTab, FilingsTab, FinancialsTab } from "@/features/research/Resear
 import { PeersTab } from "@/features/screener/PeersTab";
 import { EarningsTab } from "@/features/earnings/EarningsTab";
 import { DescriptionTab } from "@/features/terminal/DescriptionTab";
+import { forgetRecent, recordRecent } from "@/lib/recent";
 import { RiskTab } from "@/features/terminal/RiskTab";
 import { ValuationTab } from "@/features/valuation/ValuationTab";
 import { useAiStatus } from "@/features/ai/api";
@@ -84,8 +85,10 @@ export function InstrumentPage() {
   const { symbol: raw } = useParams();
   const symbol = decodeURIComponent(raw ?? "").toUpperCase();
   const snap = useSnapshots(symbol ? [symbol] : []);
-  const fund = useFundamentals(symbol);
-  const actions = useActions(symbol);
+  // The other panels wait for the quote: an unknown symbol then costs one failed request, not one per panel.
+  const known = snap.isError && !snap.data ? undefined : symbol;
+  const fund = useFundamentals(known);
+  const actions = useActions(known);
   const { data: prefs } = usePrefs();
   const { data: session } = useSession();
   const { open } = useDialogs();
@@ -104,6 +107,14 @@ export function InstrumentPage() {
   }, { replace: true });
   const tz = prefs?.display_timezone ?? "Asia/Kolkata";
   const inst = s?.instrument;
+  // The palette's "recently viewed" list (this device only): recorded on arrival, named once the quote is known,
+  // and forgotten again if the symbol cannot be resolved.
+  const instName = inst?.name ?? null;
+  const unknown = snap.isError && !snap.data;
+  useEffect(() => {
+    if (unknown) forgetRecent(symbol);
+    else recordRecent(symbol, instName);
+  }, [symbol, instName, unknown]);
   const marketSession = sessionFor(sessions.data, inst?.country);
   const ccy = inst?.currency ?? fund.data?.currency ?? null;
   const readOnly = Boolean(session?.read_only);
@@ -346,35 +357,62 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number]["value"];
 
-/** Accessible tab strip (arrow keys move between tabs); the choice lives in the URL so it survives reloads. */
+/** Accessible tab strip (arrow keys move between tabs); the choice lives in the URL so it survives reloads.
+ * On narrow screens the strip scrolls: the selected tab is kept in view and a fade marks hidden tabs on each side. */
 function ResearchTabList({ value, onChange }: { value: Tab; onChange: (t: Tab) => void }) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const strip = useRef<HTMLDivElement>(null);
+  const [hidden, setHidden] = useState({ left: false, right: false });
+  useEffect(() => {
+    const el = strip.current;
+    if (!el) return;
+    const update = () => setHidden({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro.disconnect();
+    };
+  }, []);
+  useEffect(() => {
+    refs.current[TABS.findIndex((t) => t.value === value)]?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [value]);
   return (
-    <div role="tablist" aria-label="Instrument sections" className="scrollbar-thin flex gap-1 overflow-x-auto border-b border-line-subtle lg:col-span-12"
-      onKeyDown={(e) => {
-        const i = TABS.findIndex((t) => t.value === value);
-        const next = e.key === "ArrowRight" ? (i + 1) % TABS.length : e.key === "ArrowLeft" ? (i - 1 + TABS.length) % TABS.length : -1;
-        if (next >= 0) {
-          e.preventDefault();
-          onChange(TABS[next].value);
-          refs.current[next]?.focus();
-        }
-      }}
-    >
-      {TABS.map((t, i) => (
-        <button
-          key={t.value}
-          ref={(el) => { refs.current[i] = el; }}
-          role="tab"
-          type="button"
-          aria-selected={value === t.value}
-          tabIndex={value === t.value ? 0 : -1}
-          onClick={() => onChange(t.value)}
-          className={cn("-mb-px border-b-2 px-3 py-2 text-[13px] whitespace-nowrap max-md:min-h-11", value === t.value ? "border-accent font-medium text-fg" : "border-transparent text-fg-3 hover:text-fg-2")}
-        >
-          {t.label}
-        </button>
-      ))}
+    <div className="relative lg:col-span-12">
+      <div
+        ref={strip}
+        role="tablist"
+        aria-label="Instrument sections"
+        className="scrollbar-thin flex gap-1 overflow-x-auto border-b border-line-subtle"
+        onKeyDown={(e) => {
+          const i = TABS.findIndex((t) => t.value === value);
+          const next = e.key === "ArrowRight" ? (i + 1) % TABS.length : e.key === "ArrowLeft" ? (i - 1 + TABS.length) % TABS.length : e.key === "Home" ? 0 : e.key === "End" ? TABS.length - 1 : -1;
+          if (next >= 0) {
+            e.preventDefault();
+            onChange(TABS[next].value);
+            refs.current[next]?.focus();
+          }
+        }}
+      >
+        {TABS.map((t, i) => (
+          <button
+            key={t.value}
+            ref={(el) => { refs.current[i] = el; }}
+            role="tab"
+            type="button"
+            aria-selected={value === t.value}
+            tabIndex={value === t.value ? 0 : -1}
+            onClick={() => onChange(t.value)}
+            className={cn("-mb-px border-b-2 px-3 py-2 text-[13px] whitespace-nowrap max-md:min-h-11", value === t.value ? "border-accent font-medium text-fg" : "border-transparent text-fg-3 hover:text-fg-2")}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {hidden.right && <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-linear-to-l from-canvas to-transparent" />}
+      {hidden.left && <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-linear-to-r from-canvas to-transparent" />}
     </div>
   );
 }

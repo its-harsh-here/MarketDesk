@@ -282,7 +282,7 @@ export function OverviewPage() {
               <>
                 <Select
                   aria-label="Watchlist shown on Overview"
-                  className="h-8 w-36 text-[13px] max-md:h-10"
+                  className="h-8 w-44 text-[13px] max-md:h-10"
                   value={wl?.id ?? ""}
                   disabled={readOnly}
                   onChange={(e) => patch.mutate({ default_watchlist_id: Number(e.target.value) })}

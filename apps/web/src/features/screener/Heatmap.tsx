@@ -90,7 +90,7 @@ export function HeatmapView({ universe }: { universe: UniverseSpec }) {
               </p>
               <details className="text-[13px]">
                 <summary className="cursor-pointer text-xs text-fg-2 hover:text-fg">Table of members</summary>
-                <div className="scrollbar-thin mt-2 overflow-x-auto">
+                <div tabIndex={0} className="scroll-x scrollbar-thin mt-2 overflow-x-auto">
                   <table className="w-full text-[13px]">
                     <caption className="sr-only">Members by sector with their {label} change</caption>
                     <thead>

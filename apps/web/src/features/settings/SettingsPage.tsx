@@ -230,7 +230,7 @@ function SettingsBody({ prefs }: { prefs: Prefs }) {
               <p>
                 Your data (watchlists, transactions, alerts, journal, settings) is in an external PostgreSQL database. Back it up with your database provider's tools — Neon keeps restorable history of recent changes — or with <code className="num">pg_dump</code> using the same <code className="num">DATABASE_URL</code>:
               </p>
-              <pre className="num overflow-x-auto rounded-[var(--radius-control)] border border-line-subtle bg-canvas px-3 py-2 text-xs text-fg">pg_dump --format=custom --file=marketdesk-$(date +%F).dump "$DATABASE_URL"</pre>
+              <pre tabIndex={0} className="num overflow-x-auto rounded-[var(--radius-control)] border border-line-subtle bg-canvas px-3 py-2 text-xs text-fg">pg_dump --format=custom --file=marketdesk-$(date +%F).dump "$DATABASE_URL"</pre>
               <p className="text-xs text-fg-3">Restore into an empty database with <code className="num">pg_restore --no-owner --dbname "$DATABASE_URL" FILE</code>, then point the service at it.</p>
             </>
           ) : (
@@ -238,7 +238,7 @@ function SettingsBody({ prefs }: { prefs: Prefs }) {
               <p>
                 For a full backup (watchlists, transactions, alerts, journal, settings) run on the server:
               </p>
-              <pre className="num overflow-x-auto rounded-[var(--radius-control)] border border-line-subtle bg-canvas px-3 py-2 text-xs text-fg">marketdesk backup /data/backups/marketdesk-$(date +%F).db</pre>
+              <pre tabIndex={0} className="num overflow-x-auto rounded-[var(--radius-control)] border border-line-subtle bg-canvas px-3 py-2 text-xs text-fg">marketdesk backup /data/backups/marketdesk-$(date +%F).db</pre>
               <p className="text-xs text-fg-3">This uses SQLite's online backup API, so it is consistent while the app runs. Restore with <code className="num">marketdesk restore FILE</code> after stopping the web and worker services.</p>
             </>
           )}
@@ -259,7 +259,7 @@ function SettingsBody({ prefs }: { prefs: Prefs }) {
             <ul className="space-y-2 text-[13px]">
               {status?.attribution.map((a) => (
                 <li key={a.name as string}>
-                  <a href={a.url as string} target="_blank" rel="noreferrer noopener" className="font-medium text-fg hover:text-accent-text hover:underline">{a.name as string}</a>{" "}
+                  <a href={a.url as string} target="_blank" rel="noreferrer noopener" className="font-medium text-fg underline decoration-line underline-offset-2 hover:text-accent-text hover:decoration-accent">{a.name as string}</a>{" "}
                   <span className="text-xs text-fg-3">· {a.license as string}</span>
                   <p className="text-xs leading-4 text-fg-3">{a.note as string}</p>
                 </li>
@@ -281,9 +281,10 @@ function AiPanel() {
       {!st || !b ? (
         <SkeletonRows rows={3} />
       ) : (
-        <dl className="space-y-2 text-[13px]">
+        <div className="space-y-2 text-[13px]">
+        {!st.enabled && <p className="text-xs text-fg-3">{st.reason}</p>}
+        <dl className="space-y-2">
           <div className="flex justify-between gap-2"><dt className="text-fg-2">Status</dt><dd><Pill tone={st.enabled ? "pos" : "neutral"}>{st.enabled ? "On" : "Off"}</Pill></dd></div>
-          {!st.enabled && <p className="text-xs text-fg-3">{st.reason}</p>}
           <div className="flex justify-between gap-2"><dt className="text-fg-2">Provider</dt><dd>{st.provider_label}</dd></div>
           <div className="flex justify-between gap-2"><dt className="text-fg-2">Model</dt><dd className="num">{st.model}</dd></div>
           {st.key_format && <div className="flex justify-between gap-2"><dt className="text-fg-2">API key</dt><dd className="text-right text-xs text-fg-2">{st.key_format}</dd></div>}
@@ -300,13 +301,14 @@ function AiPanel() {
           {st.provider_limits?.remaining_requests_today && (
             <div className="flex justify-between gap-2"><dt className="text-fg-2">Provider says</dt><dd className="num text-right">{st.provider_limits.remaining_requests_today} requests left today</dd></div>
           )}
+        </dl>
           <p className="text-xs leading-4 text-fg-3">
             {st.provider === "groq"
               ? "Groq's free tier runs open models without charge, within its rate limits (requests and tokens per minute and per day); MarketDesk keeps each answer to one call that fits those limits. "
               : "xAI usage is billed to your xAI account; spend is reconciled with the cost xAI reports per answer. "}
             Only public market data and your question are sent, never your portfolio or journal; web search is off. The key stays on the server (GROK_API). Limits: AI_DAILY_REQUESTS, {st.provider === "groq" ? "AI_DAILY_TOKENS, AI_REQUEST_TOKENS" : "AI_DAILY_BUDGET_USD, AI_MAX_TOOL_CALLS"}, AI_MAX_OUTPUT_TOKENS.
           </p>
-        </dl>
+        </div>
       )}
     </Panel>
   );

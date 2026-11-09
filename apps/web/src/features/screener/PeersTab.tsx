@@ -102,10 +102,10 @@ export function PeersTab({ symbol }: { symbol: string }) {
             <EmptyState title={p.source === "saved" ? "No peers chosen" : "No suggestions yet"}>
               Suggestions come from instruments with loaded data in your watchlists, holdings and screening lists that share this
               company’s industry or sector. Use “Edit peers” to choose your own, or load data on the{" "}
-              <Link to="/screener" className="text-accent-text hover:underline">Screener</Link>.
+              <Link to="/screener" className="text-accent-text underline decoration-accent/40 underline-offset-2 hover:decoration-accent">Screener</Link>.
             </EmptyState>
           ) : (
-            <div className="scrollbar-thin relative overflow-x-auto">
+            <div tabIndex={0} className="scroll-x scrollbar-thin relative overflow-x-auto">
               <table className="w-full text-[13px]" style={{ minWidth: 220 + 116 * p.rows.length }}>
                 <caption className="sr-only">{symbol} compared with its peers</caption>
                 <thead>

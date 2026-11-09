@@ -795,3 +795,65 @@ test("risk: beta against the benchmark (changeable), drawdowns, liquidity estima
   await expect(page).toHaveURL(/bench=SX%3ABANYAN/);
   await expect(sens.getByRole("table", { name: /against SX:BANYAN/ })).toBeVisible();
 });
+
+test("accessibility: no serious or critical WCAG 2.1 A/AA violations on the main screens", async ({ page }) => {
+  const { default: AxeBuilder } = await import("@axe-core/playwright");
+  const views = ["/", "/watchlists", "/screener", "/macro", "/portfolio", "/portfolio?section=performance", "/alerts", "/journal", "/lab", "/settings",
+    "/instrument/SX%3AAURORA", "/instrument/SX%3AAURORA?tab=financials", "/instrument/SX%3AAURORA?tab=risk", "/instrument/SX%3AAURORA?tab=valuation"];
+  const problems: string[] = [];
+  for (const url of views) {
+    await page.goto(url);
+    await ready(page);
+    await page.waitForLoadState("networkidle").catch(() => undefined);
+    const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+    for (const v of results.violations) {
+      if (v.impact === "serious" || v.impact === "critical") problems.push(`${url}: ${v.id} (${v.impact}) ${v.nodes[0]?.target.join(" ")}`);
+    }
+  }
+  expect(problems, problems.join("\n")).toEqual([]);
+});
+
+test("interaction polish: keyboard rows, undo after removing a symbol, palette recents and prefilled actions, tab-strip fade", async ({ page }) => {
+  await page.goto("/");
+  await ready(page);
+  const csrf = (await (await page.request.get("/api/auth/session")).json()).csrf_token;
+  const h = { "x-csrf-token": csrf };
+  const wl = await (await page.request.post("/api/watchlists", { data: { name: "Keys" }, headers: h })).json();
+  for (const s of ["SX:AURORA", "SX:COBALT", "SX:ELARA"]) await page.request.post(`/api/watchlists/${wl.id}/items`, { data: { symbol: s }, headers: h });
+  await page.goto(`/watchlists?id=${wl.id}`);
+  await ready(page);
+  // rows are keyboard rows: ↓ moves, Enter opens the instrument
+  const rows = page.getByRole("table", { name: "Keys watchlist" }).locator("tbody tr[data-row]");
+  await expect(rows).toHaveCount(3);
+  await rows.first().focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(rows.nth(1)).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/instrument\/SX%3ACOBALT$/);
+  await expect(page.getByRole("heading", { name: "SX:COBALT" })).toBeVisible();
+  // removing from a watchlist can be undone from the toast
+  await page.goto(`/watchlists?id=${wl.id}`);
+  await ready(page);
+  await page.getByRole("button", { name: "Remove SX:AURORA from Keys" }).click();
+  await expect(page.getByText("Removed SX:AURORA from Keys.")).toBeVisible();
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByText("SX:AURORA is back in Keys.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Remove SX:AURORA from Keys" })).toBeVisible();
+  // palette: recently viewed instruments when nothing is typed; actions prefilled with the current instrument
+  await page.goto("/instrument/SX%3ABANYAN");
+  await ready(page);
+  await page.keyboard.press(`${MOD}+k`);
+  const palette = page.getByRole("dialog", { name: "Command palette" });
+  await expect(palette.getByRole("option", { name: /SX:COBALT.*recently viewed/ })).toBeVisible();
+  await palette.getByRole("combobox").fill("create alert");
+  await palette.getByRole("option", { name: "Create alert for SX:BANYAN" }).click();
+  await expect(page.getByRole("dialog", { name: "Create alert" }).getByRole("combobox", { name: /Instrument/ })).toHaveValue("SX:BANYAN");
+  await page.keyboard.press("Escape");
+  // on a phone the tab strip shows a fade where more tabs are hidden, and the selected tab scrolls into view
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/instrument/SX%3ABANYAN?tab=valuation");
+  await ready(page);
+  const fades = page.locator('[aria-label="Instrument sections"] ~ div[aria-hidden]');
+  await expect(fades).toHaveCount(1); // scrolled to the end: only the left fade remains
+  await expect(page.getByRole("tab", { name: "Valuation" })).toBeInViewport();
+});

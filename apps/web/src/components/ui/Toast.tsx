@@ -3,22 +3,28 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 import { cn } from "@/lib/cn";
 
 type ToastTone = "success" | "error" | "info";
+/** An optional follow-up, e.g. Undo after a removal. The toast stays longer so it can be reached. */
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
 interface ToastItem {
   id: number;
   tone: ToastTone;
   text: string;
+  action?: ToastAction;
 }
 
-const Ctx = createContext<(tone: ToastTone, text: string) => void>(() => {});
+const Ctx = createContext<(tone: ToastTone, text: string, action?: ToastAction) => void>(() => {});
 
 /** Toasts only supplement inline status; every error is also shown where it happened. */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const seq = useRef(0);
-  const push = useCallback((tone: ToastTone, text: string) => {
+  const push = useCallback((tone: ToastTone, text: string, action?: ToastAction) => {
     const id = ++seq.current;
-    setItems((xs) => [...xs.slice(-3), { id, tone, text }]);
-    window.setTimeout(() => setItems((xs) => xs.filter((x) => x.id !== id)), tone === "error" ? 7000 : 4000);
+    setItems((xs) => [...xs.slice(-3), { id, tone, text, action }]);
+    window.setTimeout(() => setItems((xs) => xs.filter((x) => x.id !== id)), action ? 9000 : tone === "error" ? 7000 : 4000);
   }, []);
   const value = useMemo(() => push, [push]);
   return (
@@ -35,6 +41,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             >
               <Icon aria-hidden className={cn("mt-0.5 size-4 shrink-0", t.tone === "success" ? "text-pos" : t.tone === "error" ? "text-neg" : "text-info")} />
               <span className="flex-1 leading-5">{t.text}</span>
+              {t.action && (
+                <button
+                  type="button"
+                  className="shrink-0 rounded px-1.5 py-0.5 text-[13px] font-medium text-accent-text hover:bg-hover"
+                  onClick={() => {
+                    t.action?.onClick();
+                    setItems((xs) => xs.filter((x) => x.id !== t.id));
+                  }}
+                >
+                  {t.action.label}
+                </button>
+              )}
               <button type="button" aria-label="Dismiss" className="text-fg-3 hover:text-fg" onClick={() => setItems((xs) => xs.filter((x) => x.id !== t.id))}>
                 <X className="size-3.5" aria-hidden />
               </button>

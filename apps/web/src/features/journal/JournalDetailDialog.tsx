@@ -137,7 +137,7 @@ function EvidenceCard({ title, ev, tz }: { title: string; ev: Evidence | null | 
         <ul className="mt-1 space-y-0.5 text-xs">
           {ev.filings.items.map((x) => (
             <li key={x.accession}>
-              {x.link ? <a className="text-accent-text hover:underline" href={x.link} target="_blank" rel="noopener noreferrer">{x.form}</a> : x.form} · <span className="num">{formatSessionDate(x.filing_date)}</span>
+              {x.link ? <a className="text-accent-text underline decoration-accent/40 underline-offset-2 hover:decoration-accent" href={x.link} target="_blank" rel="noopener noreferrer">{x.form}</a> : x.form} · <span className="num">{formatSessionDate(x.filing_date)}</span>
             </li>
           ))}
         </ul>

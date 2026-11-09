@@ -153,7 +153,7 @@ function CompareChart({ dates, series, symbols }: { dates: string[]; series: Rec
 function CompareTable({ dates, series, symbols }: { dates: string[]; series: Record<string, string[]>; symbols: string[] }) {
   const rows = dates.map((d, k) => ({ d, k })).reverse();
   return (
-    <div className="scrollbar-thin relative max-h-[260px] overflow-auto">
+    <div tabIndex={0} className="scroll-x scrollbar-thin relative max-h-[260px] overflow-auto">
       <table className="w-full text-[13px]">
         <caption className="sr-only">Comparison values rebased to 100, newest first</caption>
         <thead className="sticky top-0 bg-panel">

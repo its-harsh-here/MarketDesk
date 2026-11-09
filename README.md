@@ -328,8 +328,13 @@ personal, non-commercial use and FINRA is named as its source).
   life) since the web process started, endpoint circuits, SEC status, AI use today against limits; your own lower
   daily AI limits (they can only tighten the server caps and are enforced before each request); and the browser
   refresh interval for quotes and valuations (30 s – 5 min, or manual).
-- **Keyboard:** Ctrl/Cmd+K palette (pages, actions, workspaces, theme, density, export), `/` search, `?` shortcuts,
-  `N` new transaction, `G` + O/W/F/M/P/A/J/L/S to go to a page.
+- **Keyboard:** Ctrl/Cmd+K palette (pages, actions, workspaces, theme, density, export; with nothing typed it lists
+  the instruments you viewed most recently on this device; on an instrument page the actions are pre-filled with that
+  instrument), `/` search, `?` shortcuts, `N` new transaction, `G` + O/W/F/M/P/A/J/L/S to go to a page. Table rows that
+  open something are keyboard rows: Tab reaches them, ↑/↓ move, Enter or Space opens. Tables wider than the screen
+  scroll inside the panel and show an edge shadow where columns are hidden; they can be scrolled from the keyboard.
+- **Undo:** removing a symbol from a watchlist offers Undo in the notice for a few seconds (the symbol returns at the
+  end of the list).
 
 ## Research lab (simulated)
 
@@ -488,6 +493,7 @@ Automated tests use the synthetic harness so they are deterministic and never de
 | Web types, lint, unit, build | `cd apps/web && npx tsc -b --noEmit && npx eslint . && npx vitest run && npm run build` |
 | Browser journeys (real API + worker) | after building the web app: `cd tests/e2e && npm ci && npx playwright test` |
 | Visual QA captures (not committed) | `cd tests/e2e && npm run screenshots` → `tests/e2e/test-results/screenshots` |
+| QA sweep: every page/dialog × 4 widths, axe audit, console and failed requests | `cd tests/e2e && QA_SWEEP=1 npx playwright test qa-sweep.spec.ts` → `test-results/qa-sweep` |
 | Live Yahoo smoke test | `cd apps/api && uv run python ../../scripts/check_yahoo.py` |
 
 The browser journeys point AI research at a local fake provider endpoint (`scripts/fake_xai.py`, Groq path): no key,

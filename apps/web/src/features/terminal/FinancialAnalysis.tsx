@@ -52,12 +52,12 @@ function MetricTable({ title, note, table, currency, signed = false, statement }
   const absentNote = absent.length > 0 && (
     <p className="mt-1 text-xs text-fg-3">
       Not available from this source{rows.length ? "" : ` (${title.toLowerCase()})`}: {absent.map((r) => r.label).join(", ")}
-      {absent[0].why?.find(Boolean) ? ` — ${absent[0].why.find(Boolean)}` : ""}.
+      {absent[0].why?.find(Boolean) ? ` — ${(absent[0].why.find(Boolean) ?? "").replace(/\.$/, "")}` : ""}.
     </p>
   );
   if (!rows.length) return <div>{absentNote}</div>;
   return (
-    <div className="scrollbar-thin overflow-x-auto">
+    <div tabIndex={0} className="scroll-x scrollbar-thin overflow-x-auto">
       <table className="w-full text-[13px]" style={{ minWidth: 200 + 84 * table.columns.length }}>
         <caption className="py-1 text-left text-xs font-medium text-fg-2">
           {title} {note && <span className="font-normal text-fg-3">· {note}</span>}
@@ -167,7 +167,7 @@ export function FinancialAnalysis({ symbol, period }: { symbol: string; period: 
               <p className="text-xs text-fg-3">Compound annual growth: {d.cagr.rows[0].why?.find(Boolean) ?? "not available"}</p>
             )}
             {d.cagr && d.cagr.rows.some((r) => r.values.some((v) => v !== null)) && (
-              <div className="scrollbar-thin overflow-x-auto">
+              <div tabIndex={0} className="scroll-x scrollbar-thin overflow-x-auto">
                 <table className="w-full text-[13px]" style={{ minWidth: 420 }}>
                   <caption className="py-1 text-left text-xs font-medium text-fg-2">Compound annual growth <span className="font-normal text-fg-3">· to the latest fiscal year</span></caption>
                   <thead>
