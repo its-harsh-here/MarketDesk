@@ -72,9 +72,13 @@ def meeting_date(text: str, filed: date) -> tuple[date, str] | None:
     for m in _MEETING.finditer(flat[:400_000]):
         d = parse_month_date(m.group(2))
         if d and filed - timedelta(days=7) <= d <= filed + timedelta(days=150):
-            start = max(0, m.start() - 80)
-            quote = flat[start : m.end() + 40].strip()
-            return d, (quote if len(quote) <= 320 else quote[:317] + "…")
+            start = max(0, m.start(2) - 230)
+            head = flat[start : m.start(2)]
+            cut = head.rfind(". ")  # begin at a sentence boundary when one is within reach
+            if cut >= 0 and len(head) - cut < 200:
+                head = head[cut + 2 :]
+            quote = (head + flat[m.start(2) : m.end() + 40]).strip()
+            return d, (quote if len(quote) <= 320 else "…" + quote[-316:])
     return None
 
 
@@ -164,6 +168,8 @@ async def _cached_text_feature(db: Session, research, key: str, kind: str, compu
 
 
 async def _proxy_meeting(db: Session, research, cik: int, filing: dict) -> dict:
+    """Cache key v2: the quote window changed after the first live check (it began at the match, not the date)."""
+
     async def compute():
         try:
             text, url = await er._filing_text(research, cik, filing, max_chars=400_000)
@@ -176,7 +182,7 @@ async def _proxy_meeting(db: Session, research, cik: int, filing: dict) -> dict:
             "quote": found[1] if found else None,
         }
 
-    return await _cached_text_feature(db, research, f"sec:proxy:{filing['accession']}", "sec_proxy", compute)
+    return await _cached_text_feature(db, research, f"sec:proxy:v2:{filing['accession']}", "sec_proxy", compute)
 
 
 async def _release_buybacks(db: Session, research, cik: int, filing: dict) -> dict:
@@ -246,8 +252,14 @@ async def security_events(db: Session, market: MarketDataService, research, inst
                                     url=r.get("document_url") or r.get("index_url"),
                                     period=r.get("report_date")))  # fmt: skip
         proxies = [r for r in rows if r["form"] in PROXY_FORMS][:2]
-        for r in proxies:
-            info = await _proxy_meeting(db, research, cik, r)
+        releases = [r for r in rows if r["form"] in RELEASE_FORMS and "2.02" in (r.get("items") or [])]
+        releases = releases[:MAX_RELEASES_SCANNED]
+        scans = await asyncio.gather(
+            *(_proxy_meeting(db, research, cik, r) for r in proxies),
+            *(_release_buybacks(db, research, cik, r) for r in releases),
+        )
+        proxy_info, release_info = scans[: len(proxies)], scans[len(proxies) :]
+        for r, info in zip(proxies, proxy_info, strict=True):
             events.append(event(r["filing_date"], "proxy", "Proxy statement filed (DEF 14A)", "confirmed", "SEC EDGAR",
                                 url=info.get("url") or r.get("document_url") or r.get("index_url")))  # fmt: skip
             if info.get("meeting_date"):
@@ -258,9 +270,7 @@ async def security_events(db: Session, market: MarketDataService, research, inst
                 notes.append(f"Proxy filed {r['filing_date']}: could not be read ({info['error']}).")
             else:
                 notes.append(f"Proxy filed {r['filing_date']}: no meeting date stated in a recognisable form.")
-        releases = [r for r in rows if r["form"] in RELEASE_FORMS and "2.02" in (r.get("items") or [])]
-        for r in releases[:MAX_RELEASES_SCANNED]:
-            info = await _release_buybacks(db, research, cik, r)
+        for r, info in zip(releases, release_info, strict=True):
             for s in info.get("sentences") or []:
                 events.append(event(r["filing_date"], "buyback", "Share repurchase mentioned in results release",
                                     "mention", "SEC EDGAR · quoted from the release", url=info.get("url"),
@@ -309,7 +319,7 @@ async def universe_events(db: Session, market: MarketDataService, research, spec
                 env = await asyncio.to_thread(research.filings, db, inst, 80)
                 for r in env.get("data") or []:
                     if r["form"] in PROXY_FORMS and lo.isoformat() <= r["filing_date"] <= hi.isoformat():
-                        info, _ = await asyncio.to_thread(research._cache_get, db, f"sec:proxy:{r['accession']}")
+                        info, _ = await asyncio.to_thread(research._cache_get, db, f"sec:proxy:v2:{r['accession']}")
                         events.append({**event(r["filing_date"], "proxy", "Proxy statement filed (DEF 14A)",
                                                "confirmed", "SEC EDGAR",
                                                url=r.get("document_url") or r.get("index_url")),

@@ -208,12 +208,15 @@ function useKindFilter(events: SecurityEvent[]) {
   return { hidden, counts, toggle, filtered };
 }
 
+const PAGE = 30;
+
 /** Terminal T4: one security's dated events (past and upcoming), each with its status, source and link. */
 export function EventsTab({ symbol }: { symbol: string }) {
   const q = useSecurityEvents(symbol);
   const d = q.data;
   const all = useMemo(() => [...(d?.upcoming ?? []), ...(d?.past ?? [])], [d]);
   const { hidden, counts, toggle, filtered } = useKindFilter(all);
+  const [shown, setShown] = useState(PAGE); // long dividend histories run to a hundred rows or more
   const today = d?.as_of ?? new Date().toISOString().slice(0, 10);
   const upcoming = filtered.filter((e) => e.date >= today);
   const past = filtered.filter((e) => e.date < today);
@@ -245,7 +248,14 @@ export function EventsTab({ symbol }: { symbol: string }) {
         meta={`${d.past.length} event${d.past.length === 1 ? "" : "s"}`}
         actions={<KindFilter counts={counts} hidden={hidden} onToggle={toggle} />}>
         {past.length ? (
-          <ul className="divide-y divide-line-subtle">{past.map((e, i) => <EventRow key={`${e.date}${e.kind}${i}`} e={e} today={today} />)}</ul>
+          <>
+            <ul className="divide-y divide-line-subtle">{past.slice(0, shown).map((e, i) => <EventRow key={`${e.date}${e.kind}${i}`} e={e} today={today} />)}</ul>
+            {past.length > shown && (
+              <button type="button" className="mt-2 text-xs text-info underline decoration-info/40 underline-offset-2 hover:decoration-info" onClick={() => setShown((n) => n + PAGE)}>
+                Show {Math.min(PAGE, past.length - shown)} more ({past.length - shown} earlier of {past.length})
+              </button>
+            )}
+          </>
         ) : all.length ? (
           <p className="text-[13px] text-fg-3">No past events of the selected kinds.</p>
         ) : (

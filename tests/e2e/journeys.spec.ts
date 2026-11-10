@@ -605,6 +605,10 @@ test("earnings: deadline (never an announced date), fiscal-year changes, reminde
 test("events: calendar with status marks and sources, kind filter, reported earnings history, universe calendar (CACS code)", async ({ page }) => {
   await page.goto("/instrument/SX%3AAURORA");
   await ready(page);
+  // The universe calendar reads the watchlists: make sure SX:AURORA is on one even when this journey runs alone.
+  const csrf = (await (await page.request.get("/api/auth/session")).json()).csrf_token;
+  const wl = await (await page.request.post("/api/watchlists", { data: { name: "T4 events" }, headers: { "x-csrf-token": csrf } })).json();
+  if (wl.id) await page.request.post(`/api/watchlists/${wl.id}/items`, { data: { symbol: "SX:AURORA" }, headers: { "x-csrf-token": csrf } });
   await page.keyboard.press(`${MOD}+k`);
   await page.getByRole("dialog", { name: "Command palette" }).getByRole("combobox").fill("cacs");
   await page.keyboard.press("Enter");

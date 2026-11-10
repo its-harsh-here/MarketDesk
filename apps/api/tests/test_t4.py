@@ -45,6 +45,7 @@ def test_meeting_date_is_quoted_and_must_be_near_the_filing():
     assert found is not None
     d, quote = found
     assert d == date(2026, 2, 26) and "February 26, 2026" in quote and len(quote) <= 320
+    assert quote.startswith("The Annual Meeting of Stockholders")  # from the sentence boundary, not the heading
     # a date far from the filing is a stray reference, not the meeting
     assert ev.meeting_date(PROXY.format(when="June 1, 2021", record="May 1, 2021"), filed) is None
     assert ev.meeting_date("No notice here. Just a date: March 3, 2026.", filed) is None

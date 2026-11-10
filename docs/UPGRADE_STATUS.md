@@ -1015,6 +1015,20 @@ console errors, page errors and failed API responses — plus every automated su
 | Playwright | 31 journeys pass (new: events — `CACS` code, SEBI deadline marked as a deadline, dividend rows with sources, kind filter hides and restores, earnings history table with YoY, Corporate events on Alerts with a 120-day window) |
 | Visual QA | Events tab and Alerts page at 1440 and 390 px (`docs/screenshots/events-*.png`); no horizontal overflow |
 
+**Live (Yahoo + SEC) after deploying 4986d6e (10 Nov 2026), read-only.** AAPL: 135 past events (92 dividends back to
+1987, 5 splits, 24 periodic reports, 8 results filings, 2 proxies, 2 meetings, 2 buyback mentions) and a next-results
+estimate of 1 Feb 2027; annual meeting 24 Feb 2026 quoted from the proxy filed 8 Jan 2026; the 30 Apr 2026 release
+quoted "authorized an additional program to repurchase up to $100 billion"; first load 30 s (two proxies and eight
+releases read from EDGAR on the Render Free instance), cached afterwards. SMR: 8 results filings, 14 reports, meeting
+29 May 2026 from the proxy of 15 Apr 2026, no dividends. RELIANCE.NS: SEBI deadline 14 Feb 2027 for the quarter ended
+30 Sep 2026, 31 dividends and 4 splits from Yahoo, the "needs a permitted exchange source" note for meetings. Earnings
+history: AAPL quarterly from SEC facts with year-on-year change (e.g. quarter to 27 Jun 2026: revenue +16.4%, diluted
+EPS +28.7%); RELIANCE.NS annual, unofficial, with change. Universe calendar over the owner's three watchlisted
+listings: 2 ahead, 1 behind, none failed. Follow-ups from the check: the meeting quote began at the regex match (a
+heading or an earlier date) rather than around the date — now quoted around the date from a sentence boundary, with
+the proxy-scan cache key versioned so cached scans are redone once; proxy and release documents are read concurrently;
+past lists longer than 30 rows page with "Show more".
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
