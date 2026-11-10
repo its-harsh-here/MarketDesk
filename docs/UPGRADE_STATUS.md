@@ -1070,6 +1070,13 @@ Performance: AAPL to 10 Nov 2026 vs S&P 500 — YTD +28.2% vs +9.9%, 1Y +29.4% v
 was "—" because Yahoo's 5Y daily history starts a few days after the five-year mark; it now uses the first close
 within a week of the mark and shows that date); RELIANCE.NS vs Nifty — 1Y −10.4% vs −1.8%.
 
+**Live check after deploying 29d2b94.** AAPL news: 26 Yahoo headlines via the search fallback plus 80 SEC items; but
+search results included stories about other companies (Nvidia, Bullish) → headlines are now kept only when Yahoo
+tags them with the symbol (untagged items kept). Converter: 1,000 USD → ₹93,918.00 (USDINR=X); 100 GBP → ¥21,185;
+but ₹50,000 → €475.00 because Yahoo quotes INR→EUR to 4 decimals (0.0095) → rates below 0.1 now come from the
+reverse pair (EURINR=X), inverted. All twelve new watchboard series returned "available". AAPL 5Y now shows +135.7%
+(18.7% a year) from 11 Nov 2021 vs the S&P 500's +61.8%.
+
 ## World markets and currency converter (11 Nov 2026)
 Macro watchboard: world indices, more FX, silver, natural gas, crypto. Currency converter panel on Macro
 (`GET /api/terminal/convert`). Yahoo headlines fall back to the search API. No schema change.

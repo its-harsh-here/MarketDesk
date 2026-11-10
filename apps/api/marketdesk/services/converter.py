@@ -32,6 +32,12 @@ async def convert(market: MarketDataService, amount: Decimal, base: str, quote: 
         }
     r = await valuation_rate(market, base, quote)
     inverted = False
+    if r.get("rate") is not None and r["rate"] < Decimal("0.1") and base != quote:
+        # Small rates (INR→EUR ≈ 0.0095) are quoted to few decimals; the reverse pair carries more precision.
+        rev = await valuation_rate(market, quote, base)
+        if rev.get("rate"):
+            r = {**rev, "pair": f"{base}/{quote}", "rate": Decimal(1) / rev["rate"]}
+            inverted = True
     if r.get("rate") is None and base != quote:
         rev = await valuation_rate(market, quote, base)
         if rev.get("rate"):

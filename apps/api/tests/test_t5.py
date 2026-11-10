@@ -41,6 +41,9 @@ def test_normalize_news_handles_both_yfinance_shapes():
     assert b.publisher == "AP" and b.published_at.tzinfo is UTC
     assert normalize_news(bad) == [] and normalize_news(None) == []
     assert len(normalize_news(old * 50, limit=5)) == 5
+    tagged = [{**old[0], "relatedTickers": ["NVDA"]}, {**old[0], "title": "Mine", "relatedTickers": ["aapl", "MSFT"]}]
+    assert [n.title for n in normalize_news(tagged, symbol="AAPL")] == ["Mine"]  # stories about others dropped
+    assert len(normalize_news(old, symbol="AAPL")) == 1  # untagged items are kept
 
 
 def test_news_cache_round_trip():

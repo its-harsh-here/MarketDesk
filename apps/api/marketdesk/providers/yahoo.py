@@ -555,12 +555,12 @@ class YahooProvider:
                 return items
             found = self._yf.Search(symbol, max_results=1, news_count=30, lists_count=0, include_cb=False,
                                     recommended=0, timeout=self.timeout, raise_errors=True)  # fmt: skip
-            return normalize_news(found.news)
+            return normalize_news(found.news, symbol=symbol)
 
         return self._call(run, "news")
 
 
-def normalize_news(raw: Any, limit: int = 30) -> list[NewsItem]:
+def normalize_news(raw: Any, limit: int = 30, symbol: str | None = None) -> list[NewsItem]:
     """yfinance news items → NewsItem. Handles the 0.2.x flat shape (title, publisher, link,
     providerPublishTime) and the 1.x shape ({"content": {title, pubDate, provider.displayName,
     canonicalUrl.url, clickThroughUrl.url, contentType}}). Items without a title or an http(s) link are dropped;
@@ -570,6 +570,9 @@ def normalize_news(raw: Any, limit: int = 30) -> list[NewsItem]:
         if not isinstance(item, dict):
             continue
         c = item.get("content") if isinstance(item.get("content"), dict) else item
+        related = item.get("relatedTickers") or c.get("relatedTickers")
+        if symbol and isinstance(related, list) and related and symbol.upper() not in {str(t).upper() for t in related}:
+            continue  # search results carry stories about other companies; keep the ones tagged with this symbol
         title = str(c.get("title") or "").strip()
         url = None
         for key in ("canonicalUrl", "clickThroughUrl"):
