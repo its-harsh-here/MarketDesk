@@ -6,7 +6,7 @@ export type Workspace = {
   id: string;
   name: string;
   start: string;
-  density: "comfortable" | "compact";
+  density: "comfortable" | "compact" | "terminal";
   default_watchlist_id: number | null;
   chart_symbol: string | null;
 };

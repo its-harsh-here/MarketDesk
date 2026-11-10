@@ -36,6 +36,7 @@ from marketdesk.providers.base import (
     Fundamentals,
     HistoryRange,
     InstrumentRef,
+    NewsItem,
     PriceHistory,
     ProviderError,
     QuoteSnapshot,
@@ -51,6 +52,7 @@ CIRCUIT_GROUPS = {
     "fundamentals": "fundamentals",
     "statements": "fundamentals",
     "search": "search",
+    "news": "search",  # a news outage must not pause price requests
 }
 Status = Literal["sample", "available", "cached", "stale", "missing", "unsupported", "unavailable"]
 
@@ -164,6 +166,7 @@ class MarketDataService:
             "actions": settings.fundamentals_ttl_seconds,
             "statements": settings.fundamentals_ttl_seconds,
             "search": settings.search_ttl_seconds,
+            "news": 15 * 60,
         }
 
     # ------------------------------------------------------------------ public API
@@ -194,6 +197,9 @@ class MarketDataService:
 
     async def actions(self, symbol: str) -> Result[list[CorporateAction]]:
         return await self._get("actions", symbol, lambda: self.provider.corporate_actions(symbol))
+
+    async def news(self, symbol: str) -> Result[list[NewsItem]]:
+        return await self._get("news", symbol, lambda: self.provider.news(symbol))
 
     async def search(self, query: str, limit: int) -> Result[list[InstrumentRef]]:
         q = " ".join(query.split()).lower()[:64]

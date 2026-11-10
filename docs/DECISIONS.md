@@ -305,3 +305,26 @@ Consequential choices, newest last. Routine choices live in code comments.
     axe check still passes), the system reduced-motion setting is honoured, and Settings → Appearance → Visual
     effects offers "Calm" to switch the effects off per browser. The layer is CSS plus one pointer listener
     (`apps/web/src/lib/fx.tsx`); no animation library was added.
+56. **News stream: SEC captions and provider headlines, links only (terminal T5, 11 Nov 2026).** The News tab merges
+    two sources and labels each: SEC filings, where an 8-K's headline is SEC's own Form 8-K item caption in plain words
+    (Item 2.02 → "Results of operations (earnings release)"), and the price provider's headlines (yfinance news: title,
+    publisher, time, link). No article body or provider summary is fetched, stored or summarised; the optional AI
+    summary is the existing cited pipeline reading SEC filings it retrieves. Items are de-duplicated by link and by
+    normalised headline (syndicated copies). The provider news cache shares the search circuit so a news outage cannot
+    pause price requests; TTL 15 minutes. In fixture mode the fictitious companies get headlines written from the
+    dataset's own dividends and annual results, with no link and the publisher "Sample wire (fictitious)". Indian
+    exchange announcements remain gated. Code CN now opens the stream; FIL opens the filings list.
+57. **Movers monitor, terminal density, and quote-page tools (terminal T9 part 1 and competitor parity, 11 Nov 2026).**
+    The owner asked to finish the terminal roadmap and then add features that consumer finance sites such as Yahoo
+    Finance offer. Shipped together: (1) a Movers page (code MOV, g v) ranking gainers, losers, most active by traded
+    value and unusual volume across a declared universe from each member's latest quote, with a breadth bar; unusual
+    volume compares the latest *completed* session with the median of the 20 before it, so a partial session is never
+    compared with full ones, and traded value is not ranked across currencies without saying so; (2) a "Terminal"
+    density preset (26 px rows, tight panels, no entrance animation); (3) chart indicators — SMA 20/50/200, EMA 20,
+    Bollinger 20/2, Wilder RSI 14 and MACD 12/26/9 — computed in the browser from the plotted daily closes with
+    textbook definitions and hand-vector tests, RSI and MACD in their own panes, the choice remembered per browser;
+    (4) CSV download of the daily prices table (numbers and ISO dates only, so no spreadsheet formula can be
+    injected); (5) a performance overview on the Description tab: price return over 1W–5Y and YTD next to the market
+    benchmark, compound per-year figures for 3Y/5Y, and the 52-week range from daily closes — labelled as price
+    return because the provider's closes are not dividend-adjusted. Linked multi-panel layouts and full keyboard
+    coverage (the rest of T9) remain.

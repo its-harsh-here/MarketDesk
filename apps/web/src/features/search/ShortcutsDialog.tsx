@@ -13,6 +13,7 @@ const ROWS: [string[], string][] = [
   [["G", "O"], "Go to Overview"],
   [["G", "W"], "Go to Watchlists"],
   [["G", "F"], "Go to Screener"],
+  [["G", "V"], "Go to Movers"],
   [["G", "M"], "Go to Macro"],
   [["G", "P"], "Go to Portfolio"],
   [["G", "A"], "Go to Alerts"],

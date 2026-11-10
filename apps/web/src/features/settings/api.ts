@@ -55,7 +55,7 @@ export function applyTheme(theme: Prefs["theme"]) {
 }
 
 export function applyDensity(density: Prefs["density"]) {
-  if (density === "compact") document.documentElement.setAttribute("data-density", "compact");
+  if (density === "compact" || density === "terminal") document.documentElement.setAttribute("data-density", density);
   else document.documentElement.removeAttribute("data-density");
   try {
     localStorage.setItem("md-density", density);

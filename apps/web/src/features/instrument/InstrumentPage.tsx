@@ -27,6 +27,7 @@ import { useActions, useFundamentals, useSessions, useSnapshots } from "@/featur
 import { ComparePanel } from "@/features/market/ComparePanel";
 import { FilingsTab, FinancialsTab } from "@/features/research/ResearchTabs";
 import { EventsTab } from "@/features/terminal/EventsTab";
+import { NewsTab } from "@/features/terminal/NewsTab";
 import { PeersTab } from "@/features/screener/PeersTab";
 import { EarningsTab } from "@/features/earnings/EarningsTab";
 import { DescriptionTab } from "@/features/terminal/DescriptionTab";
@@ -229,6 +230,8 @@ export function InstrumentPage() {
         <FinancialsTab symbol={symbol} />
       ) : tab === "filings" ? (
         <FilingsTab symbol={symbol} />
+      ) : tab === "news" ? (
+        <NewsTab symbol={symbol} />
       ) : tab === "events" ? (
         <EventsTab symbol={symbol} />
       ) : tab === "earnings" ? (
@@ -349,6 +352,7 @@ const TABS = [
   { value: "description", label: "Description" },
   { value: "chart", label: "Chart" },
   { value: "financials", label: "Financials" },
+  { value: "news", label: "News" },
   { value: "filings", label: "Filings" },
   { value: "events", label: "Events" },
   { value: "earnings", label: "Earnings" },

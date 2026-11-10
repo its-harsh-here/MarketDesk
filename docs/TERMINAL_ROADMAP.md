@@ -99,7 +99,7 @@ splits with ex-dates, buyback announcements, AGM/board meetings where a permitte
 table (reported figures only). Consensus estimates and surprises are 🔒: shown only if the owner subscribes to a
 provider with a licence for personal use.
 
-### T5 — News and filings stream
+### T5 — News and filings stream — ✅ done 11 Nov 2026 (Yahoo headlines verified live after deploy; Indian announcements gated)
 A per-security stream of filings (plain-language 8-K item labels, 10-K/10-Q, proxy, 13D/G) and company press
 releases, deduplicated and timestamped; optional cited AI summaries using the M03 pipeline (Groq free tier), never
 uncited. Indian exchange announcements gated as in T3. No scraping of article bodies (headlines and links only, per
@@ -119,7 +119,7 @@ Extends M12: a per-security "context" strip (benchmark, sector index, currency, 
 economic calendar from official release schedules, and FRED series for the US; Indian series from RBI/MOSPI once
 verified. Each series shows vintage and release date.
 
-### T9 — Workstation UX
+### T9 — Workstation UX — 🟡 partly done 11 Nov 2026 (movers monitor, terminal density; linked layouts remain)
 Linked panels (one symbol drives chart, description, news and holders), saved multi-panel layouts (extends M14),
 a movers monitor across the owner's universes, keyboard-only navigation across every view, and a dense "terminal"
 density preset. Accessibility and the existing design tokens stay; no imitation of any vendor's look.

@@ -140,6 +140,17 @@ class CorporateAction:
     description: str
 
 
+@dataclass(frozen=True)
+class NewsItem:
+    """A provider headline: title, publisher and link only (no article body is fetched or stored)."""
+
+    title: str
+    publisher: str | None
+    url: str | None  # http(s) only; None for the fictitious sample headlines
+    published_at: datetime | None  # UTC
+    kind: str = "news"  # "news", "press_release", "video" … as the provider labels it
+
+
 class MarketDataProvider(Protocol):
     name: str
     is_sample: bool
@@ -155,6 +166,8 @@ class MarketDataProvider(Protocol):
     def corporate_actions(self, symbol: str) -> list[CorporateAction]: ...
 
     def annual_statements(self, symbol: str) -> AnnualStatements: ...
+
+    def news(self, symbol: str) -> list[NewsItem]: ...
 
     def validate_symbol(self, symbol: str) -> str: ...
 

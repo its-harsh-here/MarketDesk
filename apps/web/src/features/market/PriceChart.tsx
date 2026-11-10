@@ -15,6 +15,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Bar } from "@/lib/api/client";
 import { formatMoney, formatNumber, formatPercent, formatSessionDate, formatVolume, toNumber } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import { bollinger, ema, macd, rsi, sma, type IndicatorKey, type Series } from "@/lib/indicators";
 
 export type ChartKind = "line" | "candle";
 
@@ -62,6 +63,10 @@ function palette() {
     pos: cssVar("--positive") || "#43D3A0",
     neg: cssVar("--negative") || "#FF7185",
     accent: cssVar("--chart-line") || cssVar("--accent") || "#F2B84B",
+    a1: cssVar("--accent") || "#a78bfa",
+    a2: cssVar("--accent-3") || "#f472b6",
+    a3: cssVar("--warning") || "#f6c15b",
+    info: cssVar("--info") || "#7cb4ff",
     panel: cssVar("--panel") || "#141B25",
   };
 }
@@ -81,6 +86,7 @@ export function PriceChart({
   height = 360,
   className,
   resetSignal,
+  indicators = [],
 }: {
   bars: CleanBar[];
   kind: ChartKind;
@@ -89,11 +95,13 @@ export function PriceChart({
   height?: number;
   className?: string;
   resetSignal?: number;
+  indicators?: IndicatorKey[];
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const priceRef = useRef<ISeriesApi<SeriesType> | null>(null);
   const volRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const indRef = useRef<ISeriesApi<SeriesType>[]>([]);
   const [hover, setHover] = useState<CleanBar | null>(null);
   // Width of the plot area (chart minus the price axis), so the legend never runs under the axis labels.
   const [plotWidth, setPlotWidth] = useState(0);
@@ -134,6 +142,7 @@ export function PriceChart({
       chartRef.current = null;
       priceRef.current = null;
       volRef.current = null;
+      indRef.current = [];
     };
   }, []);
 
@@ -163,6 +172,10 @@ export function PriceChart({
       chart.removeSeries(volRef.current);
       volRef.current = null;
     }
+    for (const s of indRef.current) chart.removeSeries(s);
+    indRef.current = [];
+    // remove empty lower panes left by indicators that were switched off
+    for (let i = chart.panes().length - 1; i > 0; i--) chart.removePane(i);
     if (kind === "candle") {
       const s = chart.addSeries(CandlestickSeries, {
         upColor: p.pos,
@@ -197,9 +210,45 @@ export function PriceChart({
       );
       volRef.current = v;
     }
+    // ---- indicators: overlays on the price pane; RSI and MACD each get a pane below
+    const closes = bars.map((b) => b.close);
+    const line = (vals: Series, color: string, pane = 0, extra: object = {}) => {
+      const s = chart.addSeries(LineSeries, { color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, ...extra }, pane);
+      s.setData(bars.map((b, i) => (vals[i] === null ? { time: b.time as Time } : { time: b.time as Time, value: vals[i]! })));
+      indRef.current.push(s as unknown as ISeriesApi<SeriesType>);
+      return s;
+    };
+    const on = new Set(indicators);
+    if (on.has("sma20")) line(sma(closes, 20), p.a1);
+    if (on.has("sma50")) line(sma(closes, 50), p.a3);
+    if (on.has("sma200")) line(sma(closes, 200), p.a2);
+    if (on.has("ema20")) line(ema(closes, 20), p.info, 0, { lineStyle: 2 });
+    if (on.has("bb")) {
+      const b = bollinger(closes);
+      line(b.upper, hexAlpha(p.a1, 0.7));
+      line(b.mid, hexAlpha(p.a1, 0.45), 0, { lineStyle: 2 });
+      line(b.lower, hexAlpha(p.a1, 0.7));
+    }
+    let pane = 1;
+    if (on.has("rsi")) {
+      const s = line(rsi(closes), p.a1, pane, { lineWidth: 2, lastValueVisible: true, title: "RSI 14" });
+      s.createPriceLine({ price: 70, color: hexAlpha(p.neg, 0.6), lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: "" });
+      s.createPriceLine({ price: 30, color: hexAlpha(p.pos, 0.6), lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: "" });
+      pane++;
+    }
+    if (on.has("macd")) {
+      const m = macd(closes);
+      const h = chart.addSeries(HistogramSeries, { priceLineVisible: false, lastValueVisible: false }, pane);
+      h.setData(bars.map((b, i) => (m.hist[i] === null ? { time: b.time as Time } : { time: b.time as Time, value: m.hist[i]!, color: hexAlpha(m.hist[i]! >= 0 ? p.pos : p.neg, 0.5) })));
+      indRef.current.push(h as unknown as ISeriesApi<SeriesType>);
+      line(m.macd, p.info, pane, { lineWidth: 2, title: "MACD" });
+      line(m.signal, p.a3, pane, { title: "signal" });
+      pane++;
+    }
+    for (let i = 1; i < chart.panes().length; i++) chart.panes()[i].setHeight(Math.round(height * 0.22));
     chart.priceScale("right").applyOptions({ scaleMargins: { top: 0.08, bottom: showVolume ? 0.22 : 0.08 } });
     chart.timeScale().fitContent();
-  }, [bars, kind, showVolume, theme]);
+  }, [bars, kind, showVolume, theme, indicators, height]);
 
   useEffect(() => {
     chartRef.current?.timeScale().fitContent();

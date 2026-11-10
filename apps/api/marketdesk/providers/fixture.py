@@ -28,6 +28,7 @@ from marketdesk.providers.base import (
     Fundamentals,
     HistoryRange,
     InstrumentRef,
+    NewsItem,
     PriceHistory,
     ProviderError,
     QuoteSnapshot,
@@ -286,6 +287,31 @@ class FixtureProvider:
         if not periods:
             raise ProviderError("missing", "The sample dataset has no annual statements for this instrument.")
         return AnnualStatements(self._ref(symbol), periods, "Sample annual statements (fictitious)", [])
+
+    def news(self, symbol: str) -> list[NewsItem]:
+        """Sample headlines for the fictitious companies, written from the dataset's own dividends and annual
+        statements (no links: there is no article behind them)."""
+        self._check_fault()
+        symbol = self.validate_symbol(symbol)
+        name = self.dataset.instruments[symbol].get("name") or symbol
+        wire = "Sample wire (fictitious)"
+        out = []
+        for a in self.corporate_actions(symbol):
+            verb = "declares" if a.kind == "DIVIDEND" else "announces"
+            when = datetime.combine(a.action_date, time(4, 30), UTC)
+            out.append(NewsItem(f"{name} {verb} {a.description.lower()}", wire, None, when, "press_release"))
+        try:
+            st = self.annual_statements(symbol)
+            for p in st.periods[:3]:
+                when = datetime.combine(p.period_end + relativedelta(days=45), time(11, 0), UTC)
+                title = f"{name} reports results for the year ended {p.period_end:%d %b %Y}"
+                out.append(NewsItem(title, wire, None, when, "news"))
+        except ProviderError:
+            pass
+        cursor = datetime.combine(self.cursor_date(), time(23, 59), UTC)
+        return sorted(
+            (n for n in out if n.published_at and n.published_at <= cursor), key=lambda n: n.published_at, reverse=True
+        )
 
     def corporate_actions(self, symbol: str) -> list[CorporateAction]:
         self._check_fault()

@@ -609,7 +609,7 @@ class JournalPage(Model):
 # ----------------------------------------------------------------------------- system
 class PrefsOut(Model):
     theme: Literal["dark", "light", "system"] = "dark"
-    density: Literal["comfortable", "compact"] = "comfortable"
+    density: Literal["comfortable", "compact", "terminal"] = "comfortable"
     default_watchlist_id: int | None = None
     chart_symbol: str | None = None
     display_timezone: str = "Asia/Kolkata"
@@ -618,7 +618,7 @@ class PrefsOut(Model):
 
 class PrefsPatch(Model):
     theme: Literal["dark", "light", "system"] | None = None
-    density: Literal["comfortable", "compact"] | None = None
+    density: Literal["comfortable", "compact", "terminal"] | None = None
     default_watchlist_id: int | None = None
     chart_symbol: str | None = Field(default=None, max_length=32)
     display_timezone: str | None = Field(default=None, max_length=64)
@@ -628,7 +628,7 @@ class PrefsPatch(Model):
 class WorkspaceIn(Model):
     name: str = Field(min_length=1, max_length=40)
     start: str = Field(default="/", max_length=32)
-    density: Literal["comfortable", "compact"] = "comfortable"
+    density: Literal["comfortable", "compact", "terminal"] = "comfortable"
     default_watchlist_id: int | None = None  # None: keep the current default
     chart_symbol: str | None = Field(default=None, max_length=32)  # None: keep the current chart symbol
 

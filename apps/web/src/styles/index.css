@@ -199,6 +199,19 @@
   --row-h: 32px;
   --panel-pad: 12px;
 }
+/* terminal: the densest preset — short rows, tight panels, smaller type, no entrance animations */
+[data-density="terminal"] {
+  --row-h: 26px;
+  --panel-pad: 8px;
+  --radius-panel: 8px;
+}
+[data-density="terminal"] html,
+html[data-density="terminal"] { font-size: 13px; }
+[data-density="terminal"] main > div { gap: 8px !important; padding: 8px !important; }
+[data-density="terminal"] .md-panel > header { min-height: 34px; padding-top: 4px; padding-bottom: 4px; }
+[data-density="terminal"] table { font-size: 12px; }
+[data-density="terminal"] .md-panel,
+[data-density="terminal"] tbody tr { animation: none; }
 
 @keyframes md-pulse {
   0%,

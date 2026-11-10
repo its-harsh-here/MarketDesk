@@ -26,6 +26,7 @@ from marketdesk.providers.base import (
     Fundamentals,
     HistoryRange,
     InstrumentRef,
+    NewsItem,
     PriceHistory,
     ProviderError,
     QuoteSnapshot,
@@ -538,6 +539,55 @@ class YahooProvider:
             return sorted(out, key=lambda a: a.action_date, reverse=True)
 
         return self._call(run, "corporate actions")
+
+    def news(self, symbol: str) -> list[NewsItem]:
+        symbol = self.validate_symbol(symbol)
+
+        def run():
+            t = self._yf.Ticker(symbol)
+            raw = t.get_news(count=30) if hasattr(t, "get_news") else t.news
+            return normalize_news(raw)
+
+        return self._call(run, "news")
+
+
+def normalize_news(raw: Any, limit: int = 30) -> list[NewsItem]:
+    """yfinance news items → NewsItem. Handles the 0.2.x flat shape (title, publisher, link,
+    providerPublishTime) and the 1.x shape ({"content": {title, pubDate, provider.displayName,
+    canonicalUrl.url, clickThroughUrl.url, contentType}}). Items without a title or an http(s) link are dropped;
+    no summary or body is kept."""
+    out: list[NewsItem] = []
+    for item in raw if isinstance(raw, list) else []:
+        if not isinstance(item, dict):
+            continue
+        c = item.get("content") if isinstance(item.get("content"), dict) else item
+        title = str(c.get("title") or "").strip()
+        url = None
+        for key in ("canonicalUrl", "clickThroughUrl"):
+            v = c.get(key)
+            if isinstance(v, dict) and v.get("url"):
+                url = str(v["url"])
+                break
+        url = url or c.get("link") or item.get("link")
+        if not title or not isinstance(url, str) or not url.lower().startswith(("https://", "http://")):
+            continue
+        prov = c.get("provider")
+        publisher = prov.get("displayName") if isinstance(prov, dict) else c.get("publisher")
+        when: datetime | None = None
+        ts = c.get("pubDate") or c.get("displayTime") or c.get("providerPublishTime")
+        try:
+            if isinstance(ts, (int, float)):
+                when = datetime.fromtimestamp(ts, UTC)
+            elif isinstance(ts, str) and ts:
+                when = datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(UTC)
+        except (ValueError, OSError, OverflowError):
+            when = None
+        kind = str(c.get("contentType") or c.get("type") or "news").lower()
+        kind = {"story": "news", "article": "news"}.get(kind, kind)
+        out.append(NewsItem(title[:300], (str(publisher)[:80] if publisher else None), url[:1000], when, kind))
+        if len(out) >= limit:
+            break
+    return out
 
 
 def _http_status(exc: BaseException) -> int | None:

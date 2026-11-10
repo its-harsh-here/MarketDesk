@@ -900,3 +900,80 @@ test("interaction polish: keyboard rows, undo after removing a symbol, palette r
   await expect(fades).toHaveCount(1); // scrolled to the end: only the left fade remains
   await expect(page.getByRole("tab", { name: "Valuation" })).toBeInViewport();
 });
+
+test("news: CN opens the stream, filters, sample headlines without links, cited-AI entry point", async ({ page }) => {
+  await page.goto("/instrument/SX%3AAURORA");
+  await ready(page);
+  await page.keyboard.press(`${MOD}+k`);
+  await page.getByRole("dialog", { name: "Command palette" }).getByRole("combobox").fill("cn");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/tab=news/);
+  const panel = page.getByRole("region", { name: "News and filings" });
+  const list = panel.getByRole("list", { name: "News and filings for SX:AURORA, newest first" });
+  await expect(list.getByText(/declares dividend/i).first()).toBeVisible({ timeout: 30_000 });
+  await expect(list.getByRole("link")).toHaveCount(0); // sample headlines have no article behind them
+  await expect(panel.getByText("Sample wire (fictitious)").first()).toBeVisible();
+  await panel.getByRole("radiogroup", { name: "Show" }).getByRole("radio", { name: /^Filings/ }).click();
+  await expect(panel.getByText("Nothing of this kind")).toBeVisible();
+  await panel.getByRole("radiogroup", { name: "Show" }).getByRole("radio", { name: /^All/ }).click();
+  const about = page.getByRole("region", { name: "About this stream" });
+  await expect(about.getByText(/Indian listings need a permitted source/)).toBeVisible();
+  await about.getByRole("button", { name: "Cited AI summary of recent filings" }).click();
+  await expect(page.getByRole("dialog", { name: "Research SX:AURORA" }).getByRole("radio", { name: "Catalysts" })).toHaveAttribute("aria-checked", "true");
+});
+
+
+test("movers: MOV code, breadth, gainers and losers open the instrument; terminal density preset", async ({ page }) => {
+  await page.goto("/");
+  await ready(page);
+  const csrf = (await (await page.request.get("/api/auth/session")).json()).csrf_token;
+  await page.request.post("/api/workspace/starter-watchlist", { headers: { "x-csrf-token": csrf } });
+  await page.keyboard.press(`${MOD}+k`);
+  await page.getByRole("dialog", { name: "Command palette" }).getByRole("combobox").fill("mov");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/movers/);
+  await expect(page.getByRole("img", { name: /\d+ advancing, \d+ declining, \d+ unchanged/ })).toBeVisible({ timeout: 30_000 });
+  const gainers = page.getByRole("region", { name: "Top gainers" });
+  const losers = page.getByRole("region", { name: "Top losers" });
+  await expect(gainers.getByRole("button").first()).toBeVisible();
+  await expect(losers.getByRole("button").first()).toBeVisible();
+  const first = (await losers.getByRole("button").first().innerText()).match(/SX:[A-Z0-9]+/)![0];
+  await losers.getByRole("button").first().click();
+  await expect(page).toHaveURL(new RegExp(`/instrument/${encodeURIComponent(first)}`));
+
+  await page.goto("/settings");
+  await page.getByRole("radiogroup", { name: "Table density" }).getByRole("radio", { name: "Terminal" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-density", "terminal");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-density", "terminal");
+  await page.getByRole("radiogroup", { name: "Table density" }).getByRole("radio", { name: "Comfortable" }).click();
+  await expect(page.locator("html")).not.toHaveAttribute("data-density", /.+/);
+});
+
+test("quote page extras: performance overview vs benchmark, chart indicators in their own panes, CSV of daily prices", async ({ page }) => {
+  await page.goto("/instrument/SX%3AAURORA");
+  await ready(page);
+  const perf = page.getByRole("region", { name: "Performance overview" });
+  const table = perf.getByRole("table", { name: "Price return of SX:AURORA and its benchmark by period" });
+  await expect(table.getByRole("rowheader", { name: /^1 year/ })).toBeVisible({ timeout: 30_000 });
+  await expect(perf.getByText(/vs .* · to 30 Jun 2026/)).toBeVisible();
+  await expect(perf.getByRole("img", { name: /from the 52-week high/ })).toBeVisible();
+
+  const chart = page.getByRole("region", { name: "Price history" });
+  await chart.getByRole("button", { name: /^Indicators/ }).click();
+  await page.getByRole("menuitemcheckbox", { name: /SMA 50/ }).click();
+  await page.getByRole("menuitemcheckbox", { name: /RSI 14/ }).click();
+  await page.keyboard.press("Escape");
+  await expect(chart.getByRole("button", { name: /^Indicators 2/ })).toBeVisible();
+  await page.reload(); // the choice is remembered in this browser
+  await expect(page.getByRole("region", { name: "Price history" }).getByRole("button", { name: /^Indicators 2/ })).toBeVisible();
+
+  await page.getByRole("region", { name: "Price history" }).getByRole("button", { name: "Show data table" }).click();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download these prices as CSV" }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe("SX_AURORA_1Y_daily.csv");
+  const text = await (await import("node:fs/promises")).readFile(await file.path(), "utf8");
+  expect(text.split("\n")[0]).toBe("session,open,high,low,close,volume");
+  expect(text.split("\n").length).toBeGreaterThan(200);
+});

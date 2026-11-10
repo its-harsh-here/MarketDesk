@@ -40,6 +40,7 @@ const overview = page(() => import("@/features/overview/OverviewPage"), "Overvie
 // The watchlist dialogs are global, so this module is in the main chunk anyway.
 const watchlists = <WatchlistsPage />;
 const screener = page(() => import("@/features/screener/ScreenerPage"), "ScreenerPage");
+const movers = page(() => import("@/features/movers/MoversPage"), "MoversPage");
 const macro = page(() => import("@/features/macro/MacroPage"), "MacroPage");
 const lab = page(() => import("@/features/lab/LabPage"), "LabPage");
 const instrument = page(() => import("@/features/instrument/InstrumentPage"), "InstrumentPage");
@@ -163,6 +164,7 @@ const router = createBrowserRouter([
           { index: true, element: overview },
           { path: "watchlists", element: watchlists },
           { path: "screener", element: screener },
+          { path: "movers", element: movers },
           { path: "macro", element: macro },
           { path: "lab", element: lab },
           { path: "instrument/:symbol", element: instrument },

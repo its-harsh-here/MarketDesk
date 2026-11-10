@@ -11,8 +11,9 @@ from marketdesk.api.deps import market_dep, require_reader, settings_dep
 from marketdesk.asyncbridge import off_event_loop
 from marketdesk.config import Settings
 from marketdesk.db import get_db
-from marketdesk.services import description, financial_view, security_risk
+from marketdesk.services import description, financial_view, news_stream, perf_overview, security_risk
 from marketdesk.services import events as ev
+from marketdesk.services import movers as mv
 from marketdesk.services.instruments import resolve_instrument
 from marketdesk.services.market import MarketDataService
 
@@ -117,3 +118,42 @@ async def earnings_history(
     """Reported revenue, net income and diluted EPS by period with year-on-year change; no estimates (T4)."""
     inst = await resolve_instrument(db, market, symbol)
     return ev.jsonable(await ev.earnings_history(db, market, request.app.state.research, inst))
+
+
+@router.get("/news")
+@off_event_loop
+async def news(
+    request: Request,
+    symbol: str = Query(min_length=1, max_length=32),
+    db: Session = Depends(get_db),
+    market: MarketDataService = Depends(market_dep),
+):
+    """Filings (plain-language 8-K items) and provider headlines for one security, newest first; links only (T5)."""
+    inst = await resolve_instrument(db, market, symbol)
+    return await news_stream.stream(db, market, request.app.state.research, inst)
+
+
+@router.get("/movers")
+@off_event_loop
+async def movers(
+    universe: str = Query(default="watchlists", pattern=r"^(watchlists|holdings|watchlist:\d+|list:\d+)$"),
+    db: Session = Depends(get_db),
+    market: MarketDataService = Depends(market_dep),
+):
+    """Gainers, losers, most active, unusual volume and breadth across a declared universe (T9)."""
+    kind, _, uid = universe.partition(":")
+    spec = {"kind": kind, **({"id": int(uid)} if uid else {})}
+    return ev.jsonable(await mv.movers(db, market, spec))
+
+
+@router.get("/performance")
+@off_event_loop
+async def performance(
+    symbol: str = Query(min_length=1, max_length=32),
+    db: Session = Depends(get_db),
+    market: MarketDataService = Depends(market_dep),
+    settings: Settings = Depends(settings_dep),
+):
+    """Price return over 1W–5Y and YTD against the market benchmark, and the 52-week range."""
+    inst = await resolve_instrument(db, market, symbol)
+    return ev.jsonable(await perf_overview.overview(market, settings, inst))

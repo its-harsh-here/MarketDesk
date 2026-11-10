@@ -37,9 +37,16 @@ def statements(period="annual"):
     lines = []
     for key, (unit, kind, vals) in DATA.items():
         values = [
-            {"value": D(str(v)), "unit": unit, "end": ENDS[i],
-             "start": date(ENDS[i].year, 1, 1) if kind == "d" else None,
-             "form": "10-K", "filed": FILED[ENDS[i]], "accession": f"a{i}", "prior": []}  # fmt: skip
+            {
+                "value": D(str(v)),
+                "unit": unit,
+                "end": ENDS[i],
+                "start": date(ENDS[i].year, 1, 1) if kind == "d" else None,
+                "form": "10-K",
+                "filed": FILED[ENDS[i]],
+                "accession": f"a{i}",
+                "prior": [],
+            }  # fmt: skip
             for i, v in vals.items()
         ]
         lines.append({"key": key, "values": values})

@@ -1045,6 +1045,23 @@ Settings → Appearance → Visual effects (Full/Calm, per browser); reduced mot
 | Playwright | 31 journeys pass, including the axe accessibility check (one journey now waits for the tab selection before pressing a key) |
 | Visual QA | Overview, Instrument, Portfolio, Settings, transaction dialog at 1440 px; Overview and Watchlists at 390 px; Overview in light theme; no horizontal overflow, no console errors (`docs/screenshots/overview-*.png`, `instrument-1440.png`) |
 
+## Terminal T5, movers, density and quote-page tools (11 Nov 2026)
+- **T5 News tab** (`GET /api/terminal/news`, `services/news_stream.py`, provider `news()`): SEC filings with 8-K items in
+  plain words, plus provider headlines (title, publisher, time, link — no article text), de-duplicated, grouped by
+  day, filterable (headlines / releases / filings / key events), cited-AI entry point. Codes CN (stream) and FIL
+  (filings list). Sample mode: headlines written from the fictitious dataset's dividends and results, no links.
+- **Movers** (`GET /api/terminal/movers`, `/movers`, code MOV, g v): breadth, gainers, losers, most active, unusual
+  volume (completed sessions only). **Terminal density** preset in Settings.
+- **Chart**: indicators (SMA/EMA/Bollinger overlays, RSI and MACD panes) and CSV download of the daily table.
+- **Performance overview** (`GET /api/terminal/performance`): 1W–5Y and YTD price return vs the benchmark, 52-week range.
+- **Schema:** none (news cached in the market cache; density value widened in the API schema only).
+
+| Check | Result |
+| --- | --- |
+| pytest SQLite | 333 passed, 3 skipped (new: T5 6 — both yfinance news shapes, unsafe links dropped, cache round trip, 8-K labels, de-duplication, fake-SEC stream, API; T9 3; performance overview 3) |
+| tsc, `eslint .`, vitest | clean; 45 (indicators: SMA/EMA/Bollinger/RSI/MACD hand vectors) |
+| Playwright | 34 journeys pass (new: news, movers + terminal density, quote-page extras) |
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -1052,4 +1069,4 @@ Settings → Appearance → Visual effects (Full/Calm, per browser); reduced mot
 - Portfolio has INR and USD accounts; returns (M09) use daily closes, benchmarks are price indices, and cash earns no interest.
 
 ## Next concrete action
-The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Terminal roadmap: T1, T2, T6 and T4 done; next T5 (news and filings stream) per `docs/TERMINAL_ROADMAP.md`. Owner inputs open: FINRA API credentials (short interest), Alpaca (M04), FRED key (M12/T8). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
+The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Terminal roadmap: T1, T2, T4, T5 and T6 done, T9 partly; remaining T3 (needs an India ownership source), T7 (gated on an options entitlement), T8 (needs a FRED key), T10 (stretch). Owner inputs open: FINRA API credentials (short interest), Alpaca (M04), FRED key (M12/T8). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.

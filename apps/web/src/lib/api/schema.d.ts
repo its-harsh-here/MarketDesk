@@ -1864,6 +1864,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/terminal/news": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * News
+         * @description Filings (plain-language 8-K items) and provider headlines for one security, newest first; links only (T5).
+         */
+        get: operations["news_api_terminal_news_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/terminal/movers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Movers
+         * @description Gainers, losers, most active, unusual volume and breadth across a declared universe (T9).
+         */
+        get: operations["movers_api_terminal_movers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2972,7 +3012,7 @@ export interface components {
              * @default comfortable
              * @enum {string}
              */
-            density: "comfortable" | "compact";
+            density: "comfortable" | "compact" | "terminal";
             /** Default Watchlist Id */
             default_watchlist_id?: number | null;
             /** Chart Symbol */
@@ -2994,7 +3034,7 @@ export interface components {
             /** Theme */
             theme?: ("dark" | "light" | "system") | null;
             /** Density */
-            density?: ("comfortable" | "compact") | null;
+            density?: ("comfortable" | "compact" | "terminal") | null;
             /** Default Watchlist Id */
             default_watchlist_id?: number | null;
             /** Chart Symbol */
@@ -3626,7 +3666,7 @@ export interface components {
              * @default comfortable
              * @enum {string}
              */
-            density: "comfortable" | "compact";
+            density: "comfortable" | "compact" | "terminal";
             /** Default Watchlist Id */
             default_watchlist_id?: number | null;
             /** Chart Symbol */
@@ -3651,7 +3691,7 @@ export interface components {
              * @default comfortable
              * @enum {string}
              */
-            density: "comfortable" | "compact";
+            density: "comfortable" | "compact" | "terminal";
             /** Default Watchlist Id */
             default_watchlist_id?: number | null;
             /** Chart Symbol */
@@ -3671,7 +3711,7 @@ export interface components {
              * @default comfortable
              * @enum {string}
              */
-            density: "comfortable" | "compact";
+            density: "comfortable" | "compact" | "terminal";
             /** Default Watchlist Id */
             default_watchlist_id?: number | null;
             /** Chart Symbol */
@@ -7661,6 +7701,68 @@ export interface operations {
         parameters: {
             query: {
                 symbol: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    news_api_terminal_news_get: {
+        parameters: {
+            query: {
+                symbol: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    movers_api_terminal_movers_get: {
+        parameters: {
+            query?: {
+                universe?: string;
             };
             header?: never;
             path?: never;

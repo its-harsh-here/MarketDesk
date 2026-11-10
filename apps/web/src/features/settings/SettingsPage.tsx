@@ -84,7 +84,7 @@ function SettingsBody({ prefs }: { prefs: Prefs }) {
                 applyDensity(d);
                 if (!readOnly) save({ density: d });
               }}
-              options={[{ value: "comfortable", label: "Comfortable" }, { value: "compact", label: "Compact" }]}
+              options={[{ value: "comfortable", label: "Comfortable" }, { value: "compact", label: "Compact" }, { value: "terminal", label: "Terminal" }]}
             />
           </div>
           <div>

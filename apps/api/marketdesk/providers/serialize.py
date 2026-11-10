@@ -13,6 +13,7 @@ from marketdesk.providers.base import (
     DailyBar,
     Fundamentals,
     InstrumentRef,
+    NewsItem,
     PriceHistory,
     QuoteSnapshot,
 )
@@ -168,6 +169,16 @@ def actions_from(v: list) -> list[CorporateAction]:
     return [CorporateAction(date.fromisoformat(a[0]), a[1], Decimal(a[2]), a[3]) for a in v]
 
 
+def news_to(items: list[NewsItem]) -> list:
+    return [
+        [n.title, n.publisher, n.url, n.published_at.isoformat() if n.published_at else None, n.kind] for n in items
+    ]
+
+
+def news_from(v: list) -> list[NewsItem]:
+    return [NewsItem(a[0], a[1], a[2], datetime.fromisoformat(a[3]) if a[3] else None, a[4]) for a in v]
+
+
 def search_to(refs: list[InstrumentRef]) -> list:
     return [ref_to(r) for r in refs]
 
@@ -183,4 +194,5 @@ CODECS = {
     "statements": (statements_to, statements_from),
     "actions": (actions_to, actions_from),
     "search": (search_to, search_from),
+    "news": (news_to, news_from),
 }
