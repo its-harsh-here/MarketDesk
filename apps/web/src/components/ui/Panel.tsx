@@ -24,7 +24,7 @@ export function Panel({ title, titleId, meta, actions, children, className, body
   return (
     <Tag
       aria-labelledby={title && titleId ? titleId : undefined}
-      className={cn("relative flex min-w-0 flex-col rounded-[var(--radius-panel)] border border-line-subtle bg-panel", className)}
+      className={cn("md-panel relative flex min-w-0 flex-col rounded-[var(--radius-panel)] border border-line-subtle bg-panel", className)}
     >
       {(title || actions || meta) && (
         <header className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 border-b border-line-subtle px-[var(--panel-pad)] py-2">
@@ -38,7 +38,7 @@ export function Panel({ title, titleId, meta, actions, children, className, body
           </div>
           {refreshing && (
             <span className="flex items-center gap-1.5 text-xs text-fg-3" role="status">
-              <span className="size-1.5 rounded-full bg-info" style={{ animation: "md-pulse 1.2s ease-in-out infinite" }} />
+              <span className="fx-live size-1.5 rounded-full bg-info" />
               Refreshing
             </span>
           )}

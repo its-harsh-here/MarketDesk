@@ -57,6 +57,8 @@ Frontend features own their components and API hooks. Backend routes validate an
 
 ## 5. Visual direction — specific design requirements
 
+**Owner directive (11 Nov 2026, docs/DECISIONS.md #55):** the look below is superseded by the animated "aurora glass" identity (violet/cyan palette, glass panels, glows, motion). Layout, accessibility, typography, numeric alignment and reduced-motion rules in this section still apply; the palette, the "avoid glows/gradients/glass/animation loops" list and the 120–180ms motion limit do not. Tokens live in `apps/web/src/styles/index.css`.
+
 Create an original financial workstation with a charcoal canvas, restrained amber highlights, crisp typography, and dense but readable tables. Use Bloomberg only as inspiration for information density and keyboard speed; do not copy its branding. The main entry screen is the functional Overview, not a marketing landing page.
 
 Use these initial design tokens, adjusting only for measured contrast:

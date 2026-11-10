@@ -1,5 +1,5 @@
 import { Download, RotateCcw, SkipForward, Zap, ZapOff } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { Panel } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
@@ -13,6 +13,7 @@ import { formatInstant, formatRelative, formatSessionDate } from "@/lib/format";
 import { useWatchlists } from "@/features/watchlists/api";
 import { useAiStatus } from "@/features/ai/api";
 import { OfflinePanel, UsagePanel, WorkspacesPanel } from "@/features/workspace/SettingsPanels";
+import { applyFx, readFx, withReveal, type FxMode } from "@/lib/fx";
 import { applyDensity, applyTheme, useFixture, useFixtureAction, usePatchPrefs, usePrefs, useSession, useStatus } from "./api";
 
 const TIMEZONES = ["Asia/Kolkata", "UTC", "Asia/Singapore", "Asia/Dubai", "Europe/London", "America/New_York"];
@@ -33,6 +34,7 @@ export function SettingsPage() {
 }
 
 function SettingsBody({ prefs }: { prefs: Prefs }) {
+  const [fx, setFx] = useState<FxMode>(readFx);
   const patch = usePatchPrefs();
   const { data: lists } = useWatchlists();
   const { data: status } = useStatus();
@@ -66,7 +68,7 @@ function SettingsBody({ prefs }: { prefs: Prefs }) {
               size="md"
               value={prefs.theme}
               onChange={(t) => {
-                applyTheme(t);
+                withReveal(() => applyTheme(t));
                 if (!readOnly) save({ theme: t }, "Theme saved.");
               }}
               options={[{ value: "dark", label: "Dark" }, { value: "light", label: "Light" }, { value: "system", label: "System" }]}
@@ -84,6 +86,22 @@ function SettingsBody({ prefs }: { prefs: Prefs }) {
               }}
               options={[{ value: "comfortable", label: "Comfortable" }, { value: "compact", label: "Compact" }]}
             />
+          </div>
+          <div>
+            <div className="mb-2 text-[13px] font-medium text-fg-2">Visual effects</div>
+            <Segmented
+              label="Visual effects"
+              size="md"
+              value={fx}
+              onChange={(m) => {
+                applyFx(m);
+                setFx(m);
+              }}
+              options={[{ value: "full", label: "Full" }, { value: "calm", label: "Calm" }]}
+            />
+            <p className="mt-1.5 text-xs text-fg-3">
+              Full shows the animated background, glass panels and motion. Calm turns them off for this browser. Your system's reduced-motion setting is always respected.
+            </p>
           </div>
         </div>
       </Panel>

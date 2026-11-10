@@ -1,7 +1,7 @@
 import * as DM from "@radix-ui/react-dropdown-menu";
 import * as RD from "@radix-ui/react-dialog";
 import { Bell, BookOpen, Briefcase, Ellipsis, FlaskConical, Funnel, Globe, Keyboard, LayoutDashboard, ListChecks, LogOut, Moon, Search, Settings, Sun, UserRound } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDialogs } from "./dialogs";
@@ -18,6 +18,7 @@ import { api } from "@/lib/api/client";
 import { formatInstant, formatMoney, formatRelative, formatSessionDate } from "@/lib/format";
 import { isTypingTarget, useGlobalKeys } from "@/lib/hooks";
 import { cn } from "@/lib/cn";
+import { usePageEnter, withReveal } from "@/lib/fx";
 import { useSwitchWorkspace, WorkspaceMenu } from "@/features/workspace/WorkspaceMenu";
 import { useWorkspaces } from "@/features/workspace/api";
 import { OfflineBanner } from "@/features/workspace/OfflineView";
@@ -36,13 +37,21 @@ const NAV = [
 ];
 
 function Logo({ compact }: { compact?: boolean }) {
+  const gid = useId(); // two logos exist (sidebar and phone header); a gradient inside a hidden svg does not paint
   return (
-    <Link to="/" className="flex items-center gap-2.5 rounded-md" aria-label="MarketDesk overview">
-      <svg viewBox="0 0 32 32" className="size-7 shrink-0" aria-hidden>
-        <rect width="32" height="32" rx="7" fill="var(--elevated)" stroke="var(--border)" />
-        <path d="M7 21.5 12.5 15l4 3.5L25 9.5" fill="none" stroke="var(--accent)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    <Link to="/" className="md-logo flex items-center gap-2.5 rounded-md" aria-label="MarketDesk overview">
+      <svg viewBox="0 0 32 32" className="md-logo-mark size-7 shrink-0" aria-hidden>
+        <defs>
+          <linearGradient id={gid} x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stopColor="var(--accent)" />
+            <stop offset="1" stopColor="var(--accent-2)" />
+          </linearGradient>
+        </defs>
+        <rect width="32" height="32" rx="9" fill="var(--elevated)" stroke={`url(#${gid})`} strokeOpacity="0.6" />
+        <path d="M7 21.5 12.5 15l4 3.5L25 9.5" fill="none" stroke={`url(#${gid})`} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="25" cy="9.5" r="1.6" fill="var(--accent-2)" />
       </svg>
-      {!compact && <span className="text-[15px] font-semibold tracking-tight text-fg">MarketDesk</span>}
+      {!compact && <span className="md-title text-[15px] font-semibold tracking-tight">MarketDesk</span>}
     </Link>
   );
 }
@@ -50,7 +59,7 @@ function Logo({ compact }: { compact?: boolean }) {
 function Sidebar() {
   const { data: status } = useStatus();
   return (
-    <nav aria-label="Primary" className="sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-line-subtle bg-sidebar md:flex md:w-16 xl:w-52">
+    <nav aria-label="Primary" className="md-sidebar sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-line-subtle md:flex md:w-16 xl:w-52">
       <div className="flex h-16 items-center px-4 max-xl:justify-center">
         <span className="max-xl:hidden"><Logo /></span>
         <span className="xl:hidden"><Logo compact /></span>
@@ -64,8 +73,8 @@ function Sidebar() {
               title={label}
               className={({ isActive }) =>
                 cn(
-                  "group flex h-10 items-center gap-3 rounded-[var(--radius-control)] px-3 text-[13px] font-medium transition-colors duration-150 max-xl:justify-center",
-                  isActive ? "bg-elevated text-fg ring-1 ring-line-subtle" : "text-fg-2 hover:bg-hover hover:text-fg",
+                  "md-nav group flex h-10 items-center gap-3 rounded-[var(--radius-control)] px-3 text-[13px] font-medium max-xl:justify-center",
+                  isActive ? "text-fg" : "text-fg-2 hover:bg-hover/60 hover:text-fg",
                 )
               }
             >
@@ -84,7 +93,7 @@ function Sidebar() {
           to="/settings"
           title="Settings"
           className={({ isActive }) =>
-            cn("flex h-10 items-center gap-3 rounded-[var(--radius-control)] px-3 text-[13px] font-medium max-xl:justify-center", isActive ? "bg-elevated text-fg" : "text-fg-2 hover:bg-hover hover:text-fg")
+            cn("md-nav flex h-10 items-center gap-3 rounded-[var(--radius-control)] px-3 text-[13px] font-medium max-xl:justify-center", isActive ? "text-fg" : "text-fg-2 hover:bg-hover/60 hover:text-fg")
           }
         >
           <Settings aria-hidden className="size-4 shrink-0 text-fg-3" />
@@ -111,7 +120,7 @@ function ProviderStatus() {
       <Tooltip content={<span>{status.dataset_disclaimer} Dataset date {formatSessionDate(status.dataset_date)}. Prices never update to the present.</span>}>
         <button type="button" className="inline-flex" aria-label={`Sample data, dataset date ${formatSessionDate(status.dataset_date)}`}>
           <Pill tone="info" className="gap-1.5">
-            <span className="size-1.5 rounded-full bg-info" aria-hidden />
+            <span className="fx-live size-1.5 rounded-full bg-info" aria-hidden />
             Sample data
             <span className="num font-normal text-fg-2 max-sm:hidden">· {formatSessionDate(status.dataset_date)}</span>
           </Pill>
@@ -132,7 +141,7 @@ function ProviderStatus() {
     >
       <button type="button" className="inline-flex" aria-label="Provider status">
         <Pill tone={degraded ? "warn" : "neutral"} className="gap-1.5">
-          <span className={cn("size-1.5 rounded-full", degraded ? "bg-warn" : "bg-pos")} aria-hidden />
+          <span className={cn("fx-live size-1.5 rounded-full", degraded ? "bg-warn" : "bg-pos")} aria-hidden />
           Yahoo
           <span className="font-normal text-fg-3 max-sm:hidden">· {degraded ? "degraded" : "connected"}</span>
         </Pill>
@@ -213,7 +222,7 @@ function UserMenu() {
             className={item}
             onSelect={() => {
               const next = isLight ? "dark" : "light";
-              applyTheme(next);
+              withReveal(() => applyTheme(next));
               if (!session?.read_only) patch.mutate({ theme: next });
             }}
           >
@@ -252,17 +261,17 @@ function Topbar() {
   const title = NAV.find((n) => (n.end ? loc.pathname === n.to : loc.pathname.startsWith(n.to)))?.label ??
     (loc.pathname.startsWith("/instrument") ? "Instrument" : loc.pathname.startsWith("/settings") ? "Settings" : "");
   return (
-    <header className="safe-top sticky top-0 z-30 border-b border-line-subtle bg-canvas/95 backdrop-blur-sm">
+    <header className="md-topbar safe-top sticky top-0 z-30 border-b border-line-subtle">
       <div className="flex h-14 items-center gap-2 px-4 md:h-16 md:gap-3 md:px-6">
         <span className="md:hidden"><Logo compact /></span>
         <div className="min-w-0 shrink-0 max-md:hidden">
           <WorkspaceMenu />
-          <div className="truncate text-[15px] font-semibold text-fg">{title}</div>
+          <div key={title} className="fx-reveal truncate text-[15px] font-semibold text-fg">{title}</div>
         </div>
         <button
           type="button"
           onClick={() => open({ kind: "palette" })}
-          className="mx-auto flex h-9 w-full max-w-md min-w-0 items-center gap-2.5 rounded-[var(--radius-control)] border border-line-subtle bg-panel px-3 text-[13px] text-fg-3 transition-colors hover:border-line hover:text-fg-2 max-md:h-10"
+          className="md-search mx-auto flex h-9 w-full max-w-md min-w-0 items-center gap-2.5 rounded-full border border-line-subtle px-4 text-[13px] text-fg-3 hover:text-fg-2 max-md:h-10"
           aria-label={`Search symbols, pages and actions (${MOD}+K)`}
         >
           <Search aria-hidden className="size-4 shrink-0" />
@@ -282,7 +291,7 @@ function Topbar() {
 export function MarketStrip() {
   const { data, isLoading, isError } = useBenchmarks();
   return (
-    <div className="scrollbar-thin relative flex items-stretch gap-0 overflow-x-auto border-b border-line-subtle bg-sidebar/60 px-4 md:px-6" aria-label="Market benchmarks" role="region">
+    <div className="md-strip scrollbar-thin relative flex items-stretch gap-0 overflow-x-auto border-b border-line-subtle px-4 md:px-6" aria-label="Market benchmarks" role="region">
       {isLoading && <div className="flex h-11 items-center gap-6">{[0, 1, 2].map((i) => <span key={i} className="skeleton h-4 w-40" />)}</div>}
       {isError && <div className="flex h-11 items-center text-xs text-fg-3">Benchmarks unavailable.</div>}
       <SessionPills />
@@ -312,7 +321,7 @@ function SessionPills() {
         <span key={m.market} className="flex items-center gap-1.5 whitespace-nowrap" title={`${m.name}: ${sessionText(m)}. Source: ${m.source} calendar.`}>
           <span
             aria-hidden
-            className={cn("size-1.5 rounded-full", m.state === "open" ? "bg-pos" : m.state === "closed" ? "bg-fg-3" : "bg-warn")}
+            className={cn("size-1.5 rounded-full", m.state === "open" ? "fx-live bg-pos" : m.state === "closed" ? "bg-fg-3" : "bg-warn")}
           />
           <span className="text-fg-2">{REGION_LABEL[m.market] ?? m.market}</span>
           <span className={cn(m.state === "open" ? "text-pos" : m.state === "closed" ? "text-fg-3" : "text-warn")}>
@@ -328,7 +337,7 @@ function SessionPills() {
 function BottomNav() {
   const items = NAV.filter((n) => ["/", "/watchlists", "/portfolio"].includes(n.to));
   return (
-    <nav aria-label="Primary" className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-line-subtle bg-sidebar/95 backdrop-blur-sm md:hidden">
+    <nav aria-label="Primary" className="md-bottomnav md-sidebar safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-line-subtle md:hidden">
       <ul className="grid grid-cols-4">
         {items.map(({ to, label, icon: Icon, end }) => (
           <li key={to}>
@@ -392,7 +401,7 @@ function MoreSheet() {
                 className="flex h-12 w-full items-center gap-3 rounded-lg px-3 text-[15px] text-fg-2"
                 onClick={() => {
                   const next = prefs?.theme === "light" ? "dark" : "light";
-                  applyTheme(next);
+                  withReveal(() => applyTheme(next));
                   if (!session?.read_only) patch.mutate({ theme: next });
                 }}
               >
@@ -458,6 +467,7 @@ export function Shell() {
   const navigate = useNavigate();
   const gPending = useRef<number | null>(null);
   const { data: session } = useSession();
+  const mainRef = usePageEnter<HTMLElement>(useLocation().pathname);
 
   useGlobalKeys((e) => {
     const mod = e.metaKey || e.ctrlKey;
@@ -496,7 +506,7 @@ export function Shell() {
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
         <OfflineBanner />
-        <main id="main" className="min-w-0 flex-1 pb-24 md:pb-8">
+        <main id="main" ref={mainRef} className="min-w-0 flex-1 pb-24 md:pb-8">
           <Outlet />
         </main>
       </div>

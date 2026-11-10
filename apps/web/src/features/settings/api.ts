@@ -46,7 +46,7 @@ export function useFixtureAction() {
 export function applyTheme(theme: Prefs["theme"]) {
   const resolved = theme === "system" ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark") : theme;
   document.documentElement.setAttribute("data-theme", resolved);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", resolved === "light" ? "#F3F5F8" : "#0B0E14");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", resolved === "light" ? "#F2F3FB" : "#060813");
   try {
     localStorage.setItem("md-theme", theme);
   } catch {

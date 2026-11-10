@@ -5,9 +5,9 @@ type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md";
 
 const base =
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 select-none";
+  "md-btn inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 select-none";
 const variants: Record<Variant, string> = {
-  primary: "bg-accent text-accent-fg hover:bg-accent-strong",
+  primary: "md-btn-primary bg-accent text-accent-fg",
   secondary: "border border-line bg-elevated text-fg hover:bg-hover",
   ghost: "text-fg-2 hover:bg-hover hover:text-fg",
   danger: "border border-neg/40 bg-neg-soft text-neg hover:bg-neg/20",
@@ -60,7 +60,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       aria-label={label}
       title={rest.title ?? label}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-[var(--radius-control)] text-fg-2 transition-colors duration-150 hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-40",
+        "md-icon-btn inline-flex shrink-0 items-center justify-center rounded-[var(--radius-control)] text-fg-2 hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-40",
         size === "sm" ? "size-8" : "size-9 max-md:size-11",
         active && "text-accent-text",
         className,

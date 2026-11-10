@@ -420,6 +420,7 @@ test("research tabs: keyboard navigation, URL state, and an explicit reason when
   await page.goto("/instrument/SX%3AAURORA");
   const tabs = page.getByRole("tablist", { name: "Instrument sections" });
   await tabs.getByRole("tab", { name: "Chart" }).click();
+  await expect(tabs.getByRole("tab", { name: "Chart" })).toHaveAttribute("aria-selected", "true"); // the strip follows the URL a frame or two later
   await tabs.getByRole("tab", { name: "Chart" }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(tabs.getByRole("tab", { name: "Financials" })).toHaveAttribute("aria-selected", "true");

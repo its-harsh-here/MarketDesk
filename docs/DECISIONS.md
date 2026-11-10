@@ -294,3 +294,14 @@ Consequential choices, newest last. Routine choices live in code comments.
     permitted exchange source exists (BSE licence or verified NSE terms). Consensus estimates and earnings surprises
     are licensed data: the earnings history shows reported figures with year-on-year change computed here, and the UI
     says why no estimate or surprise appears. The M02 "Filing events" tab is superseded by this view.
+55. **Owner directive: a new, animated visual identity (11 Nov 2026).** The owner asked for the frontend to be changed
+    completely, as interactive and animated as possible. This replaces the restrained look in `CLAUDE.md` §5 (which
+    asked for no glows, gradients, glass or animation loops): violet/cyan palette on a deep navy canvas, a drifting
+    aurora background with a grid and a pointer glow, glass panels with a cursor spotlight and gradient edge,
+    staggered entrances, page transitions, button sheen and press, animated navigation, tabs and segmented controls,
+    self-drawing sparklines, figures that flash green/red when a value changes, a scroll progress line and a circular
+    reveal on theme change. Kept from the old rules because they protect the data: figures always render their true
+    value at once (no count-up through false numbers), gains/losses keep sign and arrow, text contrast stays AA (the
+    axe check still passes), the system reduced-motion setting is honoured, and Settings → Appearance → Visual
+    effects offers "Calm" to switch the effects off per browser. The layer is CSS plus one pointer listener
+    (`apps/web/src/lib/fx.tsx`); no animation library was added.

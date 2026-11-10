@@ -37,7 +37,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <div
               key={t.id}
               role={t.tone === "error" ? "alert" : "status"}
-              className="anim-pop pointer-events-auto flex items-start gap-2.5 rounded-[var(--radius-control)] border border-line bg-elevated px-3 py-2.5 text-[13px] text-fg shadow-[var(--shadow-pop)]"
+              className="fx-toast pointer-events-auto flex items-start gap-2.5 rounded-[var(--radius-control)] border border-line bg-elevated px-3 py-2.5 text-[13px] text-fg shadow-[var(--shadow-pop)]"
             >
               <Icon aria-hidden className={cn("mt-0.5 size-4 shrink-0", t.tone === "success" ? "text-pos" : t.tone === "error" ? "text-neg" : "text-info")} />
               <span className="flex-1 leading-5">{t.text}</span>

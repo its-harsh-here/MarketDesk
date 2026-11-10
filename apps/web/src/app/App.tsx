@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/Tooltip";
 import { ErrorState, SkeletonRows } from "@/components/ui/States";
 import { ApiError, errorMessage, setCsrfToken, setUnauthorizedHandler } from "@/lib/api/client";
 import { applyDensity, applyTheme, usePrefs, useSession } from "@/features/settings/api";
+import { FxBackground } from "@/lib/fx";
 import { AddSymbolDialog, NewWatchlistDialog, WatchlistsPage } from "@/features/watchlists/WatchlistsPage";
 import { TransactionDialog } from "@/features/portfolio/TransactionDialog";
 import { ImportDialog } from "@/features/portfolio/ImportDialog";
@@ -179,6 +180,7 @@ const router = createBrowserRouter([
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <FxBackground />
       <TooltipProvider delayDuration={250}>
         <ToastProvider>
           <RouterProvider router={router} />

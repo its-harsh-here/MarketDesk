@@ -5,6 +5,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useDialogs } from "@/app/dialogs";
 import { useSymbolSearch } from "@/features/market/api";
+import { withReveal } from "@/lib/fx";
 import { applyDensity, applyTheme, usePatchPrefs, usePrefs, useSession } from "@/features/settings/api";
 import { useWorkspaces } from "@/features/workspace/api";
 import { GLOBAL_CODES, parseCommand, SECURITY_CODES, securityPath, type SecurityCode } from "@/lib/codes";
@@ -105,7 +106,7 @@ export function CommandPalette() {
         icon: <SunMoon />,
         run: () => {
           const next = prefs?.theme === "light" ? "dark" : "light";
-          applyTheme(next);
+          withReveal(() => applyTheme(next));
           if (!readOnly) patch.mutate({ theme: next });
           close();
         },

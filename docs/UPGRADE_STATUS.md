@@ -1034,6 +1034,17 @@ reads, then at most four concurrent fetch-and-scan tasks, then cache writes, all
 test now sleeps in document reads so the overlap is exercised. Proxies for special meetings are labelled as such (SMR's
 16 Dec 2025 special meeting had been labelled annual).
 
+## Visual redesign: animated "aurora glass" identity (11 Nov 2026)
+Owner request (DECISIONS #55). New palette and effects layer in `styles/index.css`, helpers in `lib/fx.tsx`, applied
+through the shared components (Panel, Button, Metric, Sparkline, Toast, Dialog) and the shell, so every page changes.
+Settings → Appearance → Visual effects (Full/Calm, per browser); reduced motion respected. No backend or schema change.
+
+| Check | Result |
+| --- | --- |
+| tsc, `eslint .`, vitest | clean; 41 |
+| Playwright | 31 journeys pass, including the axe accessibility check (one journey now waits for the tab selection before pressing a key) |
+| Visual QA | Overview, Instrument, Portfolio, Settings, transaction dialog at 1440 px; Overview and Watchlists at 390 px; Overview in light theme; no horizontal overflow, no console errors (`docs/screenshots/overview-*.png`, `instrument-1440.png`) |
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
