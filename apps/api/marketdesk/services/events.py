@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
@@ -48,6 +49,7 @@ PROXY_FORMS = ("DEF 14A",)
 RELEASE_FORMS = ("8-K", "8-K/A")
 MAX_UNIVERSE = 60
 MAX_RELEASES_SCANNED = 8
+MAX_CONCURRENT_SCANS = 4
 
 
 def _today() -> date:
@@ -65,9 +67,10 @@ def parse_month_date(text: str) -> date | None:
         return None
 
 
-def meeting_date(text: str, filed: date) -> tuple[date, str] | None:
-    """The shareholder-meeting date a proxy notice states, with the sentence it came from. Accepted only when it
-    falls between a week before and 150 days after the filing date (anything else is a stray date)."""
+def meeting_date(text: str, filed: date) -> tuple[date, str, str] | None:
+    """The shareholder-meeting date a proxy notice states, the passage it came from and the meeting kind ("annual" or
+    "special"). Accepted only when it falls between a week before and 150 days after the filing date (anything else
+    is a stray date)."""
     flat = re.sub(r"\s+", " ", text.translate(er._ZERO_WIDTH))
     for m in _MEETING.finditer(flat[:400_000]):
         d = parse_month_date(m.group(2))
@@ -78,7 +81,7 @@ def meeting_date(text: str, filed: date) -> tuple[date, str] | None:
             if cut >= 0 and len(head) - cut < 200:
                 head = head[cut + 2 :]
             quote = (head + flat[m.start(2) : m.end() + 40]).strip()
-            return d, (quote if len(quote) <= 320 else "…" + quote[-316:])
+            return d, (quote if len(quote) <= 320 else "…" + quote[-316:]), m.group(1).lower()
     return None
 
 
@@ -157,18 +160,30 @@ def _sec_on(research) -> bool:
     return research is not None and research.client.enabled
 
 
-async def _cached_text_feature(db: Session, research, key: str, kind: str, compute):
-    """Run `compute()` once per filing (it fetches and scans a document) and keep the result in the market cache."""
-    payload, _ = await asyncio.to_thread(research._cache_get, db, key)
-    if payload is not None:
-        return payload
-    payload = await compute()
-    await asyncio.to_thread(research._cache_put, db, key, kind, payload)
-    return payload
+async def _cached_text_features(db: Session, research, specs: list[tuple[str, str, Callable]]) -> list[dict]:
+    """For each (cache key, kind, compute) run `compute()` at most once per filing (it fetches and scans a document)
+    and keep the result in the market cache. The Session is used from one thread at a time: cache reads first,
+    then the misses' fetches and scans concurrently (the SEC client paces its own requests), then the writes."""
+    results: list[dict | None] = []
+    for key, _, _ in specs:
+        payload, _ = await asyncio.to_thread(research._cache_get, db, key)
+        results.append(payload)
+    missing = [i for i, r in enumerate(results) if r is None]
+    gate = asyncio.Semaphore(MAX_CONCURRENT_SCANS)
+
+    async def run(i: int) -> None:
+        async with gate:
+            results[i] = await specs[i][2]()
+
+    await asyncio.gather(*(run(i) for i in missing))
+    for i in missing:
+        key, kind, _ = specs[i]
+        await asyncio.to_thread(research._cache_put, db, key, kind, results[i])
+    return [r or {} for r in results]
 
 
-async def _proxy_meeting(db: Session, research, cik: int, filing: dict) -> dict:
-    """Cache key v2: the quote window changed after the first live check (it began at the match, not the date)."""
+def _proxy_spec(research, cik: int, filing: dict) -> tuple[str, str, Callable]:
+    """Key v3: the quote window and the meeting kind changed after the first live check."""
 
     async def compute():
         try:
@@ -180,12 +195,13 @@ async def _proxy_meeting(db: Session, research, cik: int, filing: dict) -> dict:
             "url": url,
             "meeting_date": found[0].isoformat() if found else None,
             "quote": found[1] if found else None,
+            "meeting_kind": found[2] if found else None,
         }
 
-    return await _cached_text_feature(db, research, f"sec:proxy:v2:{filing['accession']}", "sec_proxy", compute)
+    return f"sec:proxy:v3:{filing['accession']}", "sec_proxy", compute
 
 
-async def _release_buybacks(db: Session, research, cik: int, filing: dict) -> dict:
+def _release_spec(research, cik: int, filing: dict) -> tuple[str, str, Callable]:
     async def compute():
         try:
             text, url = await er._filing_text(research, cik, filing, max_chars=300_000)
@@ -193,7 +209,13 @@ async def _release_buybacks(db: Session, research, cik: int, filing: dict) -> di
             return {"error": err.message, "sentences": []}
         return {"url": url, "sentences": await asyncio.to_thread(buyback_sentences, text)}
 
-    return await _cached_text_feature(db, research, f"sec:buyback:{filing['accession']}", "sec_buyback", compute)
+    return f"sec:buyback:{filing['accession']}", "sec_buyback", compute
+
+
+def meeting_label(info: dict) -> str:
+    return (
+        "Special meeting of shareholders" if info.get("meeting_kind") == "special" else "Annual meeting of shareholders"
+    )
 
 
 def _action_events(acts, source: str) -> list[dict]:
@@ -254,16 +276,17 @@ async def security_events(db: Session, market: MarketDataService, research, inst
         proxies = [r for r in rows if r["form"] in PROXY_FORMS][:2]
         releases = [r for r in rows if r["form"] in RELEASE_FORMS and "2.02" in (r.get("items") or [])]
         releases = releases[:MAX_RELEASES_SCANNED]
-        scans = await asyncio.gather(
-            *(_proxy_meeting(db, research, cik, r) for r in proxies),
-            *(_release_buybacks(db, research, cik, r) for r in releases),
+        scans = await _cached_text_features(
+            db,
+            research,
+            [_proxy_spec(research, cik, r) for r in proxies] + [_release_spec(research, cik, r) for r in releases],
         )
         proxy_info, release_info = scans[: len(proxies)], scans[len(proxies) :]
         for r, info in zip(proxies, proxy_info, strict=True):
             events.append(event(r["filing_date"], "proxy", "Proxy statement filed (DEF 14A)", "confirmed", "SEC EDGAR",
                                 url=info.get("url") or r.get("document_url") or r.get("index_url")))  # fmt: skip
             if info.get("meeting_date"):
-                events.append(event(info["meeting_date"], "meeting", "Annual meeting of shareholders", "confirmed",
+                events.append(event(info["meeting_date"], "meeting", meeting_label(info), "confirmed",
                                     "SEC EDGAR · quoted from the proxy statement", url=info.get("url"),
                                     quote=info.get("quote")))  # fmt: skip
             elif info.get("error"):
@@ -319,13 +342,13 @@ async def universe_events(db: Session, market: MarketDataService, research, spec
                 env = await asyncio.to_thread(research.filings, db, inst, 80)
                 for r in env.get("data") or []:
                     if r["form"] in PROXY_FORMS and lo.isoformat() <= r["filing_date"] <= hi.isoformat():
-                        info, _ = await asyncio.to_thread(research._cache_get, db, f"sec:proxy:v2:{r['accession']}")
+                        info, _ = await asyncio.to_thread(research._cache_get, db, f"sec:proxy:v3:{r['accession']}")
                         events.append({**event(r["filing_date"], "proxy", "Proxy statement filed (DEF 14A)",
                                                "confirmed", "SEC EDGAR",
                                                url=r.get("document_url") or r.get("index_url")),
                                        "symbol": inst.symbol})  # fmt: skip
                         if info and info.get("meeting_date"):
-                            events.append({**event(info["meeting_date"], "meeting", "Annual meeting of shareholders",
+                            events.append({**event(info["meeting_date"], "meeting", meeting_label(info),
                                                    "confirmed", "SEC EDGAR · quoted from the proxy statement",
                                                    url=info.get("url")), "symbol": inst.symbol})  # fmt: skip
         except Exception as exc:  # one listing's failure must not hide the others

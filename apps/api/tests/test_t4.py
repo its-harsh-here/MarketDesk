@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import time
 from datetime import date, timedelta
 from decimal import Decimal as D
 
@@ -43,12 +44,16 @@ def test_meeting_date_is_quoted_and_must_be_near_the_filing():
     text = PROXY.format(when="February 26, 2026", record="December 29, 2025")
     found = ev.meeting_date(text, filed)
     assert found is not None
-    d, quote = found
-    assert d == date(2026, 2, 26) and "February 26, 2026" in quote and len(quote) <= 320
+    d, quote, kind = found
+    assert d == date(2026, 2, 26) and "February 26, 2026" in quote and len(quote) <= 320 and kind == "annual"
     assert quote.startswith("The Annual Meeting of Stockholders")  # from the sentence boundary, not the heading
     # a date far from the filing is a stray reference, not the meeting
     assert ev.meeting_date(PROXY.format(when="June 1, 2021", record="May 1, 2021"), filed) is None
     assert ev.meeting_date("No notice here. Just a date: March 3, 2026.", filed) is None
+    special = "Notice of Special Meeting. The special meeting of stockholders will be held on January 20, 2026 at noon."
+    assert ev.meeting_date(special, filed)[2] == "special" and ev.meeting_label({"meeting_kind": "special"}).startswith(
+        "Special"
+    )
     # case and zero-width characters (common in EDGAR HTML) do not matter
     assert ev.meeting_date(text.upper().replace("FEBRUARY", "FEBRU\u200bARY"), filed)[0] == date(2026, 2, 26)
     assert ev.parse_month_date("february 30, 2026") is None and ev.parse_month_date("Smarch 1, 2026") is None
@@ -141,6 +146,7 @@ class EventsSec(FakeSec):
         return [{"name": "exic-8k.htm"}, {"name": "exic-ex991.htm"}]
 
     def document_text(self, cik, accession, doc, max_chars, max_bytes):
+        time.sleep(0.05)  # overlapping reads, as against EDGAR: the cache must still be used from one thread at a time
         self.docs += 1
         if doc == "exic-def14a.htm":
             return PROXY.format(when=long_date(self.meeting), record=long_date(self.meeting - timedelta(days=50)))

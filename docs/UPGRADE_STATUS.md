@@ -1027,7 +1027,12 @@ EPS +28.7%); RELIANCE.NS annual, unofficial, with change. Universe calendar over
 listings: 2 ahead, 1 behind, none failed. Follow-ups from the check: the meeting quote began at the regex match (a
 heading or an earlier date) rather than around the date — now quoted around the date from a sentence boundary, with
 the proxy-scan cache key versioned so cached scans are redone once; proxy and release documents are read concurrently;
-past lists longer than 30 rows page with "Show more".
+past lists longer than 30 rows page with "Show more". The first version of that concurrency used the request's
+database session from several threads at once (AAPL's ten documents): CI failed with SQLAlchemy's
+`IllegalStateChangeError` and the live AAPL events call returned 500 for a few minutes. Fixed the same hour: cache
+reads, then at most four concurrent fetch-and-scan tasks, then cache writes, all on one thread at a time; the fake-SEC
+test now sleeps in document reads so the overlap is exercised. Proxies for special meetings are labelled as such (SMR's
+16 Dec 2025 special meeting had been labelled annual).
 
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
