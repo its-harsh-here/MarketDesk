@@ -25,7 +25,8 @@ import {
 import { ChartPanel } from "@/features/market/ChartPanel";
 import { useActions, useFundamentals, useSessions, useSnapshots } from "@/features/market/api";
 import { ComparePanel } from "@/features/market/ComparePanel";
-import { EventsTab, FilingsTab, FinancialsTab } from "@/features/research/ResearchTabs";
+import { FilingsTab, FinancialsTab } from "@/features/research/ResearchTabs";
+import { EventsTab } from "@/features/terminal/EventsTab";
 import { PeersTab } from "@/features/screener/PeersTab";
 import { EarningsTab } from "@/features/earnings/EarningsTab";
 import { DescriptionTab } from "@/features/terminal/DescriptionTab";

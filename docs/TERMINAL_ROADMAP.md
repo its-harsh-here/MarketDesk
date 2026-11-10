@@ -93,7 +93,7 @@ offline into a compact per-CUSIP table for tracked instruments only. India: quar
 (promoter, FII, DII, public, pledged) **only after the owner chooses a permitted source** (BSE licence, or verified
 NSE terms). Alerts on new insider filings reuse M05.
 
-### T4 — Earnings and corporate events
+### T4 — Earnings and corporate events — ✅ done 10 Nov 2026 (US meetings/buybacks from SEC filings; Indian exchange announcements wait for a permitted source)
 An events calendar per security and across watchlists: past results dates (8-K Item 2.02 for US), dividends and
 splits with ex-dates, buyback announcements, AGM/board meetings where a permitted source exists; earnings history
 table (reported figures only). Consensus estimates and surprises are 🔒: shown only if the owner subscribes to a
@@ -135,7 +135,7 @@ plus the owner's own annotations. Marked low confidence by design; never present
 | 1 | T1 Description + function keys ✅ | M06, M14 | none |
 | 2 | T2 Financial depth ✅ | M02, M11 | none (India stays unofficial until a source is chosen) |
 | 3 | T6 Relative value and risk ✅ | M06, M09 | FINRA API credentials (required by FINRA's terms; free Individual account) |
-| 4 | T4 Earnings and events | M07 | optional estimates provider (paid) |
+| 4 | T4 Earnings and events ✅ | M07 | optional estimates provider (paid) for consensus and surprises |
 | 5 | T5 News and filings | M03, M07 | none |
 | 6 | T3 Ownership | M02 | India source choice (BSE licence or verified NSE terms) |
 | 7 | T8 Macro context | M12 | FRED API key (free) |

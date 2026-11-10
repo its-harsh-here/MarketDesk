@@ -12,6 +12,7 @@ from marketdesk.asyncbridge import off_event_loop
 from marketdesk.config import Settings
 from marketdesk.db import get_db
 from marketdesk.services import description, financial_view, security_risk
+from marketdesk.services import events as ev
 from marketdesk.services.instruments import resolve_instrument
 from marketdesk.services.market import MarketDataService
 
@@ -74,3 +75,45 @@ async def risk(
             db, market, request.app.state.research, request.app.state.finra, settings, inst, bench, spec
         )
     )
+
+
+@router.get("/events")
+@off_event_loop
+async def events(
+    request: Request,
+    symbol: str = Query(min_length=1, max_length=32),
+    db: Session = Depends(get_db),
+    market: MarketDataService = Depends(market_dep),
+):
+    """Past and upcoming events for one security: results, dividends, splits, reports, proxies, meetings (T4)."""
+    inst = await resolve_instrument(db, market, symbol)
+    return ev.jsonable(await ev.security_events(db, market, request.app.state.research, inst))
+
+
+@router.get("/events/universe")
+@off_event_loop
+async def universe_events(
+    request: Request,
+    universe: str = Query(default="watchlists", pattern=r"^(watchlists|holdings|watchlist:\d+|list:\d+)$"),
+    ahead: int = Query(default=60, ge=7, le=180),
+    back: int = Query(default=30, ge=0, le=90),
+    db: Session = Depends(get_db),
+    market: MarketDataService = Depends(market_dep),
+):
+    """Events across a declared universe within a window (T4)."""
+    kind, _, uid = universe.partition(":")
+    spec = {"kind": kind, **({"id": int(uid)} if uid else {})}
+    return ev.jsonable(await ev.universe_events(db, market, request.app.state.research, spec, ahead, back))
+
+
+@router.get("/earnings-history")
+@off_event_loop
+async def earnings_history(
+    request: Request,
+    symbol: str = Query(min_length=1, max_length=32),
+    db: Session = Depends(get_db),
+    market: MarketDataService = Depends(market_dep),
+):
+    """Reported revenue, net income and diluted EPS by period with year-on-year change; no estimates (T4)."""
+    inst = await resolve_instrument(db, market, symbol)
+    return ev.jsonable(await ev.earnings_history(db, market, request.app.state.research, inst))

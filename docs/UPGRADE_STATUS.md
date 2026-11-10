@@ -987,6 +987,34 @@ console errors, page errors and failed API responses — plus every automated su
 | Playwright | 30 journeys pass (new: interaction polish — keyboard rows, Undo, palette recents and prefilled action, tab-strip fade; accessibility — no serious/critical axe violations on 14 screens) |
 | Visual QA | before/after captures inspected at 1440, 1024, 768 and 390 px (Overview, Watchlists, Screener and heatmap, Macro, Lab, Instrument tabs, Portfolio and performance, Alerts, Journal, Settings, dialogs) |
 
+## Terminal T4 — Earnings and corporate events (10 Nov 2026)
+- **API** (`services/events.py`, routes under `/api/terminal`): `GET /events?symbol=` — one security's past and
+  upcoming events, each with kind (results, dividend, split, report, proxy, meeting, buyback), status (confirmed,
+  estimated, deadline, mention), source, link and, where quoted, the sentence it came from; `GET /events/universe?
+  universe=&ahead=&back=` — the same across all watchlists, one watchlist, a screening list or holdings within a
+  window (7–180 days ahead, 0–90 back; at most 60 listings scanned, failures listed per symbol); `GET
+  /earnings-history?symbol=` — reported revenue, net income and diluted EPS by period with the change on a year
+  earlier, from SEC company facts (US, quarterly, official) or the provider's annual statements (unofficial).
+- **Sources:** 8-K Item 2.02 and periodic filings, DEF 14A proxies (the annual-meeting date is quoted from the notice
+  and accepted only between a week before and 150 days after the filing), 8-K results releases (sentences that mention a
+  repurchase programme, marked "mention"), the price provider's dividends and splits, and the SEBI deadline for Indian
+  listings. Each filing is read once and the scan cached per accession in the market cache. Indian board meetings,
+  AGMs and buybacks are not fetched (no permitted source); the view says so. Consensus estimates and surprises are
+  licensed data and are not shown — the UI explains why.
+- **UI:** the Events tab is now the T4 calendar (Upcoming with status marks; Past events with kind filter chips, quotes
+  in a disclosure, sources and notes) — it replaces the M02 "Filing events" + "Corporate actions" panels; an Earnings
+  history table on the Earnings tab (values link to their filings, year-on-year change computed here, R = restated);
+  a Corporate events panel on the Alerts page (universe and window selectors) next to Upcoming results; function code
+  `CACS` (DVD still opens the same tab).
+- **Schema:** none.
+
+| Check | Result |
+| --- | --- |
+| pytest SQLite / PostgreSQL 16 | 321 passed, 3 skipped / 323 passed, 1 skipped (T4: 9 — proxy meeting date quoted and bounded to the filing window, case and zero-width tolerant, stray dates rejected; buyback sentences without boilerplate; history rows with YoY and restatement flags; past/upcoming split with de-duplication; deadline vs estimate labels; fake-SEC builder with proxy, release, reports and per-document caching; API on sample data; universe window and validation; annual history with YoY) |
+| tsc, `eslint .`, vitest | clean; 41 |
+| Playwright | 31 journeys pass (new: events — `CACS` code, SEBI deadline marked as a deadline, dividend rows with sources, kind filter hides and restores, earnings history table with YoY, Corporate events on Alerts with a 120-day window) |
+| Visual QA | Events tab and Alerts page at 1440 and 390 px (`docs/screenshots/events-*.png`); no horizontal overflow |
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -994,4 +1022,4 @@ console errors, page errors and failed API responses — plus every automated su
 - Portfolio has INR and USD accounts; returns (M09) use daily closes, benchmarks are price indices, and cash earns no interest.
 
 ## Next concrete action
-The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Terminal roadmap: T1, T2 and T6 done; next T4 (earnings and corporate events) per `docs/TERMINAL_ROADMAP.md`. Owner inputs open: FINRA API credentials (short interest), Alpaca (M04), FRED key (M12/T8). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
+The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Terminal roadmap: T1, T2, T6 and T4 done; next T5 (news and filings stream) per `docs/TERMINAL_ROADMAP.md`. Owner inputs open: FINRA API credentials (short interest), Alpaca (M04), FRED key (M12/T8). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.

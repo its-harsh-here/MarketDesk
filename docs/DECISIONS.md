@@ -283,3 +283,14 @@ Consequential choices, newest last. Routine choices live in code comments.
     chunk loads. Horizontal scroll regions show an edge shadow only where columns are hidden (CSS
     `background-attachment: local`). The one-off sweep stays in the repo (`tests/e2e/qa-sweep.spec.ts`, gated by
     `QA_SWEEP=1`) for future passes.
+54. **Corporate events from filings and provider actions; no consensus figures (terminal T4, 10 Nov 2026).** The events
+    calendar uses only sources already in the product: SEC 8-K Item 2.02 filings (confirmed results dates; the next one
+    is a cadence estimate), the SEBI LODR 33(3) deadline for Indian listings (a deadline, never an announced date), the
+    price provider's dividend and split records (the provider's action date, shown as the ex-date it reports),
+    10-K/10-Q filing dates, DEF 14A proxy statements, and 8-K results releases. Annual-meeting dates are quoted from the
+    proxy notice and accepted only within a week before to 150 days after the filing; buybacks are quoted sentences
+    marked "mention", never verified amounts. Each filing document is scanned once and the result cached per accession
+    in the market cache (no schema change). Indian board-meeting, AGM and buyback announcements stay off until a
+    permitted exchange source exists (BSE licence or verified NSE terms). Consensus estimates and earnings surprises
+    are licensed data: the earnings history shows reported figures with year-on-year change computed here, and the UI
+    says why no estimate or surprise appears. The M02 "Filing events" tab is superseded by this view.

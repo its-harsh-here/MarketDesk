@@ -428,7 +428,7 @@ test("research tabs: keyboard navigation, URL state, and an explicit reason when
   await page.reload();
   await expect(page.getByRole("tab", { name: "Financials" })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tab", { name: "Events" }).click();
-  await expect(page.getByRole("heading", { name: "Corporate actions" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Past events" })).toBeVisible(); // T4 calendar replaced the M02 panels
   await page.getByRole("tab", { name: "Description" }).click();
   await expect(page.getByRole("heading", { name: "Price history" })).toBeVisible();
   await expect(page).not.toHaveURL(/tab=/);
@@ -598,7 +598,45 @@ test("earnings: deadline (never an announced date), fiscal-year changes, reminde
   await page.goto("/alerts");
   const up = page.getByRole("region", { name: "Upcoming results" });
   await expect(up.getByRole("link", { name: "SX:AURORA" })).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText("Results reminder 7 day(s) before the next results date")).toBeVisible();
+  // The rule row; the worker may already have fired the reminder (the deadline is within 7 days), which repeats the text in the inbox.
+  await expect(page.getByText("Results reminder 7 day(s) before the next results date").first()).toBeVisible();
+});
+
+test("events: calendar with status marks and sources, kind filter, reported earnings history, universe calendar (CACS code)", async ({ page }) => {
+  await page.goto("/instrument/SX%3AAURORA");
+  await ready(page);
+  await page.keyboard.press(`${MOD}+k`);
+  await page.getByRole("dialog", { name: "Command palette" }).getByRole("combobox").fill("cacs");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/tab=events/);
+  const up = page.getByRole("region", { name: "Upcoming" });
+  await expect(up.getByText("Results due by (SEBI deadline)")).toBeVisible({ timeout: 30_000 });
+  await expect(up.getByText("deadline", { exact: true }).first()).toBeVisible(); // the status pill: a regulatory deadline, never an announced date
+  await expect(up.getByText(/Consensus estimates and surprises/)).toBeVisible();
+  const past = page.getByRole("region", { name: "Past events" });
+  await expect(past.getByText("Dividend 4.00 per share").first()).toBeVisible();
+  await expect(past.getByText("Source: fixture corporate actions").first()).toBeVisible();
+  const filter = past.getByRole("group", { name: "Show event kinds" });
+  await filter.getByRole("button", { name: /^Dividend/ }).click();
+  await expect(filter.getByRole("button", { name: /^Dividend/ })).toHaveAttribute("aria-pressed", "false");
+  await expect(past.getByText("Dividend 4.00 per share")).toHaveCount(0);
+  await filter.getByRole("button", { name: "Show all" }).click();
+  await expect(past.getByText("Dividend 4.00 per share").first()).toBeVisible();
+
+  await page.getByRole("tab", { name: "Earnings" }).click();
+  const hist = page.getByRole("region", { name: "Earnings history" });
+  const table = hist.getByRole("table", { name: "Reported figures for SX:AURORA by period" });
+  await expect(table).toBeVisible({ timeout: 30_000 });
+  expect(await table.getByRole("row").count()).toBeGreaterThan(2);
+  await expect(table.getByRole("cell", { name: /[+-]\d+\.\d+%/ }).first()).toBeVisible(); // year-on-year change computed here
+  await expect(hist.getByText(/unofficial provider data/).first()).toBeVisible();
+
+  await page.goto("/alerts");
+  const cal = page.getByRole("region", { name: "Corporate events" });
+  await cal.getByRole("radiogroup", { name: "Days ahead" }).getByRole("radio", { name: "120 d" }).click();
+  await expect(cal.getByRole("link", { name: "SX:AURORA" }).first()).toBeVisible({ timeout: 30_000 });
+  await expect(cal.getByText("Results due by (SEBI deadline)").first()).toBeVisible();
+  await expect(cal.getByText(/No consensus figures/)).toBeVisible();
 });
 
 test("macro: watchboard with provider/frequency/revision, briefing, official statistics not approximated, exposure link", async ({ page }) => {

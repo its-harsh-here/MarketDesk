@@ -7,8 +7,7 @@ import { EmptyState, ErrorState, InlineNotice, SkeletonRows } from "@/components
 import { errorMessage } from "@/lib/api/client";
 import { formatLargeMoney, formatMoney, formatPercent, formatRatio, formatRelative, formatSessionDate, formatCompact } from "@/lib/format";
 import { cn } from "@/lib/cn";
-import { useActions } from "@/features/market/api";
-import { useFilings, useFinancials, useResearchEvents, type FactValue, type ResearchEnvelope, type StatementLine } from "./api";
+import { useFilings, useFinancials, type FactValue, type ResearchEnvelope, type StatementLine } from "./api";
 
 const DASH = "—";
 const STATEMENTS: { key: StatementLine["statement"]; title: string; note: string }[] = [
@@ -207,41 +206,5 @@ export function FilingsTab({ symbol }: { symbol: string }) {
         </div>
       ) : null}
     </Panel>
-  );
-}
-
-export function EventsTab({ symbol }: { symbol: string }) {
-  const q = useResearchEvents(symbol);
-  const actions = useActions(symbol);
-  return (
-    <>
-      <Panel title="Filing events" titleId="events-title" className="lg:col-span-8" refreshing={q.isFetching && !q.isLoading}>
-        {q.isLoading ? <SkeletonRows rows={6} /> : q.isError && !q.data ? <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} /> : q.data ? (
-          <div className="space-y-3">
-            <DatasetStatus env={q.data} />
-            {q.data.data && <FilingList rows={q.data.data} showEvent />}
-            <p className="text-xs text-fg-3">
-              Confirmed events only, from SEC filings: results announcements (8-K Item 2.02) and periodic reports. Estimated earnings dates are not shown because no verified
-              source is configured.
-            </p>
-          </div>
-        ) : null}
-      </Panel>
-      <Panel title="Corporate actions" titleId="ev-ca-title" className="lg:col-span-4">
-        {actions.isLoading ? <SkeletonRows rows={4} /> : actions.data?.actions?.length ? (
-          <ul className="divide-y divide-line-subtle text-[13px]">
-            {actions.data.actions.slice(0, 12).map((a, i) => (
-              <li key={i} className="flex justify-between gap-2 py-1.5">
-                <span className="num text-fg-2">{formatSessionDate(a.date)}</span>
-                <span className="text-fg">{a.description}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-[13px] text-fg-3">{actions.data?.meta.message ?? "No corporate actions reported by the price provider."}</p>
-        )}
-        <p className="mt-2 text-xs text-fg-3">Source: price provider (Yahoo). Confirmed past actions only.</p>
-      </Panel>
-    </>
   );
 }

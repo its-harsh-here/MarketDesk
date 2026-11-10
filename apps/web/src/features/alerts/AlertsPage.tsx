@@ -1,6 +1,7 @@
 import { Bell, ExternalLink, Newspaper, Pause, Pencil, Play, Plus, RotateCcw, SkipForward, Trash } from "lucide-react";
 import { useState } from "react";
 import { UpcomingResultsPanel } from "@/features/earnings/EarningsTab";
+import { UniverseEventsPanel } from "@/features/terminal/EventsTab";
 import { useDialogs } from "@/app/dialogs";
 import { Panel } from "@/components/ui/Panel";
 import { Button, IconButton } from "@/components/ui/Button";
@@ -363,6 +364,7 @@ export function AlertsPage() {
         <UpcomingResultsPanel />
       </div>
       <InboxPanel readOnly={readOnly} tz={tz} />
+      <UniverseEventsPanel className="lg:col-span-12" />
       {!readOnly && <InlineNotice className="lg:col-span-12">Only in-app notices are available. Email, Telegram and background push are not configured.</InlineNotice>}
       <ConfirmDialog
         open={deleting !== null}

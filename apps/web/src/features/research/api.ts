@@ -89,4 +89,3 @@ function useResearch<T>(kind: string, symbol: string, params: Record<string, str
 export const useFinancials = (symbol: string, period: "annual" | "quarterly", enabled = true, periods?: number) =>
   useResearch<Statements>("financials", symbol, periods ? { period, periods: String(periods) } : { period }, enabled);
 export const useFilings = (symbol: string, enabled = true) => useResearch<Filing[]>("filings", symbol, {}, enabled);
-export const useResearchEvents = (symbol: string, enabled = true) => useResearch<Filing[]>("events", symbol, {}, enabled);

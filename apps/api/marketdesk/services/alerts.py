@@ -552,8 +552,16 @@ def evaluate_earnings(db: Session, alert: Alert, cal: dict, today: date) -> Aler
         return None
     kind = "deadline for results" if nxt.get("basis") == "deadline" else "estimated results date"
     text = f"{alert.instrument.symbol}: {kind} {due.isoformat()} ({days} day(s) reminder). {nxt.get('explanation', '')}"
-    ev = _fire(db, alert, key=f"{alert.id}:earnings:{due.isoformat()}", provider="calendar", explanation=text,
-               observed_time=datetime.now(UTC), link=None, deactivate=False)
+    ev = _fire(
+        db,
+        alert,
+        key=f"{alert.id}:earnings:{due.isoformat()}",
+        provider="calendar",
+        explanation=text,
+        observed_time=datetime.now(UTC),
+        link=None,
+        deactivate=False,
+    )
     db.commit()
     return ev
 

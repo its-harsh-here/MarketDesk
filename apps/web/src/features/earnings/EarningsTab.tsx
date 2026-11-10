@@ -11,6 +11,7 @@ import { errorMessage } from "@/lib/api/client";
 import { DASH, formatLargeMoney, formatPercent, formatSessionDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { useSession } from "@/features/settings/api";
+import { EarningsHistoryPanel } from "@/features/terminal/EventsTab";
 import { useEarnings, useEarningsCalendar, useFilingChanges, useGuidance, type Calendar, type ChangeRow } from "./api";
 
 export function NextDateText({ c }: { c: Calendar }) {
@@ -79,6 +80,7 @@ export function EarningsTab({ symbol }: { symbol: string }) {
         ) : null}
       </Panel>
       <ChangesPanel data={d?.changes} loading={q.isLoading} />
+      <EarningsHistoryPanel symbol={symbol} className="lg:col-span-12" />
       <FilingChangesPanel symbol={symbol} />
       <GuidancePanel symbol={symbol} />
     </>
