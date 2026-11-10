@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -11,7 +12,7 @@ from marketdesk.api.deps import market_dep, require_reader, settings_dep
 from marketdesk.asyncbridge import off_event_loop
 from marketdesk.config import Settings
 from marketdesk.db import get_db
-from marketdesk.services import description, financial_view, news_stream, perf_overview, security_risk
+from marketdesk.services import converter, description, financial_view, news_stream, perf_overview, security_risk
 from marketdesk.services import events as ev
 from marketdesk.services import movers as mv
 from marketdesk.services.instruments import resolve_instrument
@@ -157,3 +158,15 @@ async def performance(
     """Price return over 1W–5Y and YTD against the market benchmark, and the 52-week range."""
     inst = await resolve_instrument(db, market, symbol)
     return ev.jsonable(await perf_overview.overview(market, settings, inst))
+
+
+@router.get("/convert")
+@off_event_loop
+async def convert(
+    amount: Decimal = Query(default=Decimal(1), gt=0, le=Decimal("1e12")),
+    base: str = Query(alias="from", pattern=r"^[A-Z]{3}$"),
+    quote: str = Query(alias="to", pattern=r"^[A-Z]{3}$"),
+    market: MarketDataService = Depends(market_dep),
+):
+    """Convert an amount at the provider's latest quoted rate (indicative)."""
+    return ev.jsonable(await converter.convert(market, amount, base, quote))

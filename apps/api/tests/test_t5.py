@@ -113,3 +113,29 @@ def test_news_api_on_sample_data(api):
         ats == sorted(ats, reverse=True) and max(ats) <= "2026-06-30T23:59:59+00:00"
     )  # nothing after the dataset date
     assert api.get("/api/terminal/news", params={"symbol": ""}).status_code == 422
+
+
+def test_yahoo_news_falls_back_to_search_news():
+    from marketdesk.providers.yahoo import YahooProvider
+
+    class Ticker:
+        def __init__(self, s):
+            pass
+
+        def get_news(self, count=10):
+            raise RuntimeError("*** YAHOO! FINANCE IS CURRENTLY DOWN! ***")
+
+    class Search:
+        def __init__(self, q, **kw):
+            assert q == "AAPL" and kw["news_count"] == 30
+            self.news = [{"title": "From search", "publisher": "X", "link": "https://x.test/1",
+                          "providerPublishTime": 1762700000}]  # fmt: skip
+
+    class YF:
+        pass
+
+    YF.Ticker, YF.Search = Ticker, Search
+    p = YahooProvider.__new__(YahooProvider)
+    p._yf, p.timeout = YF, 5
+    out = p.news("AAPL")
+    assert [n.title for n in out] == ["From search"]

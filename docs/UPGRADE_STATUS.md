@@ -1062,6 +1062,18 @@ Settings → Appearance → Visual effects (Full/Calm, per browser); reduced mot
 | tsc, `eslint .`, vitest | clean; 45 (indicators: SMA/EMA/Bollinger/RSI/MACD hand vectors) |
 | Playwright | 34 journeys pass (new: news, movers + terminal density, quote-page extras) |
 
+**Live check after deploying 722a48c (11 Nov 2026), read-only.** AAPL news: 80 SEC items (47 filings, 33 releases),
+newest first with plain 8-K captions (e.g. 2 Nov 2026 "Results of operations (earnings release)"); Yahoo headlines
+failed (ticker news endpoint refused) → search-news fallback added (DECISIONS #58). RELIANCE.NS: the gating note only.
+Movers over the owner's 4 watchlisted listings: 1 up, 3 down; NVDA −5.47%; unusual volume NVDA 4.83×, DOX 3.25×.
+Performance: AAPL to 10 Nov 2026 vs S&P 500 — YTD +28.2% vs +9.9%, 1Y +29.4% vs +10.1%, 3Y +87.0% vs +70.3% (5Y
+was "—" because Yahoo's 5Y daily history starts a few days after the five-year mark; it now uses the first close
+within a week of the mark and shows that date); RELIANCE.NS vs Nifty — 1Y −10.4% vs −1.8%.
+
+## World markets and currency converter (11 Nov 2026)
+Macro watchboard: world indices, more FX, silver, natural gas, crypto. Currency converter panel on Macro
+(`GET /api/terminal/convert`). Yahoo headlines fall back to the search API. No schema change.
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.

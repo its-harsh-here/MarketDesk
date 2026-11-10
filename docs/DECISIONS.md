@@ -328,3 +328,11 @@ Consequential choices, newest last. Routine choices live in code comments.
     benchmark, compound per-year figures for 3Y/5Y, and the 52-week range from daily closes — labelled as price
     return because the provider's closes are not dividend-adjusted. Linked multi-panel layouts and full keyboard
     coverage (the rest of T9) remain.
+58. **World markets, currency converter, and a second route to Yahoo headlines (11 Nov 2026).** The Macro watchboard
+    adds world indices (Dow, FTSE 100, DAX, Nikkei 225, Hang Seng), GBP/JPY in rupees and EUR/USD, silver, natural gas
+    and two crypto assets (Bitcoin, Ether) — all Yahoo market series with the same freshness labels. A currency
+    converter converts an amount at the provider's latest quoted rate (or the inverse of the reverse pair, said so),
+    marked indicative (no spread or fees); rates are serialised with significant digits because the shared
+    4-decimal serialiser would have rounded small rates such as INR→USD. The live check showed yfinance's ticker news
+    endpoint (finance.yahoo.com/xhr/ncp) refusing server requests, so headlines fall back to Yahoo's search API,
+    which symbol search already uses in production.

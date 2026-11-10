@@ -977,3 +977,16 @@ test("quote page extras: performance overview vs benchmark, chart indicators in 
   expect(text.split("\n")[0]).toBe("session,open,high,low,close,volume");
   expect(text.split("\n").length).toBeGreaterThan(200);
 });
+
+test("currency converter on Macro: converts at the sample rate, swaps, rejects bad input", async ({ page }) => {
+  await page.goto("/macro");
+  await ready(page);
+  const conv = page.getByRole("region", { name: "Currency converter" });
+  await expect(conv.getByText(/USD per|INR per USD|at [\d.]+ INR per USD/)).toBeVisible({ timeout: 30_000 });
+  await expect(conv.getByText(/Indicative/)).toBeVisible();
+  await conv.getByRole("button", { name: "Swap currencies" }).click();
+  await expect(conv.getByRole("combobox", { name: "From currency" })).toHaveValue("INR");
+  await expect(conv.getByText(/Derived from the reverse pair/)).toBeVisible();
+  await conv.getByLabel("Amount").fill("0");
+  await expect(conv.getByText("Enter a positive amount (up to six decimals).")).toBeVisible();
+});

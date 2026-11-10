@@ -544,9 +544,18 @@ class YahooProvider:
         symbol = self.validate_symbol(symbol)
 
         def run():
-            t = self._yf.Ticker(symbol)
-            raw = t.get_news(count=30) if hasattr(t, "get_news") else t.news
-            return normalize_news(raw)
+            # The ticker news endpoint (finance.yahoo.com/xhr/ncp) is often refused for server clients; Yahoo's
+            # search API (query2, the one symbol search already uses) also returns headlines for a symbol.
+            try:
+                items = normalize_news(self._yf.Ticker(symbol).get_news(count=30))
+            except Exception as exc:  # noqa: BLE001 - fall through to the search API
+                log.info("yahoo ticker news unavailable (%s); using search news", type(exc).__name__)
+                items = []
+            if items:
+                return items
+            found = self._yf.Search(symbol, max_results=1, news_count=30, lists_count=0, include_cb=False,
+                                    recommended=0, timeout=self.timeout, raise_errors=True)  # fmt: skip
+            return normalize_news(found.news)
 
         return self._call(run, "news")
 

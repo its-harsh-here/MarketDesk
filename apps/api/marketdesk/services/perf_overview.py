@@ -52,7 +52,9 @@ def period_returns(closes: list[tuple[date, Decimal]]) -> dict[str, dict]:
     for code, _ in PERIODS:
         target = start_for(code, end_d)
         base = close_on_or_before(closes, target)
-        if base is None or (target - base[0]).days > 7 or base[1] <= 0:
+        if base is None and (closes[0][0] - target).days <= 7:
+            base = closes[0]  # the provider's window can start a few days after the mark; the start date is shown
+        if base is None or abs((target - base[0]).days) > 7 or base[1] <= 0:
             out[code] = {"return_pct": None, "why": f"History does not reach back to {target.isoformat()}."}
             continue
         r = end_c / base[1] - 1
@@ -114,6 +116,7 @@ async def overview(market: MarketDataService, settings, inst: Instrument) -> dic
         "range_52w": range_52w(own),
         "basis": (h.value.adjustment if h.value else None) or "Provider daily closes.",
         "note": "Price return from daily closes (dividends not included). Periods end at the latest close; the "
-        "start is the last close on or before the same calendar day earlier (YTD: the last close of the previous "
+        "start is the last close on or before the same calendar day earlier, or the first close within a week after "
+        "it when the provider's history begins there (YTD: the last close of the previous "
         "year). 3- and 5-year figures are also shown per year (compound).",
     }

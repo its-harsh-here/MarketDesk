@@ -37,6 +37,12 @@ def test_short_history_gives_reasons_and_range():
     assert rng["high"] == 12 and rng["low"] == 9 and rng["high_date"] == "2026-01-02"
     assert float(rng["from_high_pct"]) == float((D(11) / D(12) - 1) * 100)
     assert po.period_returns(s[:1])["1W"]["return_pct"] is None
+    # a 5-year window that starts four days after the mark still gives a 5Y figure from its first close
+    end = date(2026, 11, 10)
+    late = daily(po.start_for("5Y", end) + timedelta(days=4), [100] * ((end - po.start_for("5Y", end)).days - 3))
+    assert late[-1][0] == end
+    r5 = po.period_returns(late)["5Y"]
+    assert r5["return_pct"] == 0 and r5["start"] == late[0][0].isoformat()
 
 
 def test_performance_api_on_sample_data(api):
