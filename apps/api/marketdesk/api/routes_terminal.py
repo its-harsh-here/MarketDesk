@@ -14,6 +14,7 @@ from marketdesk.asyncbridge import off_event_loop
 from marketdesk.config import Settings
 from marketdesk.db import get_db
 from marketdesk.services import (
+    context,
     converter,
     description,
     dividends,
@@ -233,3 +234,16 @@ async def relationships_view(
     """Customer-concentration and supplier-dependence sentences quoted from the latest annual report (T10)."""
     inst = await resolve_instrument(db, market, symbol)
     return await relationships.relationships(db, request.app.state.research, inst)
+
+
+@router.get("/context")
+@off_event_loop
+async def context_strip(
+    symbol: str = Query(min_length=1, max_length=32),
+    db: Session = Depends(get_db),
+    market: MarketDataService = Depends(market_dep),
+    settings: Settings = Depends(settings_dep),
+):
+    """Benchmark, currency, rates and commodities next to the security, with 1-year co-movement (T8)."""
+    inst = await resolve_instrument(db, market, symbol)
+    return await context.context(market, settings, inst)

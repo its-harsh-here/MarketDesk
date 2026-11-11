@@ -77,6 +77,9 @@ class Settings(BaseSettings):
     # "Public" credential in the FINRA API Console). Without both values the short-interest panel says so.
     finra_client_id: str | None = None
     finra_client_secret: str | None = None
+    # FRED (US official statistics, terminal T8): optional free API key from fred.stlouisfed.org. Without it the
+    # official-statistics panels say they are not configured; market series keep working.
+    fred_api_key: str | None = None
     worker_heartbeat_stale_seconds: int = 900
 
     # AI research analyst: optional, server-side only. Providers: Groq (free tier, open models) or xAI Grok (paid).

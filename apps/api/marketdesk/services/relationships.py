@@ -49,6 +49,8 @@ _STOP_NAMES = {
     "Customers",
 }
 MAX_ITEMS = 12
+# Sentences about conduct codes or cyber risk mention suppliers without saying the business depends on any.
+_NOT_SUPPLY = re.compile(r"code of conduct|cybersecurity|ransomware|malicious|data breach", re.IGNORECASE)
 # Without the word "customer", a named share of revenue counts only for something that looks like a company
 # ("Revenue from Asia accounted for 12%" names a region, not a customer).
 _COMPANY = re.compile(
@@ -81,7 +83,7 @@ def extract(text: str) -> dict:
             named = named if _CUSTOMER.search(s) else companies
             seen.add(s)
             customers.append({"quote": s, "named": named})
-        elif _SUPPLIER.search(s) and _DEPEND.search(s):
+        elif _SUPPLIER.search(s) and _DEPEND.search(s) and not _NOT_SUPPLY.search(s):
             seen.add(s)
             suppliers.append({"quote": s, "named": []})
     return {"customers": customers[:MAX_ITEMS], "suppliers": suppliers[:MAX_ITEMS]}
@@ -108,7 +110,7 @@ async def relationships(db: Session, research, inst: Instrument) -> dict:
             "reason": env.get("reason") or "No annual report is listed for this company.",
         }
     filing, cik = rows[0], env["cik"]
-    key = f"sec:relations:v1:{filing['accession']}"
+    key = f"sec:relations:v2:{filing['accession']}"
     payload, _ = await asyncio.to_thread(research._cache_get, db, key)
     if payload is None:
         try:

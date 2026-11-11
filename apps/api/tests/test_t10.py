@@ -9,7 +9,8 @@ sales and Target Corporation represented approximately 11.5% of net sales. No ot
 10% of revenue. We rely on a single supplier, Example Foundry Ltd., for our custom processors. Our suppliers ship
 goods by sea. Customer A accounted for 14% of total revenue in 2025. This report contains forward-looking statements
 about customers that accounted for 30% of sales. Revenue grew 12% year over year.
-Revenue from Asia accounted for 22% of net sales."""
+Revenue from Asia accounted for 22% of net sales. The Company relies on suppliers to adhere to its supplier code of
+conduct."""
 
 
 def test_extract_customers_and_suppliers():

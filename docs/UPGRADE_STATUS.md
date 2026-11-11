@@ -1128,8 +1128,18 @@ are now shown. Watchlist key figures loaded and fresh for the owner's list (e.g.
 - **T10 Relations tab** (code SPLC, `GET /api/terminal/relationships`): customer-concentration and
   supplier-dependence sentences quoted from the latest annual report, low confidence, with a journal note button.
 - **Schema:** none (holders, chains and Form 4/10-K scans live in the market cache).
-- Checks: pytest 348 passed; vitest 48; Playwright 40 journeys (new: holders, options, relations).
+- Checks: pytest 351 passed; vitest 48; Playwright 40 journeys (new: holders, options, relations).
 - Live data for these three is checked after deploy (Yahoo holders and chains cannot be reached from the sandbox).
+
+**Live check after deploying f99e9fa.** AAPL insiders: 25 Form 4 filings read, none failed; 32 open-market sales in
+90 days (≈$96.6M), e.g. the general counsel's 2,399-share sales. Relations: NVDA 11 customer sentences ("one direct
+customer represented 22% of total revenue…"), 3 supplier sentences; AAPL 10-K of 3 Nov 2026. Yahoo holders: HTTP
+401 for AAPL and RELIANCE.NS from the server; Yahoo option expiries: none returned — both panels explain this.
+
+## Terminal T8 (11 Nov 2026)
+Market context strip on the Description tab (`GET /api/terminal/context`); US official statistics and release
+calendar on Macro (`GET /api/macro/official`, FRED, needs `FRED_API_KEY`). DECISIONS #63–64. Checks: pytest 358,
+vitest 48, Playwright 41 (one regression found and fixed: the context table widened the page at 360 px).
 
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
@@ -1138,4 +1148,4 @@ are now shown. Watchlist key figures loaded and fresh for the owner's list (e.g.
 - Portfolio has INR and USD accounts; returns (M09) use daily closes, benchmarks are price indices, and cash earns no interest.
 
 ## Next concrete action
-The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Terminal roadmap: T1–T7, T9 and T10 done; remaining T3 (needs an India ownership source), T7 (gated on an options entitlement), T8 (needs a FRED key), T10 (stretch). Owner inputs open: FINRA API credentials (short interest), Alpaca (M04), FRED key (M12/T8). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
+The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Terminal roadmap: T1–T10 all done (FRED panel waits for FRED_API_KEY); remaining T3 (needs an India ownership source), T7 (gated on an options entitlement), T8 (needs a FRED key), T10 (stretch). Owner inputs open: FINRA API credentials (short interest), Alpaca (M04), FRED key (M12/T8). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.

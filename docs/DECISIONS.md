@@ -366,3 +366,17 @@ Consequential choices, newest last. Routine choices live in code comments.
     out only from the "X accounted for/represented N%" pattern, and a name without the word "customer" must look
     like a company, so regions are not read as customers. Labelled low confidence; absence means nothing was
     disclosed in those words. The owner's own annotations go to the journal from the same tab.
+63. **FRED behind a key; a context strip that needs none (terminal T8, 11 Nov 2026).** US official statistics
+    (CPI and core PCE year on year, unemployment, payrolls change, effective fed funds, 2- and 10-year Treasuries,
+    the 10y–2y spread, real GDP, consumer sentiment) come from FRED once `FRED_API_KEY` is set: each shows its
+    observation date, the vintage (when FRED's current value became the latest revision) and a link to the series;
+    an upcoming-release calendar keeps the market-moving releases for 45 days. The key is a query parameter by
+    FRED's design, so errors are built without the URL and the key is never logged. Cached six hours per series.
+    Without a key the panel explains how to get one. The per-security context strip (benchmark, currency, VIX, the
+    US 10-year yield, Brent, gold) uses market series already in the product and shows the 1-year correlation of
+    daily changes on common dates (≥60 pairs) — described as co-movement, not cause. Indian official series remain
+    unverified (RBI/MOSPI).
+64. **Live check of T3/T7/T10 (11 Nov 2026).** Form 4 insider data and annual-report relationships work against
+    SEC. Yahoo refuses this server's holders requests (HTTP 401) and returns no option expiries, so those panels say
+    so instead of showing empty data; the options message no longer claims a symbol "lists no expiries". Supplier
+    matches that only mention a supplier code of conduct or cyber risk are dropped (cache key bumped).

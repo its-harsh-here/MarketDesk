@@ -114,7 +114,7 @@ aligned daily returns), drawdown profile, liquidity (ADV, spread proxy), and US 
 Read-only option chains with OI, volume, implied volatility and put/call ratios, only from a source the owner is
 entitled to (verify Alpaca's options data plan; NSE F&O only with verified terms). No strategy builder or trading.
 
-### T8 — Macro and cross-asset context
+### T8 — Macro and cross-asset context — ✅ done 11 Nov 2026 (context strip live; FRED panel switches on with FRED_API_KEY)
 Extends M12: a per-security "context" strip (benchmark, sector index, currency, relevant rates/commodities), an
 economic calendar from official release schedules, and FRED series for the US; Indian series from RBI/MOSPI once
 verified. Each series shows vintage and release date.

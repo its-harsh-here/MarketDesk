@@ -18,6 +18,7 @@ import { SymbolPicker } from "@/features/search/SymbolPicker";
 import { parseSpec, specKey, useUniverses, type UniverseSpec } from "@/features/screener/api";
 import { useLinkMutations, useLinks, useSectorRelative, useWatchboard, type Change, type MacroSeries, type Window } from "./api";
 import { ConverterPanel } from "./ConverterPanel";
+import { OfficialPanel } from "./OfficialPanel";
 
 const WINDOWS: { value: Window; label: string }[] = [
   { value: "1w", label: "1W" },
@@ -67,6 +68,7 @@ export function MacroPage() {
           </div>
         ) : null}
       </Panel>
+      <OfficialPanel className="lg:col-span-12" />
       <ConverterPanel className="lg:col-span-12 lg:order-last" />
       <Panel title="What moved" titleId="mb-title" className="lg:col-span-7" actions={<Segmented label="Window" value={window} onChange={setWindow} options={WINDOWS} />}>
         {w ? (

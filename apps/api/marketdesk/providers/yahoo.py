@@ -563,7 +563,11 @@ class YahooProvider:
             t = self._yf.Ticker(symbol)
             expiries = sorted(date.fromisoformat(e) for e in (t.options or ()))
             if not expiries:
-                raise ProviderError("missing", "Yahoo lists no option expiries for this symbol.")
+                raise ProviderError(
+                    "missing",
+                    "Yahoo returned no option expiries to this server: the symbol may have no listed options, or "
+                    "Yahoo is refusing option-chain requests from this host (seen on the hosted server).",
+                )
             chosen = expiry if expiry in expiries else expiries[0]
             chain = t.option_chain(chosen.isoformat())
             ccy = None

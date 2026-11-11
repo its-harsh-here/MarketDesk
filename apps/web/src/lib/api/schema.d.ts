@@ -1465,6 +1465,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/macro/official": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Official Statistics
+         * @description US official statistics from FRED with release and revision dates, and the upcoming release calendar (T8).
+         */
+        get: operations["official_statistics_api_macro_official_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/macro/sector-relative": {
         parameters: {
             query?: never;
@@ -2037,6 +2057,26 @@ export interface paths {
          * @description Customer-concentration and supplier-dependence sentences quoted from the latest annual report (T10).
          */
         get: operations["relationships_view_api_terminal_relationships_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/terminal/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Context Strip
+         * @description Benchmark, currency, rates and commodities next to the security, with 1-year co-movement (T8).
+         */
+        get: operations["context_strip_api_terminal_context_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7005,6 +7045,26 @@ export interface operations {
             };
         };
     };
+    official_statistics_api_macro_official_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     sector_relative_api_macro_sector_relative_get: {
         parameters: {
             query?: {
@@ -8121,6 +8181,37 @@ export interface operations {
         };
     };
     relationships_view_api_terminal_relationships_get: {
+        parameters: {
+            query: {
+                symbol: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    context_strip_api_terminal_context_get: {
         parameters: {
             query: {
                 symbol: string;

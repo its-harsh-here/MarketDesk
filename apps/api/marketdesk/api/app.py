@@ -123,6 +123,9 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
 
     app.state.analyst = AnalystService(settings)
     app.state.finra = FinraClient(settings.finra_client_id, settings.finra_client_secret)
+    from marketdesk.providers.fred import FredClient
+
+    app.state.fred = FredClient(settings.fred_api_key)
     install_error_handlers(app)
 
     if settings.extra_origins:

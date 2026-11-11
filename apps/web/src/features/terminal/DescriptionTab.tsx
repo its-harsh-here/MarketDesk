@@ -17,6 +17,7 @@ import { MetricValue } from "@/features/screener/cells";
 import { usePrefs } from "@/features/settings/api";
 import { useDescription, type CoverageStatus, type Description } from "./api";
 import { PerformancePanel } from "./PerformancePanel";
+import { ContextPanel } from "./ContextPanel";
 
 const STATUS: Record<CoverageStatus, { label: string; tone: "pos" | "neutral" | "warn" | "info" }> = {
   available: { label: "Available", tone: "pos" },
@@ -58,6 +59,7 @@ export function DescriptionTab({ symbol, currency }: { symbol: string; currency:
       <BusinessSummary q={q} tz={tz} />
       <Identity q={q} tz={tz} />
       <PerformancePanel symbol={symbol} currency={currency} className="lg:col-span-4" />
+      <ContextPanel symbol={symbol} className="lg:col-span-4" />
       <NextEvents symbol={symbol} currency={currency} />
       <LatestFilings symbol={symbol} />
       <PeersStrip symbol={symbol} />
@@ -246,7 +248,7 @@ function PeersStrip({ symbol }: { symbol: string }) {
   const p = usePeers(symbol);
   const rows = (p.data?.rows ?? []).filter((r) => r.symbol !== symbol).slice(0, 5);
   return (
-    <Panel title="Peers" titleId="pe-title" className="lg:col-span-12" actions={<Link to={`?tab=peers`} className="text-xs text-fg-2 hover:text-fg">Compare peers</Link>}>
+    <Panel title="Peers" titleId="pe-title" className="lg:col-span-8" actions={<Link to={`?tab=peers`} className="text-xs text-fg-2 hover:text-fg">Compare peers</Link>}>
       {p.isLoading ? (
         <SkeletonRows rows={3} />
       ) : rows.length === 0 ? (

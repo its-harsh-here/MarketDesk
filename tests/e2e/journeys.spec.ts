@@ -1109,3 +1109,15 @@ test("relations: SPLC opens customer and supplier disclosures with a low-confide
   await about.getByRole("button", { name: "Add your own note" }).click();
   await expect(page.getByRole("dialog", { name: /journal/i })).toBeVisible();
 });
+
+test("context and official statistics: co-movement strip on the description; FRED panel explains its key", async ({ page }) => {
+  await page.goto("/instrument/SX%3AAURORA");
+  await ready(page);
+  const ctx = page.getByRole("region", { name: "Market context" });
+  const table = ctx.getByRole("table", { name: "Market context for SX:AURORA" });
+  await expect(table.getByRole("rowheader", { name: /Market benchmark/ })).toBeVisible({ timeout: 30_000 });
+  await expect(table.getByText(/^-?\d\.\d\d$/).first()).toBeVisible(); // a correlation value
+  await page.goto("/macro");
+  const off = page.getByRole("region", { name: "US official statistics" });
+  await expect(off.getByText(/FRED_API_KEY/).first()).toBeVisible({ timeout: 30_000 });
+});

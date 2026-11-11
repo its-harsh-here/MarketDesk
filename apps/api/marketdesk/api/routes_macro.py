@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -18,6 +18,7 @@ from marketdesk.db import get_db
 from marketdesk.models import Instrument, MacroLink
 from marketdesk.schemas import Model
 from marketdesk.services import macro as svc
+from marketdesk.services.events import jsonable as ev_jsonable
 from marketdesk.services.instruments import resolve_instrument
 from marketdesk.services.market import MarketDataService
 from marketdesk.services.screener import resolve_universe
@@ -52,6 +53,17 @@ async def watchboard(
 ):
     board = await svc.watchboard(market)
     return {**board, "briefing": svc.briefing(board, _links(db), window)}
+
+
+@router.get("/official", dependencies=[Depends(require_reader)])
+@off_event_loop
+async def official_statistics(request: Request, db: Session = Depends(get_db)):
+    """US official statistics from FRED with release and revision dates, and the upcoming release calendar (T8)."""
+    from datetime import UTC, datetime
+
+    from marketdesk.services.official import official
+
+    return ev_jsonable(await official(db, getattr(request.app.state, "fred", None), datetime.now(UTC).date()))
 
 
 @router.get("/sector-relative", dependencies=[Depends(require_reader)])
