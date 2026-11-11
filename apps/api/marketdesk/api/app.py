@@ -128,8 +128,10 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
 
     app.state.fred = FredClient(settings.fred_api_key)
     from marketdesk.providers.alpaca import AlpacaClient
+    from marketdesk.providers.gnews import GoogleNews
     from marketdesk.services.stream import QuoteStreamHub
 
+    app.state.gnews = GoogleNews()
     app.state.alpaca = AlpacaClient(settings.alpaca_api_key_id, settings.alpaca_api_secret_key)
     app.state.stream = QuoteStreamHub(app.state.alpaca, enabled=settings.alpaca_streaming
                                       and settings.data_provider == "yahoo")  # fmt: skip

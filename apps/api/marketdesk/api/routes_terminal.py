@@ -146,7 +146,8 @@ async def news(
     """Filings (plain-language 8-K items) and provider headlines for one security, newest first; links only (T5)."""
     inst = await resolve_instrument(db, market, symbol)
     alpaca = request.app.state.alpaca if request.app.state.settings.data_provider == "yahoo" else None
-    return await news_stream.stream(db, market, request.app.state.research, inst, alpaca)
+    gnews = request.app.state.gnews if request.app.state.settings.data_provider == "yahoo" else None
+    return await news_stream.stream(db, market, request.app.state.research, inst, alpaca, gnews)
 
 
 @router.get("/us-movers")

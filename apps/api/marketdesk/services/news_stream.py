@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from marketdesk.models import Instrument
 from marketdesk.providers.alpaca import us_symbol
 from marketdesk.providers.base import ProviderError
+from marketdesk.providers.gnews import credible
 from marketdesk.services import earnings as er
 from marketdesk.services.market import MarketDataService
 
@@ -70,6 +71,8 @@ FORM_LABELS = {
 }
 CATEGORIES = ("filing", "release", "news")
 MAX_ITEMS = 120
+PER_PUBLISHER = 8
+WIRES = {"globenewswire", "pr newswire", "business wire", "accesswire", "access newswire"}
 
 
 def filing_item(row: dict) -> dict:
@@ -217,37 +220,92 @@ def name_terms(inst: Instrument) -> list[str]:
     return [t for t in dict.fromkeys(terms) if len(t) >= 2]
 
 
+_SUFFIX = {"INC", "CORP", "CORPORATION", "CO", "COMPANY", "LTD", "LIMITED", "PLC", "LLC", "NV", "N.V", "SA", "S.A",
+           "AG", "THE", "HOLDINGS", "GROUP", "(THE)", "CLASS", "A"}  # fmt: skip
+
+
+def company_query(inst: Instrument) -> str:
+    """The company's name without legal suffixes, at most three words ("Reliance Industries Limited" → "Reliance
+    Industries"; "Apple Inc." → "Apple")."""
+    words = [w for w in re.findall(r"[A-Za-z0-9&'.()-]+", inst.name or "") if w.upper().strip(".,") not in _SUFFIX]
+    return " ".join(w.strip(".,") for w in words[:3])
+
+
+def official(publisher: str | None, inst: Instrument) -> bool:
+    """The company's own newsroom ("Tata Consultancy Services", "NVIDIA Newsroom")."""
+    p, q = (publisher or "").strip().lower(), company_query(inst).lower()
+    return bool(q) and p in (q, f"{q} newsroom", f"{q} news", f"{q} investor relations")
+
+
+async def _web_news(gnews, inst: Instrument) -> list[dict]:
+    if gnews is None or not inst.name:
+        return []
+    try:
+        rows = await asyncio.to_thread(gnews.search, company_query(inst), er.is_india(inst))
+    except ProviderError:
+        return []
+    return [news_item(n) for n in rows]
+
+
+def cap_per_publisher(items: list[dict], cap: int = PER_PUBLISHER) -> list[dict]:
+    """Newest first, at most `cap` headlines from any one publisher, so no single outlet fills the list."""
+    seen: dict[str, int] = {}
+    out = []
+    for it in sorted(items, key=lambda i: i.get("at") or "", reverse=True):
+        pub = (it.get("publisher") or "").lower()
+        if it["source"] == "provider" and pub:
+            seen[pub] = seen.get(pub, 0) + 1
+            if seen[pub] > cap:
+                continue
+        out.append(it)
+    return out
+
+
 def about(headline: str, terms: list[str], ticker: str | None = None) -> bool:
     """True when the headline names the company (any case) or carries the ticker in capitals (so "ALL" or "ON" in
     ordinary words do not count)."""
     for t in terms:
-        flags = 0 if t == ticker else re.IGNORECASE
+        # The ticker and ordinary capitalised names match exactly ("Reliance", not "reliance on"); a name written in
+        # capitals ("NVIDIA") also matches "Nvidia".
+        flags = re.IGNORECASE if t != ticker and t.isupper() and len(t) >= 4 else 0
         if re.search(rf"(?<![A-Za-z0-9]){re.escape(t)}(?![A-Za-z0-9])", headline, flags):
             return True
     return False
 
 
-async def stream(db: Session, market: MarketDataService, research, inst: Instrument, alpaca=None) -> dict:
+async def stream(db: Session, market: MarketDataService, research, inst: Instrument, alpaca=None, gnews=None) -> dict:
     sources, notes, items = [], [], []
-    tagged = await _alpaca_news(alpaca, inst)
+    tagged, web = await asyncio.gather(_alpaca_news(alpaca, inst), _web_news(gnews, inst))
     news = await market.news(inst.symbol)
-    if tagged:
-        items += tagged
-    if news.value is not None:
-        terms = name_terms(inst)
-        provider_items = [news_item(n) for n in news.value]
-        ticker = inst.symbol.split(".")[0].split(":")[-1]
-        relevant = [it for it in provider_items if about(it["headline"], terms, ticker)] if terms else provider_items
-        items += relevant
-        dropped = len(provider_items) - len(relevant)
-        if dropped:
-            notes.append(f"{dropped} headline(s) about other companies were left out.")
-    elif news.meta.message and not tagged:
+    terms = name_terms(inst)
+    ticker = inst.symbol.split(".")[0].split(":")[-1]
+    candidates = (tagged or []) + web + ([news_item(n) for n in news.value] if news.value is not None else [])
+    for it in candidates:
+        if official(it.get("publisher"), inst):
+            it["category"], it["kind"] = "release", "press_release"
+    sample = market.source == "fixture"  # the sample dataset's publishers are fictitious
+    trusted = [
+        it for it in candidates if sample or credible(it.get("publisher")) or official(it.get("publisher"), inst)
+    ]  # fmt: skip
+    # Press-release wires also carry market-research releases that only reuse a ticker-like word ("SMR market
+    # size"): from a wire, the headline must name the company.
+    named = [t for t in terms if t != ticker]
+    relevant = [
+        it for it in trusted
+        if about(it["headline"], named if (it.get("publisher") or "").lower() in WIRES else terms, ticker)
+    ] if terms else trusted  # fmt: skip
+    items += cap_per_publisher(merge(relevant))
+    if len(candidates) > len(relevant):
+        notes.append(
+            f"{len(candidates) - len(relevant)} headline(s) left out: from outlets outside the established-publisher "
+            "list, or not naming this company."
+        )
+    if news.value is None and news.meta.message and not (tagged or web):
         notes.append(f"Headlines unavailable: {news.meta.message}")
-    if tagged or news.value is not None:
+    if candidates:
         sources.append(
-            "Headlines from several publishers, kept only when they name this company or are tagged with its "
-            "symbol; title, publisher and link only. Stories that tag many symbols are marked as broad."
+            "Headlines from established publishers and company press-release wires, kept only when the headline "
+            "names this company; at most eight per publisher. Title, publisher and link only."
         )
     sec_on = research is not None and research.client.enabled
     if inst.country == "US" and sec_on:

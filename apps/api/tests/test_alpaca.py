@@ -250,3 +250,40 @@ def test_headline_relevance_terms_and_matching():
     assert about("NuScale is still down 61%", smr, "SMR")
     assert not about("Nuclear smr approval lifts the sector", smr, "SMR")  # ticker counts only in capitals
     assert about("Nvidia removed as a top pick", name_terms(NS(symbol="NVDA", name="NVIDIA Corporation")), "NVDA")
+
+
+def test_web_headlines_feed_publishers_and_balance():
+    from types import SimpleNamespace as NS
+
+    from marketdesk.providers.gnews import credible, parse_feed
+    from marketdesk.services.news_stream import about, cap_per_publisher, company_query, name_terms, official
+
+    xml = """<?xml version="1.0"?><rss><channel>
+      <item><title>Reliance Q2 profit rises - Livemint</title><link>https://news.example/a</link>
+        <pubDate>Wed, 11 Nov 2026 05:10:17 GMT</pubDate><source url="https://www.livemint.com">Livemint</source></item>
+      <item><title>No link here - Reuters</title><source url="https://reuters.com">Reuters</source></item>
+    </channel></rss>"""
+    items = parse_feed(xml)
+    assert len(items) == 1 and items[0].title == "Reliance Q2 profit rises" and items[0].publisher == "Livemint"
+    assert items[0].published_at == datetime(2026, 11, 11, 5, 10, 17, tzinfo=UTC)
+    with pytest.raises(ProviderError):
+        parse_feed('<!DOCTYPE x [<!ENTITY e "boom">]><rss/>')
+    assert credible("Reuters") and credible("The Economic Times") and not credible("Facebook") and not credible(None)
+
+    rel = NS(symbol="RELIANCE.NS", name="Reliance Industries Limited")
+    assert (
+        company_query(rel) == "Reliance Industries" and company_query(NS(symbol="AAPL", name="Apple Inc.")) == "Apple"
+    )
+    terms = name_terms(rel)
+    assert about("Retail investors crowd into Reliance, HDFC Bank", terms, "RELIANCE")
+    assert not about("India garment makers rethink reliance on US", terms, "RELIANCE")  # ordinary word, not the name
+    assert about("Nvidia stock rises", name_terms(NS(symbol="NVDA", name="NVIDIA Corporation")), "NVDA")
+    tcs = NS(symbol="TCS.NS", name="Tata Consultancy Services Limited")
+    assert official("Tata Consultancy Services", tcs) and not official("Simply Wall St", tcs)
+
+    rows = [{"source": "provider", "publisher": "Benzinga", "at": f"2026-11-11T10:{m:02d}:00Z", "headline": str(m)}
+            for m in range(12)] + [{"source": "provider", "publisher": "Reuters", "at": "2026-11-10T10:00:00Z",
+                                    "headline": "r"}]  # fmt: skip
+    capped = cap_per_publisher(rows, cap=8)
+    assert sum(1 for r in capped if r["publisher"] == "Benzinga") == 8 and capped[0]["headline"] == "11"
+    assert any(r["publisher"] == "Reuters" for r in capped)

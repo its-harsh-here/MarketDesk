@@ -440,4 +440,16 @@ Consequential choices, newest last. Routine choices live in code comments.
     provider headline is kept only when it names the company (leading word of its name, any case) or carries the
     ticker in capitals; the panel says how many were left out. Duplicates across sources are merged. Title,
     publisher, time and link only.
+71. **Established publishers only, from three headline sources (12 Nov 2026, owner request for credible
+    sources).** The News tab now combines (a) the symbol-tagged wire feed, (b) the market-data provider's
+    headlines and (c) the Google News RSS search feed for the company's name (fixed host, last 14 days, India or US
+    edition by listing; title, publisher, time, link only; cached 15 minutes; DOCTYPEs refused). Every headline must
+    come from a curated list of established outlets — global and US wires and papers (Reuters, Bloomberg, AP, CNBC,
+    FT, WSJ, Barron's, NYT, …), Indian business press (Economic Times, Mint, Business Standard, BusinessLine,
+    Moneycontrol, NDTV Profit, CNBC-TV18, Financial Express, …), financial newswires and company press-release
+    wires — or from the company's own newsroom (shown as a release); and it must name the company (capitalised
+    name or ticker in capitals; a press-release wire must use the name, not only a ticker-like word). At most eight
+    headlines per publisher so no outlet fills the list. Google News RSS is offered for personal reading; the
+    product shows headlines and links only and does not republish articles. Small companies with no established
+    coverage show fewer or no headlines, with the reason. The sample dataset keeps its fictitious headlines.
 
