@@ -70,7 +70,7 @@ def test_release_calendar_keeps_market_moving_releases_from_today():
         {"release_id": 50, "release_name": "Employment Situation", "date": "2026-11-06"},  # before today
         {"release_id": 18, "release_name": "H.15 Selected Interest Rates", "date": "2026-11-12"},
         {"release_id": 53, "release_name": "Gross Domestic Product", "date": "2026-11-26"},
-    ]
+    ] + [{"release_id": 101, "release_name": "FOMC Press Release", "date": f"2026-11-{d}"} for d in range(11, 25)]
     cal = of.upcoming(rows, date(2026, 11, 11))
     assert [(c["date"], c["release"]) for c in cal] == [("2026-11-13", "Consumer Price Index"),
                                                         ("2026-11-26", "Gross Domestic Product")]  # fmt: skip

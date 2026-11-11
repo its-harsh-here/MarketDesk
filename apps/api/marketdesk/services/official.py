@@ -90,6 +90,12 @@ def upcoming(rows: list[dict], today: date) -> list[dict]:
         seen.add(key)
         out.append({"date": r["date"], "release": name, "release_id": r.get("release_id"),
                     "url": f"https://fred.stlouisfed.org/release?rid={r.get('release_id')}"})  # fmt: skip
+    # A release FRED schedules almost every day (e.g. "FOMC Press Release" for the daily target range) is not an
+    # event worth listing; keep releases with at most six dates in the window.
+    per_release: dict = {}
+    for x in out:
+        per_release[x["release_id"]] = per_release.get(x["release_id"], 0) + 1
+    out = [x for x in out if per_release[x["release_id"]] <= 6]
     return sorted(out, key=lambda x: (x["date"], x["release"]))
 
 

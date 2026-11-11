@@ -1141,6 +1141,12 @@ Market context strip on the Description tab (`GET /api/terminal/context`); US of
 calendar on Macro (`GET /api/macro/official`, FRED, needs `FRED_API_KEY`). DECISIONS #63–64. Checks: pytest 358,
 vitest 48, Playwright 41 (one regression found and fixed: the context table widened the page at 360 px).
 
+**FRED live (owner set FRED_API_KEY on Render, 11 Nov 2026).** All ten series load with dates and vintages, e.g.
+CPI-U Oct 2026 = 337.476 (+4.08% y/y, revised 11 Nov), unemployment 4.1% (−0.1 pp), payrolls +165k, effective fed
+funds 3.88%, 10-year 4.88%, 10y–2y +0.25 pp, real GDP Q3 +2.07% y/y, Michigan sentiment 48.1. The release calendar
+listed "FOMC Press Release" every day (FRED schedules it daily); releases with more than six dates in the 45-day
+window are now dropped, leaving PPI, retail sales, CPI and similar.
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
