@@ -3,6 +3,8 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 DATA=${E2E_DATA_DIR:-$(mktemp -d -t marketdesk-e2e-XXXXXX)}
+# Deterministic journeys: never use real keys that happen to be in the shell.
+unset FRED_API_KEY ALPACA_API_KEY_ID ALPACA_API_SECRET_KEY FINRA_CLIENT_ID FINRA_CLIENT_SECRET SEC_USER_AGENT XAI_API_KEY GROQ_API_KEY
 export DATA_DIR="$DATA" DATA_PROVIDER=fixture MARKETDESK_ENV=development DEV_AUTH_BYPASS=true
 export ALERT_POLL_SECONDS=${ALERT_POLL_SECONDS:-2} WORKER_HEARTBEAT_STALE_SECONDS=60
 PORT=${PORT:-8100}
