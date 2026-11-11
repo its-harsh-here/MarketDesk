@@ -68,3 +68,20 @@ export function useWatchlistMutations() {
     starter: useMutation({ mutationFn: () => api.post<Watchlist>("/api/workspace/starter-watchlist"), ...opts }),
   };
 }
+
+export type KeyFigure = { v: string | null; as_of?: string | null; why?: string };
+export interface WatchlistMetrics {
+  items: Record<string, (Record<"market_cap" | "pe_ratio" | "from_52w_high_pct" | "return_1y_pct", KeyFigure | undefined> & { computed_at: string; stale: boolean }) | null>;
+  refresh_hours: number;
+  note: string;
+}
+
+/** Key figures from stored screening snapshots (no provider call). */
+export function useWatchlistMetrics(id: number | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ["watchlists", id, "metrics"],
+    queryFn: () => api.get<WatchlistMetrics>(`/api/watchlists/${id}/metrics`),
+    enabled: enabled && id !== undefined,
+    staleTime: 5 * 60_000,
+  });
+}

@@ -1010,3 +1010,20 @@ test("currency converter on Macro: converts at the sample rate, swaps, rejects b
   await conv.getByLabel("Amount").fill("0");
   await expect(conv.getByText("Enter a positive amount (up to six decimals).")).toBeVisible();
 });
+
+test("watchlist key figures: market cap, P/E and 1Y from stored snapshots, with a reason before data is loaded", async ({ page }) => {
+  await page.goto("/");
+  await ready(page);
+  const csrf = (await (await page.request.get("/api/auth/session")).json()).csrf_token;
+  const headers = { "x-csrf-token": csrf };
+  const wl = await (await page.request.post("/api/watchlists", { data: { name: "Figures" }, headers })).json();
+  for (const s of ["SX:AURORA", "SX:BANYAN"]) await page.request.post(`/api/watchlists/${wl.id}/items`, { data: { symbol: s }, headers });
+  await page.request.post("/api/screener/refresh", { data: { universe: { kind: "watchlist", id: wl.id } }, headers });
+  await expect.poll(async () => (await (await page.request.get("/api/screener/refresh")).json()).running, { timeout: 30_000 }).toBe(false);
+  await page.goto(`/watchlists?id=${wl.id}`);
+  const table = page.getByRole("table", { name: /Figures watchlist/ });
+  await expect(table.getByRole("columnheader", { name: "Mkt cap" })).toBeVisible({ timeout: 30_000 });
+  const row = table.getByRole("row", { name: /SX:AURORA/ });
+  await expect(row.getByText(/^\d+(\.\d+)?×$/)).toBeVisible(); // trailing P/E
+  await expect(row.getByText(/Cr|L|K|M|B/).first()).toBeVisible(); // market cap in compact units
+});

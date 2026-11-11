@@ -1094,6 +1094,13 @@ Macro watchboard: world indices, more FX, silver, natural gas, crypto. Currency 
 - `[` / `]` step through the instrument tabs (listed in shortcut help).
 - Checks: vitest 48; Playwright 35 journeys pass; no backend change.
 
+## Watchlist key figures (11 Nov 2026)
+`GET /api/watchlists/{id}/metrics` returns market cap, trailing P/E, distance from the 52-week high and 1-year return
+for each member from the stored screening snapshots only (no provider call on a watchlist view, per CLAUDE.md §7);
+members not loaded yet return null and the table explains how to load them. The full watchlist table shows these
+on wide screens (market cap, P/E and 1Y from 1280 px, the 52-week bar from 1536 px). Checks: pytest 336, vitest 48,
+Playwright 36.
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.

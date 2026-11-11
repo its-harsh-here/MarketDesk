@@ -528,6 +528,27 @@ export interface paths {
         patch: operations["patch_api_watchlists__wid__patch"];
         trace?: never;
     };
+    "/api/watchlists/{wid}/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Metrics
+         * @description Market cap, P/E, distance from the 52-week high and 1-year return for each member, read from the stored
+         *     screening snapshots (refreshed by the worker); never fetched from the provider here.
+         */
+        get: operations["metrics_api_watchlists__wid__metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/watchlists/{wid}/items": {
         parameters: {
             query?: never;
@@ -4657,6 +4678,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WatchlistOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    metrics_api_watchlists__wid__metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

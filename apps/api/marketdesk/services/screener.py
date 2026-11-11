@@ -997,3 +997,25 @@ class RefreshJob:
 
 
 REFRESH_JOB = RefreshJob()
+
+
+WATCHLIST_KEYS = ("market_cap", "pe_ratio", "from_52w_high_pct", "return_1y_pct")
+
+
+def stored_metrics(db: Session, insts: list[Instrument], provider: str, hours: int) -> dict:
+    """Key figures for a list of instruments from their stored screening snapshots only (no provider call):
+    {symbol: {key: {v, as_of, why?}, computed_at, stale}} or {symbol: None} when not loaded yet."""
+    snaps = _snapshots(db, insts)
+    out: dict = {}
+    for i in insts:
+        sm = snaps.get(i.id)
+        if sm is None or sm.provider != provider:
+            out[i.symbol] = None
+            continue
+        vals = sm.values or {}
+        out[i.symbol] = {
+            **{k: vals.get(k) for k in WATCHLIST_KEYS},
+            "computed_at": _iso(sm.computed_at),
+            "stale": is_stale(sm, hours),
+        }
+    return out

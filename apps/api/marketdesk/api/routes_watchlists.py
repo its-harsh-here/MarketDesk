@@ -39,6 +39,27 @@ def get_one(wid: int, db: Session = Depends(get_db)):
     return svc.watchlist_dict(svc.get_watchlist(db, wid))
 
 
+@router.get("/{wid}/metrics", dependencies=[Depends(require_reader)])
+def metrics(
+    wid: int,
+    db: Session = Depends(get_db),
+    market: MarketDataService = Depends(market_dep),
+    settings: Settings = Depends(settings_dep),
+):
+    """Market cap, P/E, distance from the 52-week high and 1-year return for each member, read from the stored
+    screening snapshots (refreshed by the worker); never fetched from the provider here."""
+    from marketdesk.services.screener import stored_metrics
+
+    w = svc.get_watchlist(db, wid)
+    insts = [it.instrument for it in w.items]
+    return {
+        "items": stored_metrics(db, insts, market.source, settings.screener_snapshot_hours),
+        "refresh_hours": settings.screener_snapshot_hours,
+        "note": "From stored screening snapshots (refreshed in the background); P/E is trailing, market cap as "
+        "reported by the provider, the 52-week figure uses daily closes.",
+    }
+
+
 @router.patch("/{wid}", response_model=WatchlistOut, dependencies=[Depends(require_writer)])
 def patch(wid: int, body: WatchlistPatch, db: Session = Depends(get_db)):
     return svc.watchlist_dict(svc.update_watchlist(db, wid, body.model_dump(exclude_unset=True)))

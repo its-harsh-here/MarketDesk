@@ -8,8 +8,8 @@ import { Sparkline } from "@/components/ui/Sparkline";
 import { IconButton } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import type { Snapshot, Watchlist } from "@/lib/api/client";
-import { DASH, formatMoney, formatVolume, toNumber } from "@/lib/format";
-import { useRemoveWithUndo } from "./api";
+import { DASH, formatLargeMoney, formatMoney, formatPercent, formatRatio, formatRelative, formatVolume, toNumber } from "@/lib/format";
+import { useRemoveWithUndo, useWatchlistMetrics, type KeyFigure } from "./api";
 import { useSession } from "@/features/settings/api";
 import { cn } from "@/lib/cn";
 
@@ -106,6 +106,17 @@ export function WatchlistTable({
     return sortRows(inRegion, sort);
   }, [watchlist, snapshots, sort, region]);
   const ccy = (r: Row) => r.snap?.instrument.currency ?? null;
+  const { data: metrics } = useWatchlistMetrics(watchlist.id, !compact);
+  const fig = (r: Row, k: "market_cap" | "pe_ratio" | "from_52w_high_pct" | "return_1y_pct"): KeyFigure | undefined => metrics?.items[r.symbol]?.[k];
+  const missing = (r: Row, f: KeyFigure | undefined) => {
+    const m = metrics?.items[r.symbol];
+    const why = m === null ? "Not loaded yet: open the Screener and load this list's data." : f?.why ?? "Not available";
+    return <span className="text-fg-3" title={why}>{DASH}</span>;
+  };
+  const asOf = (r: Row) => {
+    const m = metrics?.items[r.symbol];
+    return m ? `Snapshot ${formatRelative(m.computed_at)}${m.stale ? " (stale)" : ""}` : undefined;
+  };
 
   const columns: Column<Row>[] = [
     {
@@ -166,6 +177,61 @@ export function WatchlistTable({
                 {formatVolume(r.snap?.quote?.volume)}
               </span>
             ),
+          },
+        ]
+      : []),
+    ...(!compact
+      ? [
+          {
+            key: "market_cap",
+            header: "Mkt cap",
+            align: "right" as const,
+            hideBelow: "xl" as const,
+            render: (r: Row) => {
+              const f = fig(r, "market_cap");
+              return f?.v ? <span className="num text-fg-2" title={asOf(r)}>{formatLargeMoney(f.v, ccy(r))}</span> : missing(r, f);
+            },
+          },
+          {
+            key: "pe_ratio",
+            header: "P/E",
+            align: "right" as const,
+            hideBelow: "xl" as const,
+            render: (r: Row) => {
+              const f = fig(r, "pe_ratio");
+              return f?.v ? <span className="num text-fg-2" title={`Trailing P/E. ${asOf(r) ?? ""}`}>{formatRatio(f.v)}</span> : missing(r, f);
+            },
+          },
+          {
+            key: "from_52w_high_pct",
+            header: "52W high",
+            srHeader: " distance from the 52-week high",
+            align: "right" as const,
+            hideBelow: "2xl" as const,
+            render: (r: Row) => {
+              const f = fig(r, "from_52w_high_pct");
+              if (!f?.v) return missing(r, f);
+              const n = Number(f.v);
+              return (
+                <span className="inline-flex items-center justify-end gap-2" title={`${formatPercent(n)} from the 52-week high (daily closes). ${asOf(r) ?? ""}`}>
+                  <span className="relative h-1.5 w-12 rounded-full bg-elevated" aria-hidden>
+                    <span className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-neg/70 to-pos/80" style={{ width: `${Math.max(4, 100 + Math.max(-100, n))}%` }} />
+                  </span>
+                  <span className={cn("num text-xs", n >= -2 ? "text-pos" : "text-fg-2")}>{formatPercent(n)}</span>
+                </span>
+              );
+            },
+          },
+          {
+            key: "return_1y_pct",
+            header: "1Y",
+            srHeader: " price return",
+            align: "right" as const,
+            hideBelow: "xl" as const,
+            render: (r: Row) => {
+              const f = fig(r, "return_1y_pct");
+              return f?.v ? <span title={asOf(r)}><ChangeText percent={f.v} showIcon={false} className="text-xs" /></span> : missing(r, f);
+            },
           },
         ]
       : []),
