@@ -11,7 +11,7 @@ import { Sparkline } from "@/components/ui/Sparkline";
 import { EmptyState, ErrorState, InlineNotice, SkeletonRows } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
 import { errorMessage } from "@/lib/api/client";
-import { DASH, formatNumber, formatPercent, formatSessionDate, formatInstant } from "@/lib/format";
+import { DASH, formatNumber, formatPercent, formatSessionDate, formatInstant, sourceName } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { useSession } from "@/features/settings/api";
 import { SymbolPicker } from "@/features/search/SymbolPicker";
@@ -49,7 +49,7 @@ export function MacroPage() {
   }, [w]);
   return (
     <div className="grid grid-cols-1 gap-4 p-4 md:p-6 lg:grid-cols-12 lg:gap-5">
-      <Panel title="Macro watchboard" titleId="mw-title" className="lg:col-span-12" refreshing={q.isFetching && !q.isLoading} meta={w ? `${w.provider} · daily market series` : undefined}>
+      <Panel title="Macro watchboard" titleId="mw-title" className="lg:col-span-12" refreshing={q.isFetching && !q.isLoading} meta={w ? `${sourceName(w.provider)} · daily market series` : undefined}>
         {q.isLoading ? (
           <SkeletonRows rows={6} />
         ) : q.isError ? (
@@ -141,7 +141,7 @@ function SeriesCard({ s }: { s: MacroSeries }) {
             ))}
           </dl>
           <p className="mt-1.5 text-[11px] leading-4 text-fg-3">
-            {s.provider} · {s.frequency} · as of {s.session_date ? formatSessionDate(s.session_date) : DASH}
+            {sourceName(s.provider)} · {s.frequency} · as of {s.session_date ? formatSessionDate(s.session_date) : DASH}
             {s.observed && s.observed.length > 10 ? ` (${formatInstant(s.observed)})` : ""} · {s.revision}
             {s.status === "stale" ? <span className="text-warn"> · stale</span> : null}
           </p>

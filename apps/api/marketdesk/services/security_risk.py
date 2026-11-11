@@ -320,7 +320,7 @@ async def build(
     if closes is None:
         return {**out, "status": "missing", "reason": hist.meta.message or "No daily prices."}
     end = max(closes)
-    out["prices"] = {"source": f"{market.source} daily closes", "adjustment": hist.value.adjustment, "to": end}
+    out["prices"] = {"source": f"{market.label} daily closes", "adjustment": hist.value.adjustment, "to": end}
     # benchmark sensitivity
     if bcloses is None:
         out["sensitivity"] = {"why": bhist.meta.message or f"No prices for {bench_sym}."}

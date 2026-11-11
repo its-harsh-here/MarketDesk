@@ -30,7 +30,7 @@ from marketdesk.providers.alpaca import STREAM_IEX, AlpacaClient, _ts, us_symbol
 log = logging.getLogger("marketdesk.stream")
 
 FEED = "iex"
-FEED_LABEL = "IEX (Alpaca) — single exchange, not consolidated"
+FEED_LABEL = "single-exchange trades (IEX), not consolidated"
 MAX_SYMBOLS = 30  # Alpaca's free plan allows 30 symbols on one connection
 IDLE_CLOSE_SECONDS = 60.0
 
@@ -71,9 +71,9 @@ class QuoteStreamHub:
     # ---- availability and subscriptions -------------------------------------------------------------------------
     def unavailable_reason(self) -> str | None:
         if not self.enabled:
-            return "Streaming is off for this deployment (it needs the Yahoo provider and ALPACA_STREAMING)."
+            return "Live trades are not available in this deployment."
         if not self.client.enabled:
-            return self.client.problem or "Alpaca is not configured."
+            return self.client.problem or "The live-data service is not configured."
         return None
 
     def acquire(self, symbols: list[str]) -> tuple[list[str], list[str]]:
@@ -252,9 +252,9 @@ class QuoteStreamHub:
             except _StreamError as exc:
                 fatal = exc.code in (401, 402, 403, 404, 409)  # auth / plan problems: retrying will not help soon
                 if exc.code == 406:  # connection limit: another process holds the single free connection
-                    self._set_status("error", "Alpaca allows one stream per account and it is in use elsewhere.")
+                    self._set_status("error", "The live-data account allows one stream and it is in use elsewhere.")
                 elif fatal:
-                    self._set_status("error", f"Alpaca refused the stream ({exc.code}).")
+                    self._set_status("error", f"The live-data service refused the stream ({exc.code}).")
                 else:
                     self._set_status("reconnecting", f"Stream error ({exc.code or 'protocol'}).")
                 delay = 60.0 if fatal or exc.code == 406 else delay

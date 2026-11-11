@@ -30,7 +30,7 @@ export function FreshnessBadge({ meta, compact = false, className }: { meta: Dat
       <div className="text-fg-2">{meta.message ?? s.explain}</div>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 pt-1 text-fg-2">
         <dt className="text-fg-3">Source</dt>
-        <dd>{meta.source === "fixture" ? "Sample dataset" : meta.source === "yahoo" ? "Yahoo Finance (yfinance)" : meta.source}</dd>
+        <dd>{meta.source === "fixture" ? "Sample dataset" : meta.source === "yahoo" ? "Market data feed" : meta.source}</dd>
         <dt className="text-fg-3">Market time</dt>
         <dd>{formatInstant(meta.market_time, tz)}</dd>
         <dt className="text-fg-3">Fetched</dt>
@@ -107,14 +107,14 @@ export function Pill({ children, tone = "neutral", className }: { children: Reac
   return <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap", tones[tone], className)}>{children}</span>;
 }
 
-/** Marks a price that comes from the streaming IEX trade feed rather than the polled quote. */
+/** Marks a price that comes from the streaming trade feed rather than the polled quote. */
 export function LiveBadge({ time, compact = false }: { time: string; compact?: boolean }) {
   const t = new Date(time).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
-  const title = `Last trade on IEX at ${t} New York time (streamed via Alpaca). IEX is a single exchange, not consolidated market data; change is measured from the provider's previous close.`;
+  const title = `Live trade at ${t} New York time. Live trades come from a single exchange (IEX), not consolidated market data; change is measured from the previous close.`;
   return (
-    <span title={title} aria-label={`Live IEX trade at ${t} New York time`} className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-pos/40 bg-pos/10 px-1.5 py-0.5 text-[11px] font-medium leading-none text-pos">
+    <span title={title} aria-label={`Live trade at ${t} New York time`} className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-pos/40 bg-pos/10 px-1.5 py-0.5 text-[11px] font-medium leading-none text-pos">
       <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-pos motion-safe:animate-pulse" />
-      {compact ? "IEX" : `IEX live · ${t}`}
+      {compact ? "Live" : `Live · ${t}`}
     </span>
   );
 }

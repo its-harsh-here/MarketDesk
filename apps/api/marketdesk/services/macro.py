@@ -192,7 +192,7 @@ def briefing(board: dict, links: list[dict], window: str = "1w") -> dict:
         sign = "+" if Decimal(ch["value"]) > 0 else ""
         text = (
             f"{s['name']}: {sign}{ch['value']}{' pp' if ch['unit'] == 'pp' else '%'} since {ch['from']} to "
-            f"{s['value']} {s['unit']} (as of {s['session_date']}; {s['provider']})."
+            f"{s['value']} {s['unit']} (as of {s['session_date']})."
         )
         related = [lk for lk in links if lk["series_symbol"] == s["symbol"]]
         items.append(

@@ -93,7 +93,7 @@ def ask(api, question="What changed?"):
 def test_a_groq_key_in_grok_api_selects_groq_and_its_free_model(groq):
     api, app, _ = groq
     st = api.get("/api/ai/status").json()
-    assert st["provider"] == "groq" and st["provider_label"] == "Groq (free tier)" and st["enabled"]
+    assert st["provider"] == "groq" and st["provider_label"] == "AI analyst" and st["enabled"]
     assert st["model"] == "openai/gpt-oss-120b" and st["tools"] == []
     assert st["key_format"] == "starts with 'gsk_', 56 characters" and KEY not in json.dumps(st)
     assert st["budget"]["tokens_limit"] == 150_000 and st["budget"]["limit_usd"] is None
@@ -114,7 +114,7 @@ def test_one_strict_structured_call_without_tools(groq):
     assert "tools" not in body and body["reasoning_effort"] == "low" and body["include_reasoning"] is False
     assert body["max_completion_tokens"] == 2300 and body["messages"][0]["role"] == "system"
     assert a["usage"]["input_tokens"] == 3100 and a["usage"]["output_tokens"] == 900
-    assert a["usage"]["cost_source"] == "Groq free tier: not billed" and a["cost_usd"] == "0"
+    assert a["usage"]["cost_source"] == "Included in the plan: not billed" and a["cost_usd"] == "0"
     budget = api.get("/api/ai/status").json()["budget"]
     assert budget["tokens_used"] == 4000 and budget["requests_used"] == 1 and budget["spent_usd"] == "0"
 
@@ -217,7 +217,7 @@ def test_groq_client_http_behaviour(monkeypatch):
     monkeypatch.setattr("urllib.request.urlopen", fail(401, "Invalid API Key"))
     with pytest.raises(XaiError) as err:
         client.chat({"messages": []})
-    assert err.value.kind == "auth" and "console.groq.com" in err.value.message and KEY not in err.value.message
+    assert err.value.kind == "auth" and "rejected the API key" in err.value.message and KEY not in err.value.message
     monkeypatch.setattr("urllib.request.urlopen", fail(413, "Request too large: limit 8000, requested 9100"))
     with pytest.raises(XaiError) as err:
         client.chat({"messages": []})

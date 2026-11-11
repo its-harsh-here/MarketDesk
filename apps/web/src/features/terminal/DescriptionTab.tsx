@@ -5,7 +5,7 @@ import { Panel } from "@/components/ui/Panel";
 import { Pill } from "@/components/ui/Badges";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/States";
 import { errorMessage } from "@/lib/api/client";
-import { DASH, formatInstant, formatMoney, formatRelative, formatSessionDate } from "@/lib/format";
+import { DASH, formatInstant, formatMoney, formatRelative, formatSessionDate, sourceName, sourceText } from "@/lib/format";
 import { REGION_LABEL } from "@/lib/markets";
 import { SECURITY_CODES } from "@/lib/codes";
 import { ChartPanel } from "@/features/market/ChartPanel";
@@ -100,7 +100,7 @@ function KeyStats({ q, currency, tz }: { q: Q; currency: string | null; tz: stri
             </section>
           ))}
           <SourceLine>
-            Snapshot {d.key_stats.computed_at ? `computed ${formatInstant(d.key_stats.computed_at, tz)} (${formatRelative(d.key_stats.computed_at)})` : "not computed"} from {d.key_stats.provider} quote, history, fundamentals and statements; each value shows its as-of date. Hover a label for its formula.
+            Snapshot {d.key_stats.computed_at ? `computed ${formatInstant(d.key_stats.computed_at, tz)} (${formatRelative(d.key_stats.computed_at)})` : "not computed"} from {sourceName(d.key_stats.provider).toLowerCase()} quote, history, fundamentals and statements; each value shows its as-of date. Hover a label for its formula.
           </SourceLine>
         </>
       )}
@@ -161,7 +161,7 @@ function Identity({ q, tz }: { q: Q; tz: string }) {
             <Row label="Fiscal year end">{i.sec?.fiscal_year_end ? `${i.sec.fiscal_year_end} (month-day, SEC)` : i.last_fiscal_year_end ? formatSessionDate(i.last_fiscal_year_end) : DASH}</Row>
             {i.cik !== null && <Row label="SEC CIK"><span className="num">{i.cik}</span></Row>}
             {i.identifiers.map((x) => (
-              <Row key={x.scheme} label={["CIK", "ISIN", "FIGI", "CUSIP"].includes(x.scheme.toUpperCase()) ? x.scheme.toUpperCase() : `${x.scheme[0].toUpperCase()}${x.scheme.slice(1)} symbol`}><span className="num">{x.value}</span></Row>
+              <Row key={x.scheme} label={["CIK", "ISIN", "FIGI", "CUSIP"].includes(x.scheme.toUpperCase()) ? x.scheme.toUpperCase() : x.scheme.toLowerCase() === "yahoo" ? "Feed symbol" : `${x.scheme[0].toUpperCase()}${x.scheme.slice(1)} symbol`}><span className="num">{x.value}</span></Row>
             ))}
             {i.sec && i.sec.tickers.length > 0 && (
               <Row label="All listings (SEC)">{i.sec.tickers.map((t, k) => `${t}${i.sec?.exchanges[k] ? ` (${i.sec.exchanges[k]})` : ""}`).join(", ")}</Row>
@@ -173,8 +173,8 @@ function Identity({ q, tz }: { q: Q; tz: string }) {
             )}
           </dl>
           <SourceLine>
-            Listing identity: {i.identity_source ?? "provider"}
-            {i.identity_verified_at && `, verified ${formatInstant(i.identity_verified_at, tz)}`}. Classification: {i.classification_source ?? "not reported"}
+            Listing identity: {sourceText(i.identity_source ?? "provider")}
+            {i.identity_verified_at && `, verified ${formatInstant(i.identity_verified_at, tz)}`}. Classification: {sourceText(i.classification_source ?? "not reported")}
             {i.fetched_at && `, retrieved ${formatInstant(i.fetched_at, tz)}`}
             {i.sec?.fetched_at && `. SEC profile retrieved ${formatInstant(i.sec.fetched_at, tz)}`}.
           </SourceLine>
@@ -209,7 +209,7 @@ function NextEvents({ symbol, currency }: { symbol: string; currency: string | n
             </Row>
           </dl>
           <SourceLine>
-            {cal?.next?.explanation ?? cal?.note ?? ""} {cal?.source ? `Results: ${cal.source}.` : ""} Dividends and splits: {a.data?.meta.source ?? "provider"}. No date here is an announced date unless the source says so.
+            {cal?.next?.explanation ?? cal?.note ?? ""} {cal?.source ? `Results: ${cal.source}.` : ""} Dividends and splits: {sourceName(a.data?.meta.source ?? "provider").toLowerCase()}. No date here is an announced date unless the source says so.
           </SourceLine>
         </>
       )}

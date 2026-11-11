@@ -11,7 +11,7 @@ import { Segmented } from "@/components/ui/Segmented";
 import { EmptyState, ErrorState, InlineNotice, SkeletonRows } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
 import { errorMessage } from "@/lib/api/client";
-import { DASH, formatMoney, formatNumber, formatPercent, formatSessionDate } from "@/lib/format";
+import { DASH, formatMoney, formatNumber, formatPercent, formatSessionDate, sourceName } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { useSession } from "@/features/settings/api";
 import { SymbolPicker } from "@/features/search/SymbolPicker";
@@ -156,7 +156,7 @@ function RunView({ run }: { run: Run }) {
         </details>
       )}
       <p className="text-xs leading-4 text-fg-3">
-        Data: {run.data.provider}, {run.data.bars} completed daily sessions{run.data.unfinished_session_excluded ? ` (the unfinished ${run.data.unfinished_session_excluded} session is left out)` : ""}, {run.data.dividends} dividend(s) in the period, credited only while held · {run.data.adjustment} · fingerprint <span className="num">{run.data.hash.slice(0, 12)}</span>. {run.label}
+        Data: {sourceName(run.data.provider)}, {run.data.bars} completed daily sessions{run.data.unfinished_session_excluded ? ` (the unfinished ${run.data.unfinished_session_excluded} session is left out)` : ""}, {run.data.dividends} dividend(s) in the period, credited only while held · {run.data.adjustment} · fingerprint <span className="num">{run.data.hash.slice(0, 12)}</span>. {run.label}
       </p>
     </div>
   );

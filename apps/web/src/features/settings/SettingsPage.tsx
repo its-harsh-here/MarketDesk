@@ -135,7 +135,7 @@ function SettingsBody({ prefs }: { prefs: Prefs }) {
         ) : (
           <>
             <dl>
-              <Row label="Provider">{status.sample_data ? <Pill tone="info">Sample dataset (fixture)</Pill> : <Pill>Yahoo Finance via yfinance</Pill>}</Row>
+              <Row label="Provider">{status.sample_data ? <Pill tone="info">Sample dataset (fixture)</Pill> : <Pill>Market data feed</Pill>}</Row>
               {status.sample_data && <Row label="Dataset date"><span className="num">{formatSessionDate(status.dataset_date)}</span></Row>}
               <Row label="Market status">{status.market_status}</Row>
               <Row label="Provider health">{health.circuit === "closed" ? "Healthy" : health.circuit === "open" ? "Paused after repeated failures" : "Recovering"}{health.consecutive_failures ? ` · ${health.consecutive_failures} recent failure(s)` : ""}</Row>
@@ -246,7 +246,7 @@ function SettingsBody({ prefs }: { prefs: Prefs }) {
           {status?.storage.path.startsWith("postgresql") ? (
             <>
               <p>
-                Your data (watchlists, transactions, alerts, journal, settings) is in an external PostgreSQL database. Back it up with your database provider's tools — Neon keeps restorable history of recent changes — or with <code className="num">pg_dump</code> using the same <code className="num">DATABASE_URL</code>:
+                Your data (watchlists, transactions, alerts, journal, settings) is in an external PostgreSQL database. Back it up with your database provider's tools (point-in-time history, where offered) or with <code className="num">pg_dump</code> using the same <code className="num">DATABASE_URL</code>:
               </p>
               <pre tabIndex={0} className="num overflow-x-auto rounded-[var(--radius-control)] border border-line-subtle bg-canvas px-3 py-2 text-xs text-fg">pg_dump --format=custom --file=marketdesk-$(date +%F).dump "$DATABASE_URL"</pre>
               <p className="text-xs text-fg-3">Restore into an empty database with <code className="num">pg_restore --no-owner --dbname "$DATABASE_URL" FILE</code>, then point the service at it.</p>
@@ -303,9 +303,6 @@ function AiPanel() {
         {!st.enabled && <p className="text-xs text-fg-3">{st.reason}</p>}
         <dl className="space-y-2">
           <div className="flex justify-between gap-2"><dt className="text-fg-2">Status</dt><dd><Pill tone={st.enabled ? "pos" : "neutral"}>{st.enabled ? "On" : "Off"}</Pill></dd></div>
-          <div className="flex justify-between gap-2"><dt className="text-fg-2">Provider</dt><dd>{st.provider_label}</dd></div>
-          <div className="flex justify-between gap-2"><dt className="text-fg-2">Model</dt><dd className="num">{st.model}</dd></div>
-          {st.key_format && <div className="flex justify-between gap-2"><dt className="text-fg-2">API key</dt><dd className="text-right text-xs text-fg-2">{st.key_format}</dd></div>}
           <div className="flex justify-between gap-2">
             <dt className="text-fg-2">Today (UTC)</dt>
             <dd className="num text-right">
@@ -321,10 +318,7 @@ function AiPanel() {
           )}
         </dl>
           <p className="text-xs leading-4 text-fg-3">
-            {st.provider === "groq"
-              ? "Groq's free tier runs open models without charge, within its rate limits (requests and tokens per minute and per day); MarketDesk keeps each answer to one call that fits those limits. "
-              : "xAI usage is billed to your xAI account; spend is reconciled with the cost xAI reports per answer. "}
-            Only public market data and your question are sent, never your portfolio or journal; web search is off. The key stays on the server (GROK_API). Limits: AI_DAILY_REQUESTS, {st.provider === "groq" ? "AI_DAILY_TOKENS, AI_REQUEST_TOKENS" : "AI_DAILY_BUDGET_USD, AI_MAX_TOOL_CALLS"}, AI_MAX_OUTPUT_TOKENS.
+            Each answer is one call within the daily limits above. Only public market data and your question are sent, never your portfolio or journal; web search is off. The service key stays on the server.
           </p>
         </div>
       )}

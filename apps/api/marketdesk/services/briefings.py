@@ -27,7 +27,7 @@ from marketdesk.providers.venues import MARKETS
 from marketdesk.services import alert_rules as rules
 from marketdesk.services.market import MarketDataService
 from marketdesk.services.prefs import get_prefs
-from marketdesk.services.sessions import CALENDAR_LIBRARY, SPECIAL_SESSIONS, _calendar, calendar_bounds
+from marketdesk.services.sessions import SPECIAL_SESSIONS, _calendar, calendar_bounds
 
 log = logging.getLogger("marketdesk.briefings")
 KINDS = ("morning", "close")
@@ -167,7 +167,7 @@ async def generate_briefing(
             f"{m['name']} trades today ({_day(session_date)}): opens {_fmt_local(info['opens_at'], tz)}, "
             f"closes {_fmt_local(info['closes_at'], tz)}" + (" (early close)." if info.get("early_close") else ".")
         )
-        items.append(_item("session", "info", text, f"Exchange calendar: {CALENDAR_LIBRARY}."))
+        items.append(_item("session", "info", text, "Published exchange calendar."))
     reference = info.get("previous_session") if kind == "morning" else session_date
 
     moves, volume_notes, missing, statuses, last_close = [], [], [], set(), {}
@@ -292,7 +292,7 @@ async def generate_briefing(
                 "info",
                 f"Next {m['name']} session: {_day(info['next_session'])}, opens "
                 f"{_fmt_local(info['next_opens_at'], tz)}.",
-                f"Exchange calendar: {CALENDAR_LIBRARY}.",
+                "Published exchange calendar.",
             )
         )
     if missing:

@@ -202,7 +202,7 @@ def test_events_api_on_sample_data(api):
     nxt = [e for e in out["upcoming"] if e["kind"] == "results"]
     assert nxt and nxt[0]["status"] == "deadline" and "SEBI" in nxt[0]["label"]
     divs = [e for e in out["past"] if e["kind"] == "dividend"]
-    assert divs and divs[0]["value"] == "4.00" and divs[0]["source"] == "fixture corporate actions"
+    assert divs and divs[0]["value"] == "4.00" and divs[0]["source"] == "Sample dataset corporate actions"
     assert all(e["date"] < date.today().isoformat() for e in out["past"])
     assert any("Indian listings" in n for n in out["notes"]) and out["consensus"]["status"] == "licensed"
     us = api.get("/api/terminal/events", params={"symbol": "SX:HALCYON"}).json()

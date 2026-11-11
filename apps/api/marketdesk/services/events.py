@@ -258,9 +258,9 @@ async def security_events(db: Session, market: MarketDataService, research, inst
     events += _results_events(cal)
     acts = await market.actions(inst.symbol)
     if acts.value is not None:
-        src = f"Dividends and splits: {market.source} corporate actions"
+        src = f"Dividends and splits: {market.label} corporate actions"
         sources.append(src)
-        events += _action_events(acts.value, f"{market.source} corporate actions")
+        events += _action_events(acts.value, f"{market.label} corporate actions")
     elif acts.meta.message:
         notes.append(f"Corporate actions: {acts.meta.message}")
     if inst.country == "US" and _sec_on(research):
@@ -299,9 +299,7 @@ async def security_events(db: Session, market: MarketDataService, research, inst
                                     "mention", "SEC EDGAR · quoted from the release", url=info.get("url"),
                                     quote=s))  # fmt: skip
     elif inst.country == "US":
-        notes.append(
-            "SEC data is not configured on this server (SEC_USER_AGENT): filings, meetings and buybacks are not shown."
-        )
+        notes.append("SEC data is not configured on this server: filings, meetings and buybacks are not shown.")
     elif er.is_india(inst):
         notes.append(
             "Board meetings, AGMs and buyback announcements for Indian listings need a permitted exchange source "
@@ -336,7 +334,7 @@ async def universe_events(db: Session, market: MarketDataService, research, spec
             cal = await er.calendar_for(db, market, research, inst)
             events += _results_events(cal, inst.symbol)
             acts = await market.actions(inst.symbol)
-            for e in _action_events(acts.value, f"{market.source} corporate actions"):
+            for e in _action_events(acts.value, f"{market.label} corporate actions"):
                 events.append({**e, "symbol": inst.symbol})
             if inst.country == "US" and _sec_on(research):
                 env = await asyncio.to_thread(research.filings, db, inst, 80)

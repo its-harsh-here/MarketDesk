@@ -37,8 +37,8 @@ async def _bands(market: MarketDataService, inst: Instrument, annual: dict) -> d
     bars = [(b.session_date, b.close) for b in hist.value.bars if b.close is not None]
     splits = [(a.action_date, a.value) for a in (acts.value or []) if a.kind == "SPLIT"]
     out = fa.valuation_bands(annual, bars, splits, inst.currency)
-    out["price_source"] = f"{market.source} daily closes ({hist.value.adjustment})"
-    out["splits_source"] = f"{market.source} corporate actions" if acts.value is not None else None
+    out["price_source"] = f"{market.label} daily closes ({hist.value.adjustment})"
+    out["splits_source"] = f"{market.label} corporate actions" if acts.value is not None else None
     return out
 
 

@@ -26,7 +26,7 @@ from marketdesk.providers.base import OptionChain, OptionQuote, ProviderError
 DATA = "https://data.alpaca.markets"
 TRADING = "https://paper-api.alpaca.markets"  # contracts reference list (same data on paper and live)
 STREAM_IEX = "wss://stream.data.alpaca.markets/v2/iex"
-OPTIONS_SOURCE = "Alpaca indicative options feed (delayed; not OPRA)"
+OPTIONS_SOURCE = "Indicative options feed (delayed; not the official OPRA feed)"
 _SYM = re.compile(r"^[A-Z][A-Z0-9.-]{0,9}$")
 _KEY_ID = re.compile(r"^[A-Z0-9]{16,40}$")
 _MAX_PAGES = 12
@@ -118,9 +118,9 @@ class AlpacaClient:
     def __init__(self, key_id: str | None, secret: str | None, timeout: float = 15.0, ttl: float = 120.0):
         kid, sec = (key_id or "").strip(), (secret or "").strip()
         if not kid or not sec:
-            self.problem = "Alpaca is not configured (ALPACA_API_KEY_ID and ALPACA_API_SECRET_KEY)."
+            self.problem = "The live-data service is not configured on this server."
         elif not _KEY_ID.match(kid) or len(sec) < 20:
-            self.problem = "The Alpaca key pair does not look like Alpaca API credentials."
+            self.problem = "The live-data service credentials are not valid."
         else:
             self.problem = None
         self._kid, self._sec = (kid, sec) if self.problem is None else (None, None)
@@ -135,7 +135,7 @@ class AlpacaClient:
 
     def credentials(self) -> tuple[str, str]:
         if not self.enabled:
-            raise ProviderError("unsupported", self.problem or "Alpaca is not configured.")
+            raise ProviderError("unsupported", self.problem or "The live-data service is not configured.")
         return self._kid, self._sec  # type: ignore[return-value]
 
     def _get(self, base: str, path: str, params: dict) -> dict:
@@ -151,14 +151,14 @@ class AlpacaClient:
             kind = {429: "rate_limited", 404: "missing", 422: "missing", 401: "unsupported", 403: "unsupported"}.get(
                 exc.code, "upstream_unavailable"
             )
-            msg = "Alpaca rejected the credentials or this plan lacks the feed." if exc.code in (401, 403) else (
-                f"Alpaca request failed (HTTP {exc.code})."
+            msg = "Live-data credentials rejected, or the plan lacks this feed." if exc.code in (401, 403) else (
+                f"The live-data service request failed (HTTP {exc.code})."
             )  # fmt: skip
             raise ProviderError(kind, msg, retryable=exc.code >= 429) from None
         except (urllib.error.URLError, TimeoutError, ValueError):
-            raise ProviderError("timeout", "Alpaca did not respond with valid data.", retryable=True) from None
+            raise ProviderError("timeout", "The live-data service sent no valid data.", retryable=True) from None
         if not isinstance(data, dict):
-            raise ProviderError("upstream_unavailable", "Alpaca returned an unexpected response.")
+            raise ProviderError("upstream_unavailable", "The live-data service returned an unexpected response.")
         return data
 
     def _cached(self, key: tuple, fn):
@@ -177,7 +177,7 @@ class AlpacaClient:
     def contracts(self, symbol: str) -> list[dict]:
         sym = us_symbol(symbol)
         if sym is None:
-            raise ProviderError("unsupported", "Alpaca covers US listings only.")
+            raise ProviderError("unsupported", "Covers US listings only.")
 
         def load() -> list[dict]:
             today = datetime.now(UTC).date()
@@ -199,7 +199,7 @@ class AlpacaClient:
     def snapshots(self, symbol: str, expiry: date) -> dict:
         sym = us_symbol(symbol)
         if sym is None:
-            raise ProviderError("unsupported", "Alpaca covers US listings only.")
+            raise ProviderError("unsupported", "Covers US listings only.")
 
         def load() -> dict:
             params = {"feed": "indicative", "limit": 1000, "expiration_date": expiry.isoformat()}
@@ -221,7 +221,7 @@ class AlpacaClient:
         contracts = self.contracts(symbol)
         expiries = sorted({d for c in contracts if (d := _date(c.get("expiration_date"))) is not None})
         if not expiries:
-            raise ProviderError("missing", f"Alpaca lists no active option contracts for {symbol}.")
+            raise ProviderError("missing", f"No active option contracts are listed for {symbol}.")
         today = datetime.now(UTC).date()  # default: the first expiry after today (same-day contracts carry no IV)
         chosen = expiry if expiry in expiries else next((d for d in expiries if d > today), expiries[0])
         if expiry is not None and expiry not in expiries:
@@ -243,7 +243,7 @@ class AlpacaClient:
         """Headlines tagged with the symbol: {title, publisher, url, published_at, symbols}. No article bodies."""
         sym = us_symbol(symbol)
         if sym is None:
-            raise ProviderError("unsupported", "Alpaca news covers US listings only.")
+            raise ProviderError("unsupported", "Tagged news covers US listings only.")
 
         def load() -> list[dict]:
             data = self._get(DATA, "/v1beta1/news", {"symbols": sym, "limit": min(limit, 50), "sort": "desc"})

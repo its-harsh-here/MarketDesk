@@ -137,7 +137,7 @@ async def calendar_for(db: Session, market: MarketDataService, research, inst: I
                 {"date": fv.most_recent_quarter.isoformat(), "kind": "Latest reported quarter end", "url": None}
             ]
             out["next"] = sebi_deadline(fv.most_recent_quarter, fv.last_fiscal_year_end, today)
-            out["source"] = f"{market.source} fundamentals (latest reported quarter) + SEBI rule"
+            out["source"] = f"{market.label} fundamentals (latest reported quarter) + SEBI rule"
         else:
             out["note"] = "The provider does not report the latest quarter for this listing."
         return out
@@ -145,7 +145,7 @@ async def calendar_for(db: Session, market: MarketDataService, research, inst: I
         "Results dates come from SEC filings (US registrants) or the SEBI deadline (Indian listings); neither applies "
         "here."
         if inst.country != "US"
-        else "SEC data is not configured on this server (SEC_USER_AGENT)."
+        else "SEC data is not configured on this server."
     )
     return out
 

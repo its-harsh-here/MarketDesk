@@ -7,7 +7,7 @@ import { Pill } from "@/components/ui/Badges";
 import { InlineNotice, SkeletonRows } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
 import { errorMessage, type Prefs } from "@/lib/api/client";
-import { formatInstant, formatRelative } from "@/lib/format";
+import { formatInstant, formatRelative, sourceName } from "@/lib/format";
 import { useWatchlists } from "@/features/watchlists/api";
 import { usePatchPrefs, usePrefs, useSession } from "@/features/settings/api";
 import { offlineEnabled, readSnapshot, setOfflineEnabled, syncSnapshot } from "@/lib/offline";
@@ -182,7 +182,7 @@ export function UsagePanel() {
       <div className="grid gap-6 lg:grid-cols-2">
         <section aria-labelledby="u-prov">
           <h3 id="u-prov" className="mb-2 text-[13px] font-medium text-fg-2">
-            Market data · {u.provider.provider}{" "}
+            Market data · {sourceName(u.provider.provider)}{" "}
             <Pill tone={u.provider.circuit === "closed" ? "pos" : "neg"}>{u.provider.circuit === "closed" ? "healthy" : `paused (${u.provider.circuit})`}</Pill>
           </h3>
           <div tabIndex={0} className="scroll-x scrollbar-thin overflow-x-auto">
@@ -218,7 +218,7 @@ export function UsagePanel() {
 
         <section aria-labelledby="u-ai" className="space-y-3">
           <h3 id="u-ai" className="text-[13px] font-medium text-fg-2">
-            AI research · {u.ai.enabled ? `${u.ai.provider_label} (${u.ai.model})` : "off"}
+            AI research · {u.ai.enabled ? u.ai.provider_label : "off"}
           </h3>
           <dl className="space-y-1.5 text-[13px]">
             <div className="flex justify-between gap-2"><dt className="text-fg-2">Answers today (UTC)</dt><dd className="num">{u.ai.budget.requests_used} of {u.ai.budget.requests_limit}</dd></div>
@@ -277,7 +277,7 @@ export function UsagePanel() {
                 </Select>
               )}
             </Field>
-            <InlineNotice className="self-start">Alerts are checked by the worker every {mins(u.refresh.worker_poll_seconds)} (server setting ALERT_POLL_SECONDS), independent of this page.</InlineNotice>
+            <InlineNotice className="self-start">Alerts are checked by the worker every {mins(u.refresh.worker_poll_seconds)}, independent of this page.</InlineNotice>
           </div>
         </section>
       </div>

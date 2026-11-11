@@ -48,12 +48,12 @@ class XaiClient:
         """A non-secret description of the configured key's shape, to diagnose a wrong key without revealing it."""
         if not self._key:
             return None
-        shape = "starts with 'xai-'" if self._key.startswith("xai-") else "does not start with 'xai-' (xAI API keys do)"
+        shape = "starts with 'xai-'" if self._key.startswith("xai-") else "does not have the expected prefix"
         return f"{shape}, {len(self._key)} characters"
 
     def _request(self, method: str, path: str, body: dict | None = None) -> dict:
         if not self._key:
-            raise XaiError("auth", "No xAI API key is configured.")
+            raise XaiError("auth", "No AI service key is configured.")
         data = json.dumps(body).encode() if body is not None else None
         for attempt in range(self.retries + 1):
             req = urllib.request.Request(  # noqa: S310 (fixed https xAI base URL from settings)
@@ -73,30 +73,32 @@ class XaiClient:
                 try:
                     return json.loads(raw)
                 except ValueError as exc:
-                    raise XaiError("malformed", "xAI returned a response that is not JSON.") from exc
+                    raise XaiError("malformed", "The AI service returned a response that is not JSON.") from exc
             except urllib.error.HTTPError as exc:
                 detail = _error_detail(exc)
                 if exc.code in (401, 403) or (exc.code == 400 and "api key" in detail.lower()):
                     raise XaiError(
                         "auth",
-                        f"xAI rejected the API key (HTTP {exc.code}){detail} Use an API key from console.x.ai.",
+                        f"The AI service rejected the API key (HTTP {exc.code}){detail}",
                         exc.code,
                     ) from exc
                 if exc.code == 429:
                     if attempt < self.retries:
                         time.sleep(min(8.0, 2.0 * (attempt + 1)))
                         continue
-                    raise XaiError("rate_limited", "xAI rate limit or credit limit reached (HTTP 429).", 429) from exc
+                    raise XaiError("rate_limited", "AI service rate or credit limit reached (HTTP 429).", 429) from exc
                 if exc.code >= 500:
                     if attempt < self.retries:
                         time.sleep(1.0 + random.random())  # noqa: S311 (jitter only)
                         continue
-                    raise XaiError("unavailable", f"xAI is unavailable (HTTP {exc.code}).", exc.code) from exc
-                raise XaiError("bad_request", f"xAI refused the request (HTTP {exc.code}){detail}", exc.code) from exc
+                    raise XaiError("unavailable", f"AI service unavailable (HTTP {exc.code}).", exc.code) from exc
+                raise XaiError(
+                    "bad_request", f"AI service refused the request (HTTP {exc.code}){detail}", exc.code
+                ) from exc
             except (urllib.error.URLError, TimeoutError) as exc:
                 if attempt < self.retries:
                     continue
-                raise XaiError("timeout", "xAI did not respond in time.") from exc
+                raise XaiError("timeout", "The AI service did not respond in time.") from exc
         raise AssertionError("unreachable")  # pragma: no cover
 
     def create_response(self, body: dict) -> dict:

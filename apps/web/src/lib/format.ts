@@ -162,3 +162,16 @@ export function todayIso(tz = "Asia/Kolkata"): string {
     .format(new Date());
   return parts;
 }
+
+/** Display name for a data-source key returned by the API (vendor keys are not shown in the product). */
+export function sourceName(key: string | null | undefined): string {
+  const k = (key ?? "").toLowerCase();
+  if (k === "fixture" || k === "sample") return "Sample dataset";
+  if (k === "yahoo" || k.includes("yahoo") || k.includes("yfinance")) return "Market data feed";
+  return key ?? "—";
+}
+
+/** A source description from the API with any internal vendor key replaced by its display name. */
+export function sourceText(text: string | null | undefined): string {
+  return (text ?? "").replace(/\b(yahoo|yfinance)\b/gi, "market data feed").replace(/^market data feed/, "Market data feed");
+}

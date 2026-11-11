@@ -58,12 +58,9 @@ def html_to_text(markup: str) -> str:
 
 def user_agent_problem(ua: str | None) -> str | None:
     if not ua:
-        return (
-            "SEC_USER_AGENT is not set. SEC data needs an application name and a contact email, "
-            "e.g. 'MarketDesk you@example.com'."
-        )
+        return "SEC filings are not configured on this server."
     if not _UA_RE.match(ua.strip()):
-        return "SEC_USER_AGENT must be an application name followed by a contact email address."
+        return "SEC filings are not configured correctly on this server."
     return None
 
 

@@ -10,7 +10,6 @@ quote is live.
 from __future__ import annotations
 
 import functools
-import importlib.metadata
 from datetime import UTC, date, datetime
 
 import exchange_calendars as xc
@@ -18,7 +17,7 @@ import pandas as pd
 
 from marketdesk.providers.venues import MARKETS
 
-CALENDAR_LIBRARY = f"exchange_calendars {importlib.metadata.version('exchange-calendars')}"
+CALENDAR_LIBRARY = "published exchange"
 
 # Sessions held outside the regular schedule whose hours the calendar does not model. Shown as "unknown" rather than
 # "closed". Sources: exchange announcements as reported by brokers (Budget-day session; Diwali Muhurat trading).

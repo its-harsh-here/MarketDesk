@@ -20,7 +20,7 @@ export interface LiveState {
   ticks: Record<string, LiveTick>;
 }
 
-const FEED_LABEL = "IEX (Alpaca) — single exchange, not consolidated";
+const FEED_LABEL = "single-exchange trades (IEX), not consolidated";
 
 /** Symbols the server could stream: US listings only (no Indian suffixes, indices, currencies or sample names). */
 export function streamable(symbol: string): boolean {
@@ -121,7 +121,7 @@ export function liveSummary(s: LiveState): { tone: "live" | "warn" | "muted"; te
     case "live":
       return { tone: "live", text: `Live trades: ${s.feedLabel}. Other listings are polled.` };
     case "connecting":
-      return { tone: "muted", text: "Connecting to the IEX trade stream…" };
+      return { tone: "muted", text: "Connecting to live trades…" };
     case "reconnecting":
       return { tone: "warn", text: `Stream reconnecting — showing polled quotes. ${s.message ?? ""}`.trim() };
     case "error":

@@ -113,7 +113,7 @@ def ask(api, kind="ask", symbols=("SX:AURORA",), question="What changed recently
 # --------------------------------------------------------------------------- configuration
 def test_disabled_without_a_key(api):
     st = api.get("/api/ai/status").json()
-    assert st["enabled"] is False and "GROK_API" in st["reason"] and st["web_search"] is False
+    assert st["enabled"] is False and "not configured" in st["reason"] and st["web_search"] is False
     r = api.post("/api/ai/answers", json={"kind": "ask", "symbols": ["SX:AURORA"], "question": "x"})
     assert r.status_code == 503 and r.json()["error"]["code"] == "ai_disabled"
     assert api.get("/api/watchlists").status_code == 200  # everything else unaffected
@@ -426,7 +426,7 @@ def test_status_describes_the_key_shape_without_revealing_it(ai):
     assert st["key_format"] == f"starts with 'xai-', {len(KEY)} characters"
     assert KEY not in json.dumps(st)
     assert XaiClient(' "xai-abc" ', "https://api.x.ai/v1", "m").key_format == "starts with 'xai-', 7 characters"
-    assert "does not start with 'xai-'" in XaiClient("sk-123", "https://api.x.ai/v1", "m").key_format
+    assert "does not have the expected prefix" in XaiClient("sk-123", "https://api.x.ai/v1", "m").key_format
 
 
 def test_figure_check_handles_signs_dates_units_and_citation_markers():

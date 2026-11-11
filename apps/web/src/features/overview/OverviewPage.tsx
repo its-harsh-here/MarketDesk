@@ -328,7 +328,7 @@ export function OverviewPage() {
             >
               {status?.sample_data
                 ? "The sample starter adds fictitious SX: companies from the fixed dataset."
-                : "The NSE starter adds a few large Yahoo symbols; prices are fetched live."}
+                : "The NSE starter adds a few large Indian listings with live prices."}
             </EmptyState>
           ) : wl.items.length === 0 ? (
             <EmptyState

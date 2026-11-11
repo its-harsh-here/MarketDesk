@@ -37,7 +37,7 @@ def test_symbol_gate_and_credentials():
     assert us_symbol("aapl") == "AAPL" and us_symbol("BRK-B") == "BRK.B"
     assert us_symbol("RELIANCE.NS") is None and us_symbol("^GSPC") is None and us_symbol("SX:HALCYON") is None
     assert us_symbol("EURUSD=X") is None
-    assert not AlpacaClient(None, None).enabled and "ALPACA_API_KEY_ID" in AlpacaClient(None, None).problem
+    assert not AlpacaClient(None, None).enabled and "not configured" in AlpacaClient(None, None).problem
     assert not AlpacaClient("bad key", SEC).enabled
     c = AlpacaClient(KID, SEC)
     assert c.enabled and c.credentials() == (KID, SEC)
@@ -194,7 +194,7 @@ def test_hub_session_authenticates_subscribes_seeds_and_reconnects(monkeypatch):
 
 def test_stream_endpoint_off_in_fixture_mode(api):
     st = api.get("/api/stream/status").json()
-    assert st["available"] is False and st["feed"] == "iex" and "Yahoo" in st["reason"]
+    assert st["available"] is False and st["feed"] == "iex" and "not available" in st["reason"]
     with api.c.stream("GET", "/api/stream/quotes", params={"symbols": "AAPL,RELIANCE.NS"}) as r:
         assert r.headers["content-type"].startswith("text/event-stream")
         body = "".join(r.iter_text())

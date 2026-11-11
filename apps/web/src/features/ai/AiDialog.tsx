@@ -70,7 +70,7 @@ function AnswerView({ a, providerLabel }: { a: AiAnswer; providerLabel: string }
   return (
     <article className="space-y-4" aria-label="AI answer">
       <div>
-        <p className="text-xs font-medium text-accent-text">Model output · {a.model} via {providerLabel} · interpretation of the sources listed · not investment advice</p>
+        <p className="text-xs font-medium text-accent-text">Model output · {providerLabel} · interpretation of the sources listed · not investment advice</p>
         <h3 className="mt-1 text-[15px] font-semibold text-fg">{o.headline}</h3>
       </div>
       {a.flags.length > 0 && (
@@ -196,7 +196,7 @@ export function AiDialog() {
       open={isOpen}
       onOpenChange={(o) => !o && close()}
       title={`Research ${symbol}`}
-      description={`MarketDesk retrieves and computes the evidence; ${st ? `${st.model} (${st.provider_label})` : "the model"} writes a cited answer from it. Every point is checked against the sources, and figures never come from the model.`}
+      description={`MarketDesk retrieves and computes the evidence; the AI analyst writes a cited answer from it. Every point is checked against the sources, and figures never come from the model.`}
       size="xl"
       footer={<Button variant="ghost" onClick={close}>Close</Button>}
     >
@@ -246,7 +246,7 @@ export function AiDialog() {
             )}
             {error && <InlineNotice tone="neg"><span role="alert">{error}</span></InlineNotice>}
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs text-fg-3">{budget} · {st.model} · {st.tools.length ? "read-only filing lookups, " : "one call, "}no web search</span>
+              <span className="text-xs text-fg-3">{budget} · {st.tools.length ? "read-only filing lookups, " : "one call, "}no web search</span>
               <Button variant="primary" icon={<Sparkles className="size-4" aria-hidden />} disabled={!canRun} loading={m.ask.isPending || answer.data?.status === "running"} onClick={run} title={readOnly ? "Read-only demo" : undefined}>
                 Run
               </Button>

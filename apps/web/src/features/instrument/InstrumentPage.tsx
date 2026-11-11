@@ -198,12 +198,12 @@ export function InstrumentPage() {
                 </div>
                 <ChangeText value={s.quote.change} percent={s.quote.change_percent} currency={ccy} className="text-[13px]" />
                 <div className="mt-1 text-xs text-fg-3">
-                  {liveQuote ? "Last IEX trade" : "Last observed"} · market time {formatInstant(s.quote.market_time, tz, { seconds: !!liveQuote })}
+                  {liveQuote ? "Last live trade" : "Last observed"} · market time {formatInstant(s.quote.market_time, tz, { seconds: !!liveQuote })}
                   {s.quote.session_date && ` · session ${formatSessionDate(s.quote.session_date)}`}
                 </div>
                 {extended && (
-                  <div className="mt-1 flex flex-wrap items-baseline gap-x-2 text-[13px]" title="Latest IEX trade outside the regular 09:30–16:00 New York session (one exchange, not consolidated). Change is from the latest regular-session price.">
-                    <span className="text-xs text-fg-3">{extended.label} (IEX)</span>
+                  <div className="mt-1 flex flex-wrap items-baseline gap-x-2 text-[13px]" title="Latest trade outside the regular 09:30–16:00 New York session, from a single exchange (IEX), not consolidated. Change is from the latest regular-session price.">
+                    <span className="text-xs text-fg-3">{extended.label}</span>
                     <span className="num text-fg">{formatMoney(String(extended.price), ccy)}</span>
                     <ChangeText value={extended.change.toFixed(4)} percent={extended.changePercent.toFixed(4)} currency={ccy} className="text-xs" />
                     <span className="num text-xs text-fg-3">{formatInstant(extended.time, tz)}</span>

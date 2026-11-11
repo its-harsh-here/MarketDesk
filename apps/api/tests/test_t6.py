@@ -125,7 +125,7 @@ def test_short_interest_is_gated_on_credentials():
         country, symbol = "US", "AAPL"
 
     out = sr._short_interest(None, fin.FinraClient(None, None), Inst())
-    assert out["status"] == "not_configured" and "FINRA_CLIENT_ID" in out["reason"]
+    assert out["status"] == "not_configured" and "not configured" in out["reason"]
     Inst.country = "IN"
     assert sr._short_interest(None, fin.FinraClient("a", "b"), Inst())["status"] == "not_applicable"
 

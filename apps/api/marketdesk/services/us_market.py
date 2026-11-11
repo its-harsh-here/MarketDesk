@@ -63,12 +63,12 @@ def actives_view(raw: dict, snaps: dict, limit: int = 15) -> list[dict]:
 
 async def us_movers(alpaca) -> dict:
     base = {
-        "source": "Alpaca market screener (all US-listed stocks)",
+        "source": "Market screener (all US-listed stocks)",
         "filter": f"Common-stock tickers priced at ${MIN_PRICE:.0f} or more; warrants, rights and penny shares are "
         "left out.",
     }
     if alpaca is None or not alpaca.enabled:
-        why = "Market-wide US movers need the Alpaca keys (ALPACA_API_KEY_ID, ALPACA_API_SECRET_KEY)."
+        why = "Market-wide US movers are not configured on this server."
         return {**base, "status": "not_configured", "reason": why}
     try:
         movers, actives = await asyncio.gather(
@@ -87,7 +87,7 @@ async def us_movers(alpaca) -> dict:
         "gainers": m["gainers"],
         "losers": m["losers"],
         "actives": actives_view(actives, snaps),
-        "note": "Percent change is from the previous close as Alpaca's screener reports it. Most-active prices are "
-        "the latest IEX trade (one exchange). A list of movers is a description of today's prices, not a "
+        "note": "Percent change is from the previous close as the screener reports it. Most-active prices are "
+        "the latest single-exchange (IEX) trade. A list of movers is a description of today's prices, not a "
         "recommendation.",
     }

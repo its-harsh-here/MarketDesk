@@ -41,8 +41,7 @@ def test_no_dividends_and_annual_payer():
 
 def test_dividends_api_on_sample_data(api):
     out = api.get("/api/terminal/dividends", params={"symbol": "SX:AURORA"}).json()
-    assert (
-        out["status"] == "available" and out["frequency"] == "annual" and out["source"] == "fixture corporate actions"
-    )
+    assert out["status"] == "available" and out["frequency"] == "annual"
+    assert out["source"] == "Sample dataset corporate actions"
     assert out["last"]["ex_date"] == "2026-06-12" and float(out["ttm"]["total"]) == 4.0
     assert abs(float(out["ttm"]["yield_pct"]) - 4 / float(out["price"]) * 100) < 1e-4  # serialised to 4 places

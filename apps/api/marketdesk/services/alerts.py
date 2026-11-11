@@ -624,7 +624,7 @@ async def run_evaluation_cycle(db: Session, market: MarketDataService, research=
     filing_alerts = [a for a in alerts if a.rule == "FILING"]
     for a in filing_alerts:
         if research is None or not research.client.enabled:
-            a.last_skip_reason = "Not evaluated: SEC data is not configured (SEC_USER_AGENT)."
+            a.last_skip_reason = "Not evaluated: SEC data is not configured."
             db.commit()
             continue
         env = research.filings(db, a.instrument)

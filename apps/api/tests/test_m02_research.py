@@ -76,7 +76,7 @@ def test_user_agent_is_required_and_validated():
     assert user_agent_problem(None) and user_agent_problem("MarketDesk") and user_agent_problem("you@example.com")
     assert user_agent_problem("MarketDesk owner@example.com") is None
     client = SecClient(None)
-    with pytest.raises(ProviderError, match="SEC_USER_AGENT"):
+    with pytest.raises(ProviderError, match="not configured"):
         client.submissions(1)  # refuses before any network request
 
 
@@ -85,7 +85,7 @@ def test_not_configured_and_not_applicable(env, tmp_path):
     off = ResearchService(svc.settings, client=SecClient(None))
     with db_session() as db:
         r = off.profile(db, db.get(Instrument, us_id))
-        assert r["status"] == "not_configured" and "SEC_USER_AGENT" in r["reason"]
+        assert r["status"] == "not_configured" and "not configured" in r["reason"]
         r = svc.financials(db, db.get(Instrument, in_id), "annual")
         assert r["status"] == "not_applicable" and "not a US listing" in r["reason"]
     assert fake.calls == {"tickers": 0, "submissions": 0, "facts": 0}

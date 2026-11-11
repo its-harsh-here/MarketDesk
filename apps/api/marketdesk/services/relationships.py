@@ -114,7 +114,7 @@ async def relationships(db: Session, research, inst: Instrument) -> dict:
         return {
             **base,
             "status": "not_configured",
-            "reason": "SEC data is not configured on this server (SEC_USER_AGENT).",
+            "reason": "SEC data is not configured on this server.",
         }
     env = await asyncio.to_thread(research.filings, db, inst, 80)
     rows = [r for r in env.get("data") or [] if r["form"] in ANNUAL_FORMS]

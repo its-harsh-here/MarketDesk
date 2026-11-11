@@ -125,7 +125,7 @@ export function OptionsTab({ symbol }: { symbol: string }) {
           </table>
         </div>
         <p className="mt-2 text-xs leading-4 text-fg-3">Shaded cells are in the money; the line marks the last price; the amber strike is max pain. {d.note}
-          {d.fallback_reason && <span className="text-warn"> Alpaca could not serve this chain ({d.fallback_reason}); shown from the fallback provider.</span>}</p>
+          {d.fallback_reason && <span className="text-warn"> The primary options feed could not serve this chain ({d.fallback_reason}); shown from the fallback source.</span>}</p>
       </Panel>
       <Panel title="Chain summary" titleId="opt-sum" className="lg:col-span-4 lg:self-start">
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">

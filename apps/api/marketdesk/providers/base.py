@@ -151,7 +151,7 @@ class AnnualPeriod:
 class AnnualStatements:
     instrument: InstrumentRef
     periods: list[AnnualPeriod]  # newest first
-    source: str  # e.g. "Yahoo annual statements"
+    source: str  # e.g. "Annual statements"
     notes: list[str] = field(default_factory=list)
 
 

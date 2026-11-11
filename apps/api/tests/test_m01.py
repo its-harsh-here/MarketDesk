@@ -149,9 +149,7 @@ def test_unknown_states_are_never_guessed():
 def test_sessions_endpoint(api):
     rows = api.get("/api/market/sessions").json()
     assert {r["market"] for r in rows} == {"IN", "US"}
-    assert all(
-        r["state"] in ("open", "closed", "unknown") and r["source"].startswith("exchange_calendars") for r in rows
-    )
+    assert all(r["state"] in ("open", "closed", "unknown") and r["source"] == "published exchange" for r in rows)
 
 
 # --------------------------------------------------------------------------- comparison

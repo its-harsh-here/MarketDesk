@@ -39,12 +39,12 @@ class GroqClient:
     def key_format(self) -> str | None:
         if not self._key:
             return None
-        shape = "starts with 'gsk_'" if self._key.startswith("gsk_") else "does not start with 'gsk_' (Groq keys do)"
+        shape = "starts with 'gsk_'" if self._key.startswith("gsk_") else "does not have the expected prefix"
         return f"{shape}, {len(self._key)} characters"
 
     def chat(self, body: dict) -> dict:
         if not self._key:
-            raise AiError("auth", "No Groq API key is configured.")
+            raise AiError("auth", "No AI service key is configured.")
         data = json.dumps({"model": self.model, **body}).encode()
         for attempt in range(self.retries + 1):
             req = urllib.request.Request(  # noqa: S310 (fixed https Groq base URL from settings)
@@ -65,17 +65,15 @@ class GroqClient:
                 try:
                     return json.loads(raw)
                 except ValueError as exc:
-                    raise AiError("malformed", "Groq returned a response that is not JSON.") from exc
+                    raise AiError("malformed", "The AI service returned a response that is not JSON.") from exc
             except urllib.error.HTTPError as exc:
                 self._record_limits(exc.headers)
                 detail = _error_detail(exc)
                 if exc.code in (401, 403) or (exc.code == 400 and "api key" in detail.lower()):
-                    raise AiError(
-                        "auth", f"Groq rejected the API key (HTTP {exc.code}){detail} Use a key from console.groq.com."
-                    ) from exc
+                    raise AiError("auth", f"The AI service rejected the API key (HTTP {exc.code}){detail}") from exc
                 if exc.code == 413:
                     raise AiError(
-                        "too_large", f"The request is larger than Groq allows for this model{detail}"
+                        "too_large", f"The request is larger than the AI service allows for this model{detail}"
                     ) from exc
                 if exc.code == 429:
                     wait = _retry_after(exc.headers)
@@ -83,17 +81,19 @@ class GroqClient:
                         time.sleep(wait + 0.5)
                         continue
                     when = f" Try again in about {int(wait)} seconds." if wait else ""
-                    raise AiError("rate_limited", f"Groq free-tier rate limit reached (HTTP 429).{when}", 429) from exc
+                    raise AiError("rate_limited", f"AI service rate limit reached (HTTP 429).{when}", 429) from exc
                 if exc.code >= 500:
                     if attempt < self.retries:
                         time.sleep(1.0 + random.random())  # noqa: S311 (jitter only)
                         continue
-                    raise AiError("unavailable", f"Groq is unavailable (HTTP {exc.code}).", exc.code) from exc
-                raise AiError("bad_request", f"Groq refused the request (HTTP {exc.code}){detail}", exc.code) from exc
+                    raise AiError("unavailable", f"The AI service is unavailable (HTTP {exc.code}).", exc.code) from exc
+                raise AiError(
+                    "bad_request", f"AI service refused the request (HTTP {exc.code}){detail}", exc.code
+                ) from exc
             except (urllib.error.URLError, TimeoutError) as exc:
                 if attempt < self.retries:
                     continue
-                raise AiError("timeout", "Groq did not respond in time.") from exc
+                raise AiError("timeout", "The AI service did not respond in time.") from exc
         raise AssertionError("unreachable")  # pragma: no cover
 
     def _record_limits(self, headers) -> None:

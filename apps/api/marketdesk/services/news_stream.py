@@ -180,18 +180,14 @@ async def stream(db: Session, market: MarketDataService, research, inst: Instrum
     if tagged:
         items += tagged
         sources.append(
-            "Headlines: Benzinga via Alpaca, tagged with this symbol; title, publisher and link only. Stories that "
+            "Headlines tagged with this symbol; title, publisher and link only. Stories that "
             "tag many symbols are marked as broad."
         )
     elif news.value is not None:
         items += [news_item(n) for n in news.value]
         sources.append(
-            f"Headlines: {market.source} ({news.meta.status}); title, publisher and link only. "
-            + (
-                "Yahoo's results for a symbol can include stories about related companies."
-                if market.source == "yahoo"
-                else ""
-            )
+            f"Headlines: {market.label} ({news.meta.status}); title, publisher and link only. "
+            + ("Results for a symbol can include stories about related companies." if market.source == "yahoo" else "")
         )
     elif news.meta.message:
         notes.append(f"Headlines unavailable: {news.meta.message}")
@@ -204,7 +200,7 @@ async def stream(db: Session, market: MarketDataService, research, inst: Instrum
         if env.get("reason") and not rows:
             notes.append(env["reason"])
     elif inst.country == "US":
-        notes.append("SEC data is not configured on this server (SEC_USER_AGENT): filings are not shown.")
+        notes.append("SEC data is not configured on this server: filings are not shown.")
     elif er.is_india(inst):
         notes.append(
             "Exchange announcements for Indian listings need a permitted source (BSE licence or verified NSE terms) "

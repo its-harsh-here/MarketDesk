@@ -125,7 +125,7 @@ async def resolve_instrument(db: Session, market: MarketDataService, symbol: str
                 raise AppError(
                     422,
                     "symbol_unverified",
-                    f"{sym} is not a Yahoo symbol. Did you mean {label}?",
+                    f"{sym} is not a recognised symbol. Did you mean {label}?",
                     {"suggestions": [suggested]},
                 )
             raise AppError(status, "symbol_unverified", f"Could not verify {sym}: {reason}")

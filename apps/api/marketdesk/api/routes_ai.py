@@ -61,7 +61,7 @@ async def ask(
 ):
     analyst = _analyst(request)
     if not analyst.enabled:
-        raise AppError(503, "ai_disabled", f"Grok research is unavailable. {analyst.problem}")
+        raise AppError(503, "ai_disabled", f"The AI analyst is unavailable. {analyst.problem}")
     analyst.validate_request(body.kind, body.symbols, body.question)
     analyst.recover_stale(db)
     running = db.scalar(select(func.count()).select_from(AiAnswer).where(AiAnswer.status == "running")) or 0

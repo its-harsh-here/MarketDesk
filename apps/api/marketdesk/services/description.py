@@ -111,7 +111,7 @@ async def _summary(db: Session, market: MarketDataService, research, inst: Instr
             "status": "available",
             "kind": "provider",
             "text": text if len(text) <= SUMMARY_CHARS * 2 else text[: SUMMARY_CHARS * 2 - 1].rstrip() + "…",
-            "source": f"{market.source} company profile, as supplied by the provider (not verified)",
+            "source": "Company profile as supplied by the data provider (not verified)",
             "url": None,
             "as_of": None,
             "fetched_at": fund["meta"].get("fetched_at"),
@@ -122,14 +122,14 @@ async def _summary(db: Session, market: MarketDataService, research, inst: Instr
         else (
             "The provider did not supply a company profile for this listing."
             + (
-                " Yahoo refuses its company-summary endpoint from some cloud servers."
+                " The provider refuses its company-summary endpoint from some servers."
                 if market.source == "yahoo"
                 else ""
             )
         )
     )
     if inst.country == "US" and (research is None or not research.client.enabled):
-        reason = "SEC data is not configured on this server (SEC_USER_AGENT), and " + reason[0].lower() + reason[1:]
+        reason = "SEC data is not configured on this server, and " + reason[0].lower() + reason[1:]
     return {"status": "missing", "reason": reason}
 
 
@@ -227,7 +227,7 @@ def _coverage(
     india = inst.country == "IN"
     sec_on = research is not None and research.client.enabled
     sample = market.source == "fixture"
-    src = "Sample dataset" if sample else f"{market.source} (delayed, unofficial)"
+    src = "Sample dataset" if sample else "Market data feed (delayed)"
     inputs = stats.get("inputs") or {}
 
     def ok(name: str) -> bool:
@@ -245,7 +245,7 @@ def _coverage(
             None,
             "not_configured",
             None,
-            "Needs a streaming feed (Alpaca for US, roadmap M04). Indian prices are polled and delayed.",
+            "Needs a streaming feed for US listings. Indian prices are polled.",
         ),
         row("Key statistics", "DES", "available" if ok("quote") else "missing", src, None, "description"),
         row(
@@ -264,7 +264,7 @@ def _coverage(
             None
             if us and sec_on
             else (
-                "SEC data needs SEC_USER_AGENT on the server."
+                "Not configured on this server."
                 if us
                 else (
                     "Exchange announcements need a permitted source (BSE licence or verified NSE terms)."
@@ -329,7 +329,7 @@ def _coverage(
             "SI",
             ("available" if finra_enabled else "not_configured") if us else "not_available",
             "FINRA consolidated short interest" if us else None,
-            (None if finra_enabled else "Needs FINRA API credentials (FINRA_CLIENT_ID, FINRA_CLIENT_SECRET).")
+            (None if finra_enabled else "Not configured on this server.")
             if us
             else ("Not published comparably for Indian listings." if india else "No short-interest source applies."),
             "risk",

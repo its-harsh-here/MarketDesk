@@ -423,4 +423,14 @@ Consequential choices, newest last. Routine choices live in code comments.
     previous close when reported, otherwise with the first bar's open, and says which. The fixture provider draws
     a deterministic path inside each sample session's high/low ending at its close (fictitious, like all sample
     prices). Indicators work on intraday bars as on daily ones.
+69. **Vendor names out of the product chrome (owner directive, 12 Nov 2026).** The interface no longer names
+    third-party vendors or tools: no "Yahoo · connected" pill (the topbar shows nothing while data is healthy and a
+    "Data degraded" warning when the provider circuit is open), no data line under the navigation, and source labels
+    read "Market data feed", "AI analyst", "Live" (streamed trades), "indicative options feed", "published exchange
+    calendar". Not-configured messages no longer print server variable names. What stays, deliberately: the
+    Settings → About attribution (yfinance's data-use notice and the chart library's licence require it; CLAUDE.md
+    §7 requires a visible attribution page); official public sources (SEC, FINRA, FRED, SEBI rules) where a figure
+    comes from them; each news headline's publisher; and the live-trade tooltip still says the trades are from a
+    single exchange (IEX), not consolidated data (CLAUDE.md §3 requires naming the feed). Internal keys and code
+    identifiers are unchanged.
 

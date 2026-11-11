@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Panel } from "@/components/ui/Panel";
 import { InlineNotice } from "@/components/ui/States";
 import { api, errorMessage } from "@/lib/api/client";
-import { formatInstant } from "@/lib/format";
+import { formatInstant, sourceName } from "@/lib/format";
 import { usePrefs } from "@/features/settings/api";
 
 interface Conversion {
@@ -80,7 +80,7 @@ export function ConverterPanel({ className }: { className?: string }) {
             <p className="num text-[13px] text-fg-2">{fmt(d.amount, d.from)} at {d.rate ?? "—"} {d.to} per {d.from} · 1 {d.to} = {d.inverse ?? "—"} {d.from}</p>
             {d.rate === null && <p className="mt-1 text-xs text-warn">No usable rate: {d.message ?? d.status}.</p>}
             <p className="mt-1.5 text-xs text-fg-3">
-              {d.source ? `Source: ${d.source}${d.symbol ? ` (${d.symbol})` : ""}` : ""}{d.market_time ? ` · quoted ${formatInstant(d.market_time, prefs?.display_timezone)}` : ""}{d.status && d.status !== "identity" ? ` · ${d.status}` : ""}. {d.note}
+              {d.source ? `Source: ${sourceName(d.source)}${d.symbol ? ` (${d.symbol})` : ""}` : ""}{d.market_time ? ` · quoted ${formatInstant(d.market_time, prefs?.display_timezone)}` : ""}{d.status && d.status !== "identity" ? ` · ${d.status}` : ""}. {d.note}
             </p>
           </div>
         ) : null}

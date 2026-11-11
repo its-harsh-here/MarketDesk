@@ -83,7 +83,7 @@ async def dividend_summary(market: MarketDataService, symbol: str, today: date) 
         **out,
         "price": price,
         "currency": quote.value.instrument.currency if quote.value else None,
-        "source": f"{market.source} corporate actions",
+        "source": f"{market.label} corporate actions",
         "note": "Amounts per share as the provider reports them (ex-dates). Trailing yield = dividends with ex-dates "
         "in the last 365 days ÷ the latest price. Indicated = latest payment × payments a year (a convention, "
         "not a forecast). Growth uses complete calendar years only.",

@@ -181,6 +181,11 @@ class MarketDataService:
 
     # ------------------------------------------------------------------ public API
     @property
+    def label(self) -> str:
+        """Display name of the market-data source (vendor names are not shown in the product)."""
+        return "Sample dataset" if self.provider.is_sample else "Market data feed"
+
+    @property
     def source(self) -> str:
         return self.provider.name
 

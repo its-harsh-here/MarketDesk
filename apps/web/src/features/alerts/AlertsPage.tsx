@@ -38,7 +38,7 @@ function WorkerPanel() {
         </div>
         <div className="flex justify-between gap-2"><dt className="text-fg-2">Last evaluation</dt><dd className="num text-right">{w.last_cycle_at ? `${formatRelative(w.last_cycle_at)}` : DASH}</dd></div>
         <div className="flex justify-between gap-2"><dt className="text-fg-2">Polling interval</dt><dd className="num">{w.poll_seconds}s</dd></div>
-        <div className="flex justify-between gap-2"><dt className="text-fg-2">Provider</dt><dd>{status.sample_data ? "Sample dataset" : "Yahoo (yfinance)"} · {health.circuit === "closed" ? "healthy" : health.circuit}</dd></div>
+        <div className="flex justify-between gap-2"><dt className="text-fg-2">Provider</dt><dd>{status.sample_data ? "Sample dataset" : "Market data feed"} · {health.circuit === "closed" ? "healthy" : health.circuit}</dd></div>
         {w.last_error && <div className="text-xs text-warn">{w.last_error}</div>}
       </dl>
       <p className="mt-3 text-xs leading-4 text-fg-3">

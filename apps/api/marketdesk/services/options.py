@@ -11,7 +11,7 @@ import asyncio
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
-from marketdesk.providers.alpaca import us_symbol
+from marketdesk.providers.alpaca import OPTIONS_SOURCE, us_symbol
 from marketdesk.providers.base import ProviderError
 from marketdesk.services import earnings as er
 from marketdesk.services.market import MarketDataService
@@ -100,7 +100,7 @@ async def chain_view(market: MarketDataService, inst, expiry: date | None, alpac
         if r.value is None:
             reason = r.meta.message or "No option chain."
             if alpaca_problem:
-                reason = f"Alpaca: {alpaca_problem} Fallback provider: {reason}"
+                reason = f"Primary options feed: {alpaca_problem} Fallback: {reason}"
             return {"symbol": inst.symbol, "status": r.meta.status, "reason": reason}
         chain, status, fetched = r.value, r.meta.status, r.meta.fetched_at
     c = chain
@@ -123,9 +123,9 @@ async def chain_view(market: MarketDataService, inst, expiry: date | None, alpac
         "note": "Read-only, delayed provider data (bid/ask and last trade as reported; implied volatility is the "
         "provider's). Put/call ratios and max pain describe this expiry's open interest; they are not forecasts."
         + (
-            " Alpaca's indicative feed is a free delayed derivative of OPRA, not the official OPRA feed; open "
-            "interest is Alpaca's figure for the date shown."
-            if oi_day is not None or c.source.startswith("Alpaca")
+            " The indicative feed is a delayed derivative of OPRA, not the official OPRA feed; open "
+            "interest is as reported for the date shown."
+            if oi_day is not None or c.source == OPTIONS_SOURCE
             else ""
         ),
     }

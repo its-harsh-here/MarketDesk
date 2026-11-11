@@ -60,26 +60,32 @@ function Logo({ compact }: { compact?: boolean }) {
 
 /** Icon rail that expands over the page on hover or keyboard focus (labels fade in); 64px in the layout. */
 function Sidebar() {
-  const { data: status } = useStatus();
   // Opens when the pointer moves onto the rail (after a short intent delay), not because a page loaded under a
   // resting cursor; keyboard focus opens it through CSS (:focus-within).
   const [open, setOpen] = useState(false);
   const timer = useRef<number | undefined>(undefined);
   const chosen = useRef(false); // an item was just selected: stay closed until the pointer leaves the rail
   useEffect(() => () => window.clearTimeout(timer.current), []);
-  const enter = (e: ReactPointerEvent) => {
-    if (e.pointerType !== "mouse" || chosen.current) return; // touch: a tap navigates, no hover state
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setOpen(true), 90);
+  // Only a real movement over the rail opens it: browsers also fire enter events when content re-renders under a
+  // pointer that has not moved, which would pop the rail open over the page.
+  const move = (e: ReactPointerEvent) => {
+    if (e.pointerType !== "mouse" || chosen.current || open || timer.current) return; // touch: a tap navigates
+    if (!e.movementX && !e.movementY) return;
+    timer.current = window.setTimeout(() => {
+      timer.current = undefined;
+      setOpen(true);
+    }, 90);
   };
   const leave = () => {
     window.clearTimeout(timer.current);
+    timer.current = undefined;
     chosen.current = false;
     setOpen(false);
   };
   // Selecting a destination closes the rail and moves focus to the page, so :focus-within does not hold it open.
   const select = (e: ReactMouseEvent) => {
     window.clearTimeout(timer.current);
+    timer.current = undefined;
     chosen.current = e.detail > 0; // a pointer click (Enter on a focused link has detail 0)
     (e.currentTarget as HTMLElement).blur(); // collapse now, not once the next page has mounted
     setOpen(false);
@@ -88,7 +94,7 @@ function Sidebar() {
   const item = "md-nav group flex h-10 items-center gap-3 rounded-[var(--radius-control)] px-4 text-[13px] font-medium";
   return (
     <div className="relative hidden w-16 shrink-0 md:block">
-      <nav aria-label="Primary" data-open={open || undefined} onPointerEnter={enter} onPointerLeave={leave}
+      <nav aria-label="Primary" data-open={open || undefined} onPointerMove={move} onPointerLeave={leave}
         className="md-sidebar md-rail fixed top-0 left-0 z-40 flex h-dvh flex-col overflow-hidden border-r border-line-subtle">
         <div className="flex h-16 items-center px-[18px]" onClick={select}>
           <Logo />
@@ -123,12 +129,6 @@ function Sidebar() {
             <Settings aria-hidden className="size-4 shrink-0 text-fg-3" />
             <span className="md-fade">Settings</span>
           </NavLink>
-          {status && (
-            <div className="md-fade w-48 px-4 pt-2 text-[11px] leading-4 !whitespace-normal text-fg-3">
-              {status.sample_data ? "Synthetic test harness" : "Data: Yahoo Finance via yfinance"}
-              <br />v{status.version}
-            </div>
-          )}
         </div>
       </nav>
     </div>
@@ -138,7 +138,7 @@ function Sidebar() {
 function ProviderStatus() {
   const { data: status } = useStatus();
   const { data: prefs } = usePrefs();
-  if (!status) return <span className="skeleton h-6 w-28" />;
+  if (!status) return null;
   const h = status.provider_health as { circuit?: string; last_error?: { message?: string } | null };
   if (status.sample_data) {
     return (
@@ -154,21 +154,20 @@ function ProviderStatus() {
     );
   }
   const degraded = h.circuit && h.circuit !== "closed";
+  if (!degraded) return null; // healthy: nothing to show
   return (
     <Tooltip
       content={
         <span>
-          Yahoo Finance via yfinance (unofficial). {status.market_status}.{" "}
-          {degraded ? `Provider requests paused after failures: ${h.last_error?.message ?? ""}` : "Provider reachable at last request."}
-          {status.worker.last_cycle_at && ` Worker last ran ${formatInstant(status.worker.last_cycle_at, prefs?.display_timezone)}.`}
+          Market-data requests are paused after repeated failures; prices may be stale. {h.last_error?.message ?? ""}
+          {status.worker.last_cycle_at && ` Background checks last ran ${formatInstant(status.worker.last_cycle_at, prefs?.display_timezone)}.`}
         </span>
       }
     >
-      <button type="button" className="inline-flex" aria-label="Provider status">
-        <Pill tone={degraded ? "warn" : "neutral"} className="gap-1.5">
-          <span className={cn("fx-live size-1.5 rounded-full", degraded ? "bg-warn" : "bg-pos")} aria-hidden />
-          Yahoo
-          <span className="font-normal text-fg-3 max-sm:hidden">· {degraded ? "degraded" : "connected"}</span>
+      <button type="button" className="inline-flex" aria-label="Market data degraded">
+        <Pill tone="warn" className="gap-1.5">
+          <span className="fx-live size-1.5 rounded-full bg-warn" aria-hidden />
+          Data degraded
         </Pill>
       </button>
     </Tooltip>

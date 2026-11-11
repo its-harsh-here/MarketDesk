@@ -313,7 +313,7 @@ async def insiders(db: Session, research, inst: Instrument, today: date) -> dict
         return {
             **base,
             "status": "not_configured",
-            "reason": "SEC data is not configured on this server (SEC_USER_AGENT).",
+            "reason": "SEC data is not configured on this server.",
         }
     env = await asyncio.to_thread(research.insider_filings, db, inst, MAX_FILINGS)
     if env.get("data") is None:
@@ -373,17 +373,17 @@ async def ownership(db: Session, market: MarketDataService, research, inst: Inst
     if er.is_india(inst):
         notes.append(
             "The exchange shareholding pattern (promoter, FII, DII, public, pledged shares) needs a permitted source "
-            "(BSE licence or verified NSE terms) and is not shown; Yahoo's insider and institution percentages are "
+            "(BSE licence or verified NSE terms) and is not shown; the provider's insider and institution figures are "
             "a summary, not that filing."
         )
     if h.value is None and inst.country == "US":
         holders["reason"] = (
-            "Yahoo's ownership summary (institutional percentages and largest institutions) is refused for this "
+            "The ownership summary (institutional percentages and largest institutions) is not available to this "
             "server. Holders above 5% from SEC Schedules 13D/13G and insiders' holdings from Form 4 are shown instead."
         )
     elif h.value is None and er.is_india(inst):
         holders["reason"] = (
-            "Yahoo's ownership summary is refused for this server, and the exchange shareholding pattern needs a "
+            "The ownership summary is not available to this server, and the exchange shareholding pattern needs a "
             "permitted source; no holder data can be shown for this listing yet."
         )
     return {"symbol": inst.symbol, "holders": holders, "major": major, "insiders": ins, "notes": notes}

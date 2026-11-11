@@ -21,8 +21,7 @@ function DatasetStatus<T>({ env }: { env: ResearchEnvelope<T> }) {
   if (env.status === "not_configured") {
     return (
       <InlineNotice tone="info">
-        SEC data is not configured on this server. {env.reason} Set <code className="num">SEC_USER_AGENT</code> in the
-        hosting environment (README → Render reference); no API key is needed.
+        SEC filings are not configured on this server.
       </InlineNotice>
     );
   }

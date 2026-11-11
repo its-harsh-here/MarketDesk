@@ -1,6 +1,6 @@
 """YahooProvider: live data through the unofficial yfinance library.
 
-yfinance is not an official Yahoo API. Review its documentation and Yahoo's terms before
+yfinance is not an official Yahoo API. Review its documentation and the provider's terms before
 any public redistribution. All calls here are blocking; the market service runs them in a
 bounded thread pool with timeouts, retries and a circuit breaker.
 """
@@ -47,8 +47,7 @@ _SYMBOL_RE = re.compile(r"^\^?[A-Z0-9][A-Z0-9.\-&=]{0,23}$")
 _PERIODS: dict[str, str] = {"1M": "1mo", "3M": "3mo", "6M": "6mo", "1Y": "1y", "5Y": "5y"}
 _SEARCH_TYPES = {"EQUITY", "ETF", "INDEX", "MUTUALFUND"}
 ADJUSTMENT_NOTE = (
-    "Yahoo daily bars via yfinance (auto_adjust=False): OHLC as reported by Yahoo, which is "
-    "split-adjusted; dividends are not adjusted."
+    "Daily bars as reported by the data provider (OHLC split-adjusted by the provider; dividends are not adjusted)."
 )
 
 
@@ -186,7 +185,7 @@ def quote_from_history(symbol: str, df: Any, meta: dict) -> QuoteSnapshot:
     last = _dec(meta.get("regularMarketPrice"), places)
     market_time = _to_utc(meta.get("regularMarketTime"))
     if last is None or market_time is None:
-        raise ProviderError("missing", "Yahoo did not report a regular-market price and time for this symbol.")
+        raise ProviderError("missing", "The provider did not report a regular-market price and time for this symbol.")
     tz = ZoneInfo(ref.timezone) if ref.timezone else UTC
     session = market_time.astimezone(tz).date()
     prior = [b for b in bars if b.session_date < session]
@@ -204,7 +203,7 @@ def quote_from_history(symbol: str, df: Any, meta: dict) -> QuoteSnapshot:
         volume_note=(
             "Index volume is not reported."
             if is_index
-            else "Session volume as reported by Yahoo; incomplete if the session was still open."
+            else "Session volume as reported by the data provider; incomplete if the session was still open."
         ),
         recent_bars=bars[-66:],
     )
@@ -213,7 +212,7 @@ def quote_from_history(symbol: str, df: Any, meta: dict) -> QuoteSnapshot:
 def normalize_dividend_yield(info: dict) -> tuple[Decimal | None, str | None]:
     """Return dividend yield in percent points.
 
-    Yahoo's ``dividendYield`` has been observed in percent points (e.g. 6.02 for 6.02%) in
+    the provider's ``dividendYield`` has been observed in percent points (e.g. 6.02 for 6.02%) in
     yfinance 1.7, while older responses used a fraction. Cross-check against
     ``dividendRate / price`` when possible instead of assuming a unit.
     """
@@ -227,11 +226,11 @@ def normalize_dividend_yield(info: dict) -> tuple[Decimal | None, str | None]:
         as_percent = abs(raw - implied)
         as_fraction = abs(raw * 100 - implied)
         value = raw if as_percent <= as_fraction else raw * 100
-        return value.quantize(Decimal("0.01")), "Yahoo dividendYield, unit cross-checked against dividendRate ÷ price."
+        return value.quantize(Decimal("0.01")), "Dividend yield, unit cross-checked against dividend rate ÷ price."
     # Without a cross-check, treat values below 1 with suspicion rather than guessing.
     if raw < 1:
         return None, "Dividend yield unit could not be verified, so it is not shown."
-    return raw.quantize(Decimal("0.01")), "Yahoo dividendYield (reported in percent points)."
+    return raw.quantize(Decimal("0.01")), "Provider dividend yield (reported in percent points)."
 
 
 class YahooProvider:
@@ -282,7 +281,7 @@ class YahooProvider:
                 "unsupported", "SX: symbols are fictitious sample instruments available only in fixture mode."
             )
         if not _SYMBOL_RE.match(s):
-            raise ProviderError("unsupported", f"'{symbol}' is not a valid Yahoo symbol.")
+            raise ProviderError("unsupported", f"'{symbol}' is not a valid symbol.")
         return s
 
     # -- error mapping -----------------------------------------------------------
@@ -294,37 +293,41 @@ class YahooProvider:
         except ProviderError:
             raise
         except yfe.YFRateLimitError as exc:
-            raise ProviderError("rate_limited", "Yahoo rate-limited the request (HTTP 429).", retryable=True) from exc
+            raise ProviderError(
+                "rate_limited", "The provider rate-limited the request (HTTP 429).", retryable=True
+            ) from exc
         except yfe.YFInvalidPeriodError as exc:
-            raise ProviderError("unsupported", "Yahoo does not support this range for the symbol.") from exc
+            raise ProviderError("unsupported", "The provider does not support this range for the symbol.") from exc
         except yfe.YFTickerMissingError as exc:
-            raise ProviderError("missing", f"Yahoo returned no {what} for this symbol (it may be delisted).") from exc
+            raise ProviderError(
+                "missing", f"The provider returned no {what} for this symbol (it may be delisted)."
+            ) from exc
         except (KeyError, TypeError, ValueError, IndexError, AttributeError) as exc:
             log.warning("yahoo %s malformed: %s", what, type(exc).__name__)
-            raise ProviderError("malformed", f"Yahoo returned a malformed {what} response.") from exc
+            raise ProviderError("malformed", f"The provider returned a malformed {what} response.") from exc
         except TimeoutError as exc:
-            raise ProviderError("timeout", f"Yahoo {what} request timed out.", retryable=True) from exc
+            raise ProviderError("timeout", f"The provider's {what} request timed out.", retryable=True) from exc
         except Exception as exc:  # network errors from curl_cffi / requests
             name = type(exc).__name__
             status = _http_status(exc)
             log.warning("yahoo %s failed: %s %s", what, name, status or "")
             if status == 429:
                 raise ProviderError(
-                    "rate_limited", f"Yahoo rate-limited the {what} request (HTTP 429).", retryable=True
+                    "rate_limited", f"The provider rate-limited the {what} request (HTTP 429).", retryable=True
                 ) from exc
             if status in (401, 403, 404) and _says_not_found(exc):
-                raise ProviderError("missing", f"Yahoo has no {what} for this symbol (not found).") from exc
+                raise ProviderError("missing", f"The provider has no {what} for this symbol (not found).") from exc
             if status in (401, 403):
                 raise ProviderError(
                     "upstream_unavailable",
-                    f"Yahoo returned HTTP {status} for this {what} request: the symbol may not exist, or Yahoo is "
-                    "limiting requests from this server.",
+                    f"The provider returned HTTP {status} for this {what} request: the symbol may not exist, "
+                    "or the provider is limiting requests from this server.",
                 ) from exc
             if status == 404:
-                raise ProviderError("missing", f"Yahoo has no {what} for this symbol (HTTP 404).") from exc
+                raise ProviderError("missing", f"The provider has no {what} for this symbol (HTTP 404).") from exc
             kind = "timeout" if "Timeout" in name else "upstream_unavailable"
             detail = f"HTTP {status}" if status else name
-            raise ProviderError(kind, f"Yahoo {what} request failed ({detail}).", retryable=True) from exc
+            raise ProviderError(kind, f"The provider's {what} request failed ({detail}).", retryable=True) from exc
 
     # -- interface ---------------------------------------------------------------
     def search(self, query: str, limit: int) -> list[InstrumentRef]:
@@ -394,7 +397,7 @@ class YahooProvider:
             ref = instrument_from_meta(symbol, meta)
             bars = normalize_bars(df, int(meta.get("priceHint") or 2), (ref.kind or "").upper() == "INDEX")
             if not bars:
-                raise ProviderError("missing", "Yahoo returned no daily bars for this range.")
+                raise ProviderError("missing", "The provider returned no daily bars for this range.")
             return PriceHistory(instrument=ref, range=range_, bars=bars, adjustment=ADJUSTMENT_NOTE)
 
         return self._call(run, "history")
@@ -414,7 +417,7 @@ class YahooProvider:
             places = int(meta.get("priceHint") or 2)
             bars = normalize_intraday(df, places, (ref.kind or "").upper() == "INDEX")
             if not bars:
-                raise ProviderError("missing", "Yahoo returned no intraday bars for this listing.")
+                raise ProviderError("missing", "The provider returned no intraday bars for this listing.")
             prev = _dec(meta.get("chartPreviousClose") if range_ == "1D" else None, places)
             return IntradayHistory(instrument=ref, range=range_, interval=interval, bars=bars, previous_close=prev)
 
@@ -423,7 +426,7 @@ class YahooProvider:
     def fundamentals(self, symbol: str) -> Fundamentals:
         """Company summary (quoteSummary) when Yahoo allows it; otherwise derived fields.
 
-        Yahoo's company-summary endpoint needs a cookie+crumb and is often refused for cloud IPs.
+        the provider's company-summary endpoint needs a cookie+crumb and is often refused for cloud IPs.
         The fallback uses endpoints that keep working there: price history (52-week range,
         dividends), valuation measures (market cap, trailing P/E, P/B), statements (dates) and
         search (sector, industry). Each derived field is labelled in the notes.
@@ -435,7 +438,7 @@ class YahooProvider:
             def run():
                 info = self._yf.Ticker(symbol).info or {}
                 if len(info) < 5:
-                    raise ProviderError("missing", "Yahoo returned an empty company summary.")
+                    raise ProviderError("missing", "The provider returned an empty company summary.")
                 return fundamentals_from_info(symbol, info)
 
             try:
@@ -448,7 +451,7 @@ class YahooProvider:
                     # Don't hammer an endpoint that refuses this server; retry it in an hour.
                     self._summary_blocked_until = time.monotonic() + 3600
         else:
-            primary = ProviderError("upstream_unavailable", "Yahoo's company summary was recently refused.")
+            primary = ProviderError("upstream_unavailable", "The provider's company summary was recently refused.")
         return self._call(lambda: self._derived_fundamentals(symbol, primary), "fundamentals")
 
     def _derived_fundamentals(self, symbol: str, primary: ProviderError | None) -> Fundamentals:
@@ -460,15 +463,15 @@ class YahooProvider:
         is_index = (ref.kind or "").upper() == "INDEX"
         bars = normalize_bars(df, places, is_index)
         if not bars:
-            raise ProviderError("missing", "Yahoo returned no price history for this symbol.")
+            raise ProviderError("missing", "The provider returned no price history for this symbol.")
         # The symbol clearly exists here (we have its price history), so explain only the summary refusal.
         code = re.search(r"HTTP (\d{3})", primary.message) if primary else None
         reason = (
-            f"Yahoo's company summary is not available to this server (HTTP {code.group(1)})."
+            f"The provider's company summary is not available to this server (HTTP {code.group(1)})."
             if code
-            else "Yahoo's company summary is not available right now."
+            else "The provider's company summary is not available right now."
         )
-        notes = [f"{reason} These figures are derived from Yahoo's price history, valuation and statement data."]
+        notes = [f"{reason} These figures are derived from the provider's price history, valuation and statement data."]
         last = _dec(meta.get("regularMarketPrice"), places) or bars[-1].close
         high = _dec(meta.get("fiftyTwoWeekHigh"), places) or max((b.high or b.close) for b in bars)
         low = _dec(meta.get("fiftyTwoWeekLow"), places) or min((b.low or b.close) for b in bars)
@@ -488,7 +491,7 @@ class YahooProvider:
                 dividend_yield = (total / last * 100).quantize(Decimal("0.01"))
                 notes.append("Dividend yield = dividends paid in the last 12 months ÷ last price.")
             else:
-                notes.append("No dividends in the last 12 months of Yahoo's price history.")
+                notes.append("No dividends in the last 12 months of the provider's price history.")
 
         market_cap = pe = pb = None
         last_fy = mrq = None
@@ -503,7 +506,7 @@ class YahooProvider:
                         return _dec(vm.at[label, col], digits) if label in vm.index else None
 
                     market_cap, pe, pb = cell("Market Cap", 0), cell("Trailing P/E", 2), cell("Price/Book", 2)
-                    notes.append("Market cap, trailing P/E and P/B come from Yahoo valuation measures (latest).")
+                    notes.append("Market cap, trailing P/E and P/B come from valuation measures (latest).")
             except Exception as exc:  # optional enrichment
                 notes.append(f"Valuation measures unavailable ({_describe(exc)}).")
             for freq in ("quarterly", "yearly"):
@@ -585,9 +588,9 @@ class YahooProvider:
                 div = _dec(row.get("Dividends"))
                 split = _dec(row.get("Stock Splits"))
                 if div and div > 0:
-                    out.append(CorporateAction(d, "DIVIDEND", div, f"Dividend of {div} per share (Yahoo)"))
+                    out.append(CorporateAction(d, "DIVIDEND", div, f"Dividend of {div} per share"))
                 if split and split > 0:
-                    out.append(CorporateAction(d, "SPLIT", split, f"Split ratio {split} new shares per share (Yahoo)"))
+                    out.append(CorporateAction(d, "SPLIT", split, f"Split ratio {split} new shares per share"))
             return sorted(out, key=lambda a: a.action_date, reverse=True)
 
         return self._call(run, "corporate actions")
@@ -599,7 +602,7 @@ class YahooProvider:
             t = self._yf.Ticker(symbol)
             h = normalize_holders(t.major_holders, t.institutional_holders, t.mutualfund_holders)
             if h.insiders_pct is None and h.institutions_pct is None and not h.institutions and not h.funds:
-                raise ProviderError("missing", "Yahoo reports no holder data for this listing.")
+                raise ProviderError("missing", "The provider reports no holder data for this listing.")
             return h
 
         return self._call(run, "holders")
@@ -613,8 +616,8 @@ class YahooProvider:
             if not expiries:
                 raise ProviderError(
                     "missing",
-                    "Yahoo returned no option expiries to this server: the symbol may have no listed options, or "
-                    "Yahoo is refusing option-chain requests from this host (seen on the hosted server).",
+                    "The provider returned no option expiries: the symbol may have no listed options, or "
+                    "the provider is refusing option-chain requests from this server.",
                 )
             chosen = expiry if expiry in expiries else expiries[0]
             chain = t.option_chain(chosen.isoformat())
@@ -623,7 +626,7 @@ class YahooProvider:
             if calls:
                 ccy = calls[0].get("currency")
             return OptionChain(expiries, chosen, _option_rows(chain.calls), _option_rows(chain.puts), ccy,
-                               "Yahoo option chain (unofficial, delayed)")  # fmt: skip
+                               "Option chain (delayed)")  # fmt: skip
 
         return self._call(run, "options")
 
@@ -736,7 +739,7 @@ def normalize_holders(major: Any, institutions: Any, funds: Any) -> Holders:
         int(count) if count is not None else None,
         _holder_rows(institutions),
         _holder_rows(funds),
-        "Yahoo holders (unofficial)",
+        "Ownership summary",
     )
 
 
@@ -819,16 +822,16 @@ def statements_from_frames(symbol: str, income: Any, balance: Any, cashflow: Any
     capex = {k: (abs(v) if v is not None else None) for k, v in _frame_row(cashflow, ("CapitalExpenditure",)).items()}
     ends = sorted(set(revenue) | set(net) | set(debt) | set(equity), reverse=True)[:4]
     if not ends:
-        raise ProviderError("missing", "Yahoo returned no annual statements for this symbol.")
+        raise ProviderError("missing", "The provider returned no annual statements for this symbol.")
     periods = [
         AnnualPeriod(e, revenue.get(e), net.get(e), debt.get(e), equity.get(e), ocf.get(e), capex.get(e), cash.get(e))
         for e in ends
     ]
-    notes = ["Total debt and shareholders' equity are Yahoo's balance-sheet lines at each fiscal year end."]
+    notes = ["Total debt and shareholders' equity are the provider's balance-sheet lines at each fiscal year end."]
     if not debt:
-        notes.append("Yahoo reports no total-debt line for this company.")
+        notes.append("The provider reports no total-debt line for this company.")
     ref = InstrumentRef(symbol, None, None, None, None, None)
-    return AnnualStatements(instrument=ref, periods=periods, source="Yahoo annual statements", notes=notes)
+    return AnnualStatements(instrument=ref, periods=periods, source="Annual statements", notes=notes)
 
 
 def fundamentals_from_info(symbol: str, info: dict) -> Fundamentals:

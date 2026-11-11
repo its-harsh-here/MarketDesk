@@ -154,7 +154,7 @@ export function SymbolPicker({
         <ul id={listId} role="listbox" className="scrollbar-thin absolute top-full right-0 left-0 z-30 mt-1 max-h-64 overflow-y-auto rounded-[var(--radius-control)] border border-line bg-elevated py-1 shadow-[var(--shadow-pop)]">
           {searching && (
             <li role="presentation" className="px-3 py-2 text-[13px] text-fg-3" aria-live="polite">
-              Searching Yahoo for “{typed}”…
+              Searching for “{typed}”…
             </li>
           )}
           {!searching &&

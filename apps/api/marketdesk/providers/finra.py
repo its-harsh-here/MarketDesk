@@ -57,10 +57,7 @@ class FinraClient:
     @property
     def problem(self) -> str | None:
         if not self.client_id or not self.client_secret:
-            return (
-                "Not configured: FINRA's terms require API credentials. Create a free Individual account in the FINRA "
-                "API Console, make a Public credential, and set FINRA_CLIENT_ID and FINRA_CLIENT_SECRET on the server."
-            )
+            return "Short interest is not configured on this server."
         return None
 
     @property

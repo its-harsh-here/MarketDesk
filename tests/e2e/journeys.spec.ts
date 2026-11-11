@@ -286,7 +286,7 @@ test("ai research: cited answer from retrieved evidence, sources listed, repeat 
   await dialog.getByRole("button", { name: "Run", exact: true }).click();
   const answer = dialog.getByRole("article", { name: "AI answer" });
   await expect(answer.getByText("Test-harness answer for SX:AURORA (fake AI endpoint)")).toBeVisible({ timeout: 20_000 });
-  await expect(answer.getByText("Model output · openai/gpt-oss-120b via Groq (free tier)", { exact: false })).toBeVisible();
+  await expect(answer.getByText("Model output · AI analyst", { exact: false })).toBeVisible();
   await expect(answer.getByText("Fact", { exact: true })).toBeVisible();
   await expect(answer.getByRole("link", { name: "Source S1" }).first()).toBeVisible();
   await expect(answer.getByText("automated check", { exact: false })).toHaveCount(0); // the quoted price is in S1
@@ -301,7 +301,7 @@ test("ai research: cited answer from retrieved evidence, sources listed, repeat 
   const panel = page.getByRole("region", { name: "AI research (optional)" });
   await expect(panel.getByText("On", { exact: true })).toBeVisible();
   await expect(panel.getByText(/1\/30 answers/)).toBeVisible(); // the reused answer did not count
-  await expect(panel.getByText("Groq (free tier)")).toBeVisible();
+  await expect(panel.getByText(/AI research/).first()).toBeVisible();
   await expect(panel.getByText(/3,240 of 150,000 tokens/)).toBeVisible();
 });
 
@@ -626,7 +626,7 @@ test("events: calendar with status marks and sources, kind filter, reported earn
   await expect(up.getByText(/Consensus estimates and surprises/)).toBeVisible();
   const past = page.getByRole("region", { name: "Past events" });
   await expect(past.getByText("Dividend 4.00 per share").first()).toBeVisible();
-  await expect(past.getByText("Source: fixture corporate actions").first()).toBeVisible();
+  await expect(past.getByText("Source: Sample dataset corporate actions").first()).toBeVisible();
   const filter = past.getByRole("group", { name: "Show event kinds" });
   await filter.getByRole("button", { name: /^Dividend/ }).click();
   await expect(filter.getByRole("button", { name: /^Dividend/ })).toHaveAttribute("aria-pressed", "false");
@@ -784,7 +784,7 @@ test("description: tiles with sources, coverage with reasons, function codes fro
   await expect(page.getByRole("tab", { name: "Description" })).toHaveAttribute("aria-selected", "true");
   const biz = page.getByRole("region", { name: "Business" });
   await expect(biz.getByText(/fictitious company in MarketDesk's sample dataset/)).toBeVisible();
-  await expect(biz.getByText(/company profile, as supplied by the provider \(not verified\)/)).toBeVisible();
+  await expect(biz.getByText(/Company profile as supplied by the data provider \(not verified\)/)).toBeVisible();
   const stats = page.getByRole("region", { name: "Key statistics" });
   await expect(stats.getByText("Last price")).toBeVisible();
   await expect(stats.getByText(/Snapshot computed/)).toBeVisible();

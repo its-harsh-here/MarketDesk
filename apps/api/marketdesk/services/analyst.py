@@ -231,7 +231,7 @@ async def _listing(ev: Evidence, db, market, research, inst: Instrument, kind: s
         v = q.value
         ev.add(
             "quote",
-            f"{sym} last observed price ({q.meta.source}, {q.meta.status})",
+            f"{sym} last observed price ({q.meta.status})",
             {
                 "price": _num(v.last_price),
                 "currency": v.instrument.currency,
@@ -285,7 +285,7 @@ async def _listing(ev: Evidence, db, market, research, inst: Instrument, kind: s
         fv = f.value
         ev.add(
             "fundamentals",
-            f"{sym} valuation and profile ({f.meta.source})",
+            f"{sym} valuation and profile (market data feed)",
             {
                 "market_cap": _num(fv.market_cap),
                 "pe_ratio": _num(fv.pe_ratio),
@@ -703,7 +703,7 @@ class AnalystService:
     @property
     def problem(self) -> str | None:
         if not self.client.configured:
-            return "Not configured: set GROK_API (a Groq gsk_ key or an xAI xai- key) in the server environment."
+            return "The AI analyst is not configured on this server."
         if not self.settings.grok_enabled:
             return "Turned off with GROK_ENABLED=false."
         return None
@@ -758,7 +758,7 @@ class AnalystService:
             "enabled": self.enabled,
             "reason": self.problem,
             "provider": self.provider,
-            "provider_label": "Groq (free tier)" if self.free_tier else "xAI",
+            "provider_label": "AI analyst",
             "model": self.client.model,
             "key_format": self.client.key_format,
             "tools": [] if self.free_tier else ["read_filing (SEC, read-only)"],
@@ -968,9 +968,9 @@ class AnalystService:
             db.commit()
             return
         answer.model = self.client.model
-        step(f"Asking {self.client.model} on Groq (one structured, cited answer).")
+        step("Preparing one structured, cited answer.")
         usage = self._new_usage()
-        usage["cost_source"] = "Groq free tier: not billed"
+        usage["cost_source"] = "Included in the plan: not billed"
         answer._live_usage = usage
         body = {
             "messages": [
