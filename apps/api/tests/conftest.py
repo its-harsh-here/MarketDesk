@@ -21,6 +21,7 @@ _REAL_SECRETS = (
     "SEC_USER_AGENT",
     "FINRA_CLIENT_ID",
     "FINRA_CLIENT_SECRET",
+    "FRED_API_KEY",
 )
 
 
