@@ -1153,6 +1153,10 @@ VARCHAR(16): SQLite accepted it, PostgreSQL raised DataError and the whole risk 
 rollback on a failed cache write, each risk section now reports its own failure instead of failing the view, and a
 regression test writes the cache (CI runs it on PostgreSQL). Indian listings were unaffected (no FINRA call).
 
+**FINRA short interest live (11 Nov 2026).** After the two fixes above, the Risk tab shows the latest year: AAPL
+settlement 30 Oct 2026 short 144.8M shares, 3.36 days to cover (+10.0%); SMR 97.2M, 3.6 days; NVDA 279.6M, 2.8 days
+(−7.3%). The first version returned FINRA's oldest records (AAPL from 2020) because no date filter was sent.
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -1160,4 +1164,4 @@ regression test writes the cache (CI runs it on PostgreSQL). Indian listings wer
 - Portfolio has INR and USD accounts; returns (M09) use daily closes, benchmarks are price indices, and cash earns no interest.
 
 ## Next concrete action
-The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Terminal roadmap: T1–T10 all done (FRED panel waits for FRED_API_KEY); remaining T3 (needs an India ownership source), T7 (gated on an options entitlement), T8 (needs a FRED key), T10 (stretch). Owner inputs open: FINRA API credentials (short interest), Alpaca (M04), FRED key (M12/T8). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
+The roadmap (M00–M14) is complete except M04 (streaming), which waits for the owner's Alpaca key/secret. Terminal roadmap T1–T10 is done; live inputs configured: SEC, FINRA, FRED, Groq. Not available from the hosted server: Yahoo holders and option chains (Yahoo refuses the requests). India's shareholding pattern needs a permitted source.
