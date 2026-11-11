@@ -213,14 +213,17 @@ async def ownership_view(
 @router.get("/options")
 @off_event_loop
 async def options_chain(
+    request: Request,
     symbol: str = Query(min_length=1, max_length=32),
     expiry: date | None = Query(default=None),
     db: Session = Depends(get_db),
     market: MarketDataService = Depends(market_dep),
+    settings: Settings = Depends(settings_dep),
 ):
     """One expiry of the option chain with put/call ratios, max pain and the volatility smile; read-only (T7)."""
     inst = await resolve_instrument(db, market, symbol)
-    return ev.jsonable(await options.chain_view(market, inst, expiry))
+    alpaca = request.app.state.alpaca if settings.data_provider == "yahoo" else None
+    return ev.jsonable(await options.chain_view(market, inst, expiry, alpaca))
 
 
 @router.get("/relationships")

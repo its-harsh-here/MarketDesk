@@ -2,7 +2,7 @@ import { Star } from "lucide-react";
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
 import { DataTable, type Column, type SortState } from "@/components/ui/DataTable";
-import { FreshnessBadge, InstrumentBadge } from "@/components/ui/Badges";
+import { FreshnessBadge, InstrumentBadge, LiveBadge } from "@/components/ui/Badges";
 import { ChangeText } from "@/components/ui/Change";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { IconButton } from "@/components/ui/Button";
@@ -12,6 +12,7 @@ import { DASH, formatLargeMoney, formatMoney, formatPercent, formatRatio, format
 import { useRemoveWithUndo, useWatchlistMetrics, type KeyFigure } from "./api";
 import { useSession } from "@/features/settings/api";
 import { cn } from "@/lib/cn";
+import { applyLive, liveSummary, useLiveTrades } from "@/lib/live";
 
 export interface Row {
   symbol: string;
@@ -100,11 +101,25 @@ export function WatchlistTable({
   region?: "all" | "IN" | "US" | "other";
 }) {
   const navigate = useNavigate();
+  const symbols = useMemo(() => watchlist.items.map((i) => i.symbol), [watchlist.items]);
+  const live = useLiveTrades(symbols);
+  // Polled snapshots with any newer regular-session IEX trade applied; `liveSyms` marks which prices are streamed.
+  const { merged, liveSyms } = useMemo(() => {
+    const liveSyms = new Set<string>();
+    const merged = snapshots?.map((s) => {
+      const q = applyLive(s.quote, live.ticks[s.symbol]);
+      if (!q) return s;
+      liveSyms.add(s.symbol);
+      return { ...s, quote: q };
+    });
+    return { merged, liveSyms };
+  }, [snapshots, live.ticks]);
+  const liveTick = (r: Row) => (liveSyms.has(r.symbol) ? live.ticks[r.symbol] : undefined);
   const rows = useMemo(() => {
-    const all = buildRows(watchlist, snapshots);
+    const all = buildRows(watchlist, merged);
     const inRegion = region === "all" ? all : all.filter((r) => (region === "other" ? r.country !== "IN" && r.country !== "US" : r.country === region));
     return sortRows(inRegion, sort);
-  }, [watchlist, snapshots, sort, region]);
+  }, [watchlist, merged, sort, region]);
   const ccy = (r: Row) => r.snap?.instrument.currency ?? null;
   const { data: metrics } = useWatchlistMetrics(watchlist.id, !compact);
   const fig = (r: Row, k: "market_cap" | "pe_ratio" | "from_52w_high_pct" | "return_1y_pct"): KeyFigure | undefined => metrics?.items[r.symbol]?.[k];
@@ -136,9 +151,11 @@ export function WatchlistTable({
       mobileLabel: "Last price",
       render: (r) => (
         <span className="inline-flex items-center justify-end gap-2">
-          {compact && r.snap && <FreshnessBadge meta={r.snap.meta} compact />}
+          {compact && r.snap && (liveTick(r) ? <LiveBadge time={liveTick(r)!.time} compact /> : <FreshnessBadge meta={r.snap.meta} compact />)}
           {r.snap?.quote ? (
-            <span className="num text-fg">{formatMoney(r.snap.quote.last_price, ccy(r))}</span>
+            <span key={liveTick(r) ? r.snap.quote.last_price : undefined} className={cn("num text-fg", liveTick(r) && "live-flash")}>
+              {formatMoney(r.snap.quote.last_price, ccy(r))}
+            </span>
           ) : (
             <span className="text-fg-3" title={r.snap?.meta.message ?? "No quote"}>{DASH}</span>
           )}
@@ -255,7 +272,8 @@ export function WatchlistTable({
             header: "Data",
             align: "left" as const,
             mobileLabel: "Data",
-            render: (r: Row) => (r.snap ? <FreshnessBadge meta={r.snap.meta} /> : <span className="skeleton inline-block h-3 w-12" />),
+            render: (r: Row) =>
+              liveTick(r) ? <LiveBadge time={liveTick(r)!.time} /> : r.snap ? <FreshnessBadge meta={r.snap.meta} /> : <span className="skeleton inline-block h-3 w-12" />,
           },
         ]
       : []),
@@ -268,7 +286,9 @@ export function WatchlistTable({
     },
   ];
 
+  const summary = liveSummary(live);
   return (
+    <>
     <DataTable
       caption={caption ?? `${watchlist.name} watchlist`}
       columns={columns}
@@ -291,5 +311,12 @@ export function WatchlistTable({
         </div>
       )}
     />
+    {summary && (
+      <p role="status" className={cn("mt-2 flex items-center gap-1.5 px-1 text-xs", summary.tone === "live" ? "text-fg-3" : summary.tone === "warn" ? "text-warn" : "text-fg-3")}>
+        {summary.tone === "live" && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-pos motion-safe:animate-pulse" />}
+        {summary.text}
+      </p>
+    )}
+    </>
   );
 }

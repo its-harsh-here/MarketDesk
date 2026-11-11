@@ -106,3 +106,15 @@ export function Pill({ children, tone = "neutral", className }: { children: Reac
   };
   return <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap", tones[tone], className)}>{children}</span>;
 }
+
+/** Marks a price that comes from the streaming IEX trade feed rather than the polled quote. */
+export function LiveBadge({ time, compact = false }: { time: string; compact?: boolean }) {
+  const t = new Date(time).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  const title = `Last trade on IEX at ${t} New York time (streamed via Alpaca). IEX is a single exchange, not consolidated market data; change is measured from the provider's previous close.`;
+  return (
+    <span title={title} aria-label={`Live IEX trade at ${t} New York time`} className="inline-flex items-center gap-1 rounded-full border border-pos/40 bg-pos/10 px-1.5 py-0.5 text-[11px] font-medium leading-none text-pos">
+      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-pos motion-safe:animate-pulse" />
+      {compact ? "IEX" : `IEX live · ${t}`}
+    </span>
+  );
+}

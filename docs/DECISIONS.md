@@ -380,3 +380,21 @@ Consequential choices, newest last. Routine choices live in code comments.
     SEC. Yahoo refuses this server's holders requests (HTTP 401) and returns no option expiries, so those panels say
     so instead of showing empty data; the options message no longer claims a symbol "lists no expiries". Supplier
     matches that only mention a supplier code of conduct or cyber risk are dropped (cache key bumped).
+65. **Alpaca for US option chains and streaming trades (M04 and T7, owner choice of a free source, 11 Nov 2026).**
+    The owner created a free Alpaca account (Basic market-data plan); `ALPACA_API_KEY_ID` / `ALPACA_API_SECRET_KEY`
+    are backend secrets sent only as request headers, never logged, exported or exposed to the browser. *Option
+    chains:* the contracts reference list (strike, type, expiry, open interest with Alpaca's date) is merged with
+    snapshots from the **indicative** feed — a free, delayed derivative of OPRA, labelled "not OPRA" — giving bid/ask,
+    last trade, implied volatility; volume is taken only from the latest session's daily bar. Yahoo remains the
+    fallback, and the panel says when and why it was used. Indian F&O stays off. *Streaming:* one websocket per web
+    process to Alpaca's **IEX** feed (the free plan allows one connection and 30 symbols), opened on the first
+    subscriber and closed a minute after the last; browsers receive the latest trade per symbol over Server-Sent
+    Events at most once a second. Duplicate trade ids and trades older than the shown one are dropped and counted;
+    cancels and corrections are applied; after every (re)connect the latest trade is re-read over REST so a gap
+    never leaves an older trade showing as current. The UI names the feed ("single exchange, not consolidated"),
+    shows connection state, pauses while the tab is hidden, and keeps the polled Yahoo quote whenever the stream is
+    reconnecting or off. A streamed trade replaces the polled price only if it is newer, inside the regular
+    09:30–16:00 New York session and in the same session as the quote (its previous close is the change basis);
+    extended-hours trades are not shown as the session price. Alerts keep evaluating polled quotes in the worker.
+    Indian prices stay polled. No orders, account data or trading endpoints are used.
+

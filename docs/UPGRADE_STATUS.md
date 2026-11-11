@@ -16,7 +16,7 @@ Roadmap: `docs/MARKETDESK_ROADMAP.txt`. Older history and decisions: `docs/STATU
 | Area | Implemented | Not implemented / gap |
 | --- | --- | --- |
 | Pages | Overview, Watchlists, Screener, Macro, Portfolio (holdings, ledger, performance, rebalance, stress), Alerts + inbox, Journal, Lab, Settings, Instrument (overview, financials, filings, events, earnings, valuation, peers, compare), login; palette, shortcuts, workspaces, dark/light, responsive shell | No onboarding wizard (Settings → Data status covers status) |
-| Data | Yahoo (yfinance) with cache, de-duplication, retries, per-endpoint circuits, stale fallback; SEC EDGAR (submissions, company facts, filings); exchange calendars (NSE/BSE, NYSE/Nasdaq); fixture provider for tests only | No streaming (M04 waits for Alpaca credentials); official macro statistics (FRED key / Indian source) |
+| Data | Yahoo (yfinance) with cache, de-duplication, retries, per-endpoint circuits, stale fallback; SEC EDGAR (submissions, company facts, filings); exchange calendars (NSE/BSE, NYSE/Nasdaq); fixture provider for tests only | Streaming covers US listings only (IEX, single exchange, via Alpaca); Indian prices are polled; official macro statistics (FRED key / Indian source) |
 | Portfolio | INR and USD long-only accounts, FX conversions, Decimal replay, CSV import/export; TWR, XIRR, drawdowns, volatility, beta, correlations, rebalance and stress | No broker CSV presets; cash earns no interest |
 | Research | Statements and ratios with sources; screener + peers + heatmap; earnings calendar, reported changes, filing diffs, guidance quotes; valuation lab (DCF, multiples, sensitivity); macro watchboard; research lab (rule tests, paper portfolio); research export | No historical fundamentals (no point-in-time tests); no consensus estimates |
 | Alerts + worker | Price, cross, volume, volatility, filing and earnings rules; cooldown/rearm, quiet hours, unique keys; inbox; scheduled briefings; single worker | No email/Telegram/push |
@@ -838,7 +838,7 @@ Every milestone's "Done when" from `docs/MARKETDESK_ROADMAP.txt`, against the ev
 | M01 India + US | Symbols disambiguated; native currency; holidays/DST give no false "open" | ✅ | Calendar tests incl. DST; live identity checks |
 | M02 Company workspace | Every figure traceable to period, unit, source, update date; missing explicit | ✅ | SEC companyfacts with periods/units/forms; live SEC verification |
 | M03 Cited analyst | Answers tied to evidence; maths in code; unsupported claims flagged; no key → AI off | ✅ | Validation tests (unknown sources, figures not in sources); live Groq answers |
-| M04 Streaming | Disconnects, gaps, duplicates, limits; IEX not called consolidated | ⏸ not started | Needs the owner's Alpaca key/secret and feed choice |
+| M04 Streaming | Disconnects, gaps, duplicates, limits; IEX not called consolidated | ✅ done (11 Nov 2026) | Alpaca IEX websocket → SSE; DECISIONS #65; tests/test_alpaca.py, tests/live.test.ts |
 | M05 Alerts and review | Restarts don't duplicate; stale data can't trigger; failed delivery visible | ✅ | Idempotency and stale-quote tests; live worker cycles |
 | M06 Discovery and peers | Cached normalized data; missing ≠ pass/zero; universe named | ✅ | Screener tests; live snapshot refresh |
 | M07 Earnings and filings | Annual/quarterly/YTD never mixed; restatements distinguishable | ✅ | Period tests; live calendar, changes, SEBI deadline, 10-K risk-factor diff (after the fixes below) |
@@ -1164,4 +1164,4 @@ settlement 30 Oct 2026 short 144.8M shares, 3.36 days to cover (+10.0%); SMR 97.
 - Portfolio has INR and USD accounts; returns (M09) use daily closes, benchmarks are price indices, and cash earns no interest.
 
 ## Next concrete action
-The roadmap (M00–M14) is complete except M04 (streaming), which waits for the owner's Alpaca key/secret. Terminal roadmap T1–T10 is done; live inputs configured: SEC, FINRA, FRED, Groq. Not available from the hosted server: Yahoo holders and option chains (Yahoo refuses the requests). India's shareholding pattern needs a permitted source.
+The roadmap (M00–M14) is complete, including M04 (Alpaca IEX streaming). Terminal roadmap T1–T10 is done; live inputs configured: SEC, FINRA, FRED, Groq. US option chains now come from Alpaca's indicative feed. Not available from the hosted server: Yahoo holders (Yahoo refuses the requests). India's shareholding pattern needs a permitted source.

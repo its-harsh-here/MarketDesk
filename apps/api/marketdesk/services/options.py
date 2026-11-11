@@ -7,9 +7,12 @@ volatility smile. Descriptive statistics of the chain only — no strategy, pric
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
+from marketdesk.providers.alpaca import us_symbol
+from marketdesk.providers.base import ProviderError
 from marketdesk.services import earnings as er
 from marketdesk.services.market import MarketDataService
 
@@ -72,20 +75,42 @@ def _row(o) -> dict:
     }  # fmt: skip
 
 
-async def chain_view(market: MarketDataService, inst, expiry: date | None) -> dict:
+async def _alpaca_chain(alpaca, symbol: str, expiry: date | None, spot: Decimal | None):
+    """(chain, open-interest date, None) from Alpaca, or (None, None, reason) when it cannot serve this request."""
+    if alpaca is None or not alpaca.enabled or us_symbol(symbol) is None:
+        return None, None, None
+    try:
+        chain, oi_day = await asyncio.to_thread(alpaca.option_chain, symbol, expiry, spot)
+    except ProviderError as exc:
+        return None, None, exc.message
+    return chain, oi_day, None
+
+
+async def chain_view(market: MarketDataService, inst, expiry: date | None, alpaca=None) -> dict:
     if er.is_india(inst):
         why = "Indian F&O chains (NSE) need verified terms before they can be fetched; none are shown."
         return {"symbol": inst.symbol, "status": "not_available", "reason": why}
-    r, q = await market.options(inst.symbol, expiry), await market.quote(inst.symbol)
-    if r.value is None:
-        return {"symbol": inst.symbol, "status": r.meta.status, "reason": r.meta.message or "No option chain."}
-    c = r.value
+    q = await market.quote(inst.symbol)
     spot = q.value.last_price if q.value is not None else None
+    chain, oi_day, alpaca_problem = await _alpaca_chain(alpaca, inst.symbol, expiry, spot)
+    if chain is not None:
+        status, fetched = "available", datetime.now(UTC)
+    else:
+        r = await market.options(inst.symbol, expiry)
+        if r.value is None:
+            reason = r.meta.message or "No option chain."
+            if alpaca_problem:
+                reason = f"Alpaca: {alpaca_problem} Fallback provider: {reason}"
+            return {"symbol": inst.symbol, "status": r.meta.status, "reason": reason}
+        chain, status, fetched = r.value, r.meta.status, r.meta.fetched_at
+    c = chain
     return {
         "symbol": inst.symbol,
-        "status": r.meta.status,
+        "status": status,
         "source": c.source,
-        "fetched_at": r.meta.fetched_at.isoformat() if r.meta.fetched_at else None,
+        "open_interest_date": oi_day,
+        "fallback_reason": alpaca_problem,
+        "fetched_at": fetched.isoformat() if fetched else None,
         "expiries": [d.isoformat() for d in c.expiries],
         "expiry": c.expiry.isoformat(),
         "days_to_expiry": (c.expiry - datetime.now(UTC).date()).days,
@@ -96,5 +121,11 @@ async def chain_view(market: MarketDataService, inst, expiry: date | None) -> di
         "puts": [_row(o) for o in c.puts],
         "stats": analytics(c, spot),
         "note": "Read-only, delayed provider data (bid/ask and last trade as reported; implied volatility is the "
-        "provider's). Put/call ratios and max pain describe this expiry's open interest; they are not forecasts.",
+        "provider's). Put/call ratios and max pain describe this expiry's open interest; they are not forecasts."
+        + (
+            " Alpaca's indicative feed is a free delayed derivative of OPRA, not the official OPRA feed; open "
+            "interest is Alpaca's figure for the date shown."
+            if oi_day is not None or c.source.startswith("Alpaca")
+            else ""
+        ),
     }

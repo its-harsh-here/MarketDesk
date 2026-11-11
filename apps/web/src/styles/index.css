@@ -628,3 +628,11 @@ textarea:focus { box-shadow: 0 0 0 3px var(--accent-soft), 0 0 22px -8px var(--g
   .fx-bg .cursor { display: none; }
   .md-panel { backdrop-filter: blur(10px); }
 }
+
+/* Streaming price: a brief highlight when a new IEX trade replaces the shown price (M04). */
+@keyframes md-live-flash {
+  from { background-color: color-mix(in oklab, var(--positive) 28%, transparent); }
+  to { background-color: transparent; }
+}
+.live-flash { border-radius: 4px; animation: md-live-flash 900ms ease-out; }
+@media (prefers-reduced-motion: reduce) { .live-flash { animation: none; } }

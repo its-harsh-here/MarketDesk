@@ -29,6 +29,7 @@ from marketdesk.api import (
     routes_portfolio,
     routes_research,
     routes_screener,
+    routes_stream,
     routes_system,
     routes_terminal,
     routes_valuation,
@@ -126,6 +127,12 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
     from marketdesk.providers.fred import FredClient
 
     app.state.fred = FredClient(settings.fred_api_key)
+    from marketdesk.providers.alpaca import AlpacaClient
+    from marketdesk.services.stream import QuoteStreamHub
+
+    app.state.alpaca = AlpacaClient(settings.alpaca_api_key_id, settings.alpaca_api_secret_key)
+    app.state.stream = QuoteStreamHub(app.state.alpaca, enabled=settings.alpaca_streaming
+                                      and settings.data_provider == "yahoo")  # fmt: skip
     install_error_handlers(app)
 
     if settings.extra_origins:
@@ -183,6 +190,7 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
         routes_lab,
         routes_workspace,
         routes_terminal,
+        routes_stream,
     ):
         app.include_router(r.router)
 

@@ -1,5 +1,5 @@
 import { Bell, Download, NotebookPen, Plus, Sparkles } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { Link } from "react-router";
 import { useDialogs } from "@/app/dialogs";
@@ -7,7 +7,8 @@ import { Panel } from "@/components/ui/Panel";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
 import { ChangeText } from "@/components/ui/Change";
-import { FreshnessBadge, Pill } from "@/components/ui/Badges";
+import { FreshnessBadge, LiveBadge, Pill } from "@/components/ui/Badges";
+import { applyLive, useLiveTrades } from "@/lib/live";
 import { EmptyState, ErrorState, InlineNotice, Skeleton, SkeletonRows } from "@/components/ui/States";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { errorMessage } from "@/lib/api/client";
@@ -100,7 +101,10 @@ export function InstrumentPage() {
   const { open } = useDialogs();
   const alerts = useAlerts();
   const notes = useJournal({ symbol });
-  const s = snap.data?.[0];
+  const polled = snap.data?.[0];
+  const liveFeed = useLiveTrades(useMemo(() => [symbol], [symbol]));
+  const liveQuote = applyLive(polled?.quote, liveFeed.ticks[symbol]);
+  const s = polled && liveQuote ? { ...polled, quote: liveQuote } : polled;
   const sessions = useSessions();
   const [params, setParams] = useSearchParams();
   const rawTab = params.get("tab") === "overview" ? "chart" : params.get("tab"); // links saved before T1
@@ -167,7 +171,7 @@ export function InstrumentPage() {
               {inst?.country && <Pill>{REGION_LABEL[inst.country] ?? inst.country}</Pill>}
               {ccy && <Pill>{ccy}</Pill>}
               {inst?.kind && <Pill>{inst.kind}</Pill>}
-              {s && <FreshnessBadge meta={s.meta} />}
+              {s && (liveQuote ? <LiveBadge time={liveQuote.market_time!} /> : <FreshnessBadge meta={s.meta} />)}
             </div>
             <div className="mt-1 line-clamp-2 text-[13px] break-words text-fg-2">{snap.isLoading ? <Skeleton className="h-4 w-56" /> : inst?.name ?? "Name not reported"}</div>
             {!snap.isLoading && (
@@ -188,10 +192,12 @@ export function InstrumentPage() {
               <Skeleton className="h-8 w-40" />
             ) : s?.quote ? (
               <>
-                <div className="num text-[28px] leading-8 font-semibold text-fg">{formatMoney(s.quote.last_price, ccy)}</div>
+                <div key={liveQuote ? s.quote.last_price : undefined} className={cn("num text-[28px] leading-8 font-semibold text-fg", liveQuote && "live-flash")}>
+                  {formatMoney(s.quote.last_price, ccy)}
+                </div>
                 <ChangeText value={s.quote.change} percent={s.quote.change_percent} currency={ccy} className="text-[13px]" />
                 <div className="mt-1 text-xs text-fg-3">
-                  Last observed · market time {formatInstant(s.quote.market_time, tz)}
+                  {liveQuote ? "Last IEX trade" : "Last observed"} · market time {formatInstant(s.quote.market_time, tz, { seconds: !!liveQuote })}
                   {s.quote.session_date && ` · session ${formatSessionDate(s.quote.session_date)}`}
                 </div>
               </>

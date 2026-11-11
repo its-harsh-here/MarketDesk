@@ -80,6 +80,12 @@ class Settings(BaseSettings):
     # FRED (US official statistics, terminal T8): optional free API key from fred.stlouisfed.org. Without it the
     # official-statistics panels say they are not configured; market series keep working.
     fred_api_key: str | None = None
+    # Alpaca Market Data (free Basic plan; docs/DECISIONS.md #65): US option chains from the indicative feed and
+    # streaming IEX trades. Optional; without both values options fall back to the market-data provider and
+    # quotes are polled. ALPACA_STREAMING=false keeps the key for option chains but turns streaming off.
+    alpaca_api_key_id: str | None = None
+    alpaca_api_secret_key: str | None = None
+    alpaca_streaming: bool = True
     worker_heartbeat_stale_seconds: int = 900
 
     # AI research analyst: optional, server-side only. Providers: Groq (free tier, open models) or xAI Grok (paid).

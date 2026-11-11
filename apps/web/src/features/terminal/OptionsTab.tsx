@@ -9,7 +9,7 @@ import { usePrefs } from "@/features/settings/api";
 
 interface Row { contract: string; strike: string; last: string | null; bid: string | null; ask: string | null; volume: number | null; open_interest: number | null; iv: string | null; itm: boolean | null }
 interface Chain {
-  symbol: string; status: string; reason?: string; source?: string; fetched_at?: string | null; expiries?: string[]; expiry?: string;
+  symbol: string; status: string; reason?: string; source?: string; fetched_at?: string | null; open_interest_date?: string | null; fallback_reason?: string | null; expiries?: string[]; expiry?: string;
   days_to_expiry?: number; currency?: string | null; spot?: string | null; spot_time?: string | null; calls?: Row[]; puts?: Row[];
   stats?: { calls: { open_interest: number; volume: number }; puts: { open_interest: number; volume: number }; put_call_oi: string | null;
     put_call_volume: string | null; max_pain: string | null; atm: { strike: string; iv: string | null } | null;
@@ -90,7 +90,7 @@ export function OptionsTab({ symbol }: { symbol: string }) {
   return (
     <>
       <Panel title="Option chain" titleId="opt-title" className="lg:col-span-8" refreshing={q.isFetching} wrapHeader
-        meta={`${d.source}${d.fetched_at ? ` · fetched ${formatRelative(d.fetched_at)}` : ""}`}
+        meta={`${d.source}${d.open_interest_date ? ` · open interest as of ${formatSessionDate(d.open_interest_date)}` : ""}${d.fetched_at ? ` · fetched ${formatRelative(d.fetched_at)}` : ""}`}
         actions={
           <label className="flex items-center gap-1.5 text-xs text-fg-3">
             <span>Expiry</span>
@@ -124,7 +124,8 @@ export function OptionsTab({ symbol }: { symbol: string }) {
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs leading-4 text-fg-3">Shaded cells are in the money; the line marks the last price; the amber strike is max pain. {d.note}</p>
+        <p className="mt-2 text-xs leading-4 text-fg-3">Shaded cells are in the money; the line marks the last price; the amber strike is max pain. {d.note}
+          {d.fallback_reason && <span className="text-warn"> Alpaca could not serve this chain ({d.fallback_reason}); shown from the fallback provider.</span>}</p>
       </Panel>
       <Panel title="Chain summary" titleId="opt-sum" className="lg:col-span-4 lg:self-start">
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
