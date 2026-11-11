@@ -1111,6 +1111,13 @@ yield (on the latest quote), frequency from the last two years, calendar-year to
 date), 5-year growth on complete years only, consecutive yearly increases. Provider amounts per share, no forecast.
 Checks: pytest 339, vitest 48, Playwright 37.
 
+**Live check after deploying 898e301.** Dividends: AAPL quarterly, 5-year growth 5.0% a year (2020–2025), 13 yearly
+increases; RELIANCE.NS annual, ₹6.00 last on 5 Jun 2026; SMR "no dividends". AAPL's trailing-12-month figure was
+$0.80 (three payments) because the November 2025 ex-date fell a day outside the 365-day window and the November 2026
+one was not yet reported → an "indicated annual" figure (latest payment × payments a year) and the TTM payment count
+are now shown. Watchlist key figures loaded and fresh for the owner's list (e.g. NVDA P/E 22.59, −30.6% from the
+52-week high).
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.

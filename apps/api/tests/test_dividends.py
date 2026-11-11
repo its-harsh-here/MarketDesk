@@ -20,6 +20,7 @@ def test_summary_hand_vector():
     # TTM: Aug and Nov 2025 (0.26 each) + Feb and May 2026 (0.27 each) = 1.06
     assert s["ttm"]["total"] == D("1.06") and s["ttm"]["payments"] == 4 and s["ttm"]["yield_pct"] == D("1.06")
     assert s["frequency"] == "quarterly" and s["last"] == {"ex_date": "2026-05-10", "amount": D("0.27")}
+    assert s["indicated"] == {"total": D("1.08"), "per_year": 4, "yield_pct": D("1.08")}  # 0.27 × 4
     totals = {r["year"]: r["total"] for r in s["years"]}
     assert totals[2019] == D("0.80") and totals[2025] == D("1.04") and totals[2026] == D("0.54")
     g = s["growth_5y"]
@@ -33,6 +34,9 @@ def test_no_dividends_and_annual_payer():
     s = dv.summary([(date(2025, 6, 13), D(4)), (date(2024, 7, 12), D(4))], date(2026, 6, 30), None)
     assert s["frequency"] == "annual" and s["ttm"]["total"] == 0 and s["ttm"]["yield_pct"] is None
     assert s["growth_5y"] is None and s["increase_streak_years"] == 0
+    assert s["indicated"]["total"] == 4 and s["indicated"]["yield_pct"] is None
+    odd = dv.summary([(date(2021, 1, 1), D(1))], date(2026, 6, 30), D(10))
+    assert odd["frequency"] == "irregular" and odd["indicated"] is None
 
 
 def test_dividends_api_on_sample_data(api):

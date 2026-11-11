@@ -11,6 +11,7 @@ interface Div {
   last?: { ex_date: string; amount: string };
   ttm?: { total: string; payments: number; from: string; yield_pct: string | null };
   frequency?: string;
+  indicated?: { total: string; per_year: number; yield_pct: string | null } | null;
   years?: { year: number; total: string; payments: number }[];
   growth_5y?: { years: number; from: number; to: number; cagr_pct: string } | null;
   increase_streak_years?: number;
@@ -38,8 +39,10 @@ export function DividendsPanel({ symbol, className }: { symbol: string; classNam
       ) : (
         <div className="space-y-3 text-[13px]">
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-            <div><dt className="text-xs text-fg-3">Trailing 12 months</dt><dd className="num text-base font-semibold text-fg">{formatMoney(d.ttm!.total, d.currency)}</dd></div>
+            <div><dt className="text-xs text-fg-3">Trailing 12 months</dt><dd className="num text-base font-semibold text-fg">{formatMoney(d.ttm!.total, d.currency)} <span className="text-xs font-normal text-fg-3">{d.ttm!.payments} payment{d.ttm!.payments === 1 ? "" : "s"}</span></dd></div>
             <div><dt className="text-xs text-fg-3">Trailing yield</dt><dd className="num text-base font-semibold text-fg">{d.ttm!.yield_pct ? formatPercent(Number(d.ttm!.yield_pct), { signed: false }) : DASH}</dd></div>
+            <div title="Latest payment × payments a year (a convention, not a forecast)"><dt className="text-xs text-fg-3">Indicated annual{d.indicated ? ` (last × ${d.indicated.per_year})` : ""}</dt><dd className="num text-fg">{d.indicated ? formatMoney(d.indicated.total, d.currency) : DASH}</dd></div>
+            <div><dt className="text-xs text-fg-3">Indicated yield</dt><dd className="num text-fg">{d.indicated?.yield_pct ? formatPercent(Number(d.indicated.yield_pct), { signed: false }) : DASH}</dd></div>
             <div><dt className="text-xs text-fg-3">Last ex-date</dt><dd className="num text-fg">{formatSessionDate(d.last!.ex_date)} · {formatMoney(d.last!.amount, d.currency)}</dd></div>
             <div><dt className="text-xs text-fg-3">Frequency</dt><dd className="text-fg">{d.frequency}</dd></div>
             <div><dt className="text-xs text-fg-3">5-year growth (per year)</dt><dd className="num text-fg">{d.growth_5y ? `${formatPercent(Number(d.growth_5y.cagr_pct))} (${d.growth_5y.from}–${d.growth_5y.to})` : DASH}</dd></div>

@@ -10,6 +10,18 @@ from decimal import Decimal
 from marketdesk.services.fx import USABLE
 from marketdesk.services.market import MarketDataService
 
+PER_YEAR = {"monthly": 12, "quarterly": 4, "semi-annual": 2, "annual": 1}
+
+
+def _indicated(last: Decimal, freq: str, price: Decimal | None) -> dict | None:
+    """Latest payment × the payments a year implied by the frequency (what quote pages call the forward dividend);
+    not computed for irregular payers."""
+    n = PER_YEAR.get(freq)
+    if n is None:
+        return None
+    total = last * n
+    return {"total": total, "per_year": n, "yield_pct": (total / price * 100) if price and price > 0 else None}
+
 
 def summary(divs: list[tuple[date, Decimal]], today: date, price: Decimal | None) -> dict:
     """divs: (ex-date, amount per share), any order."""
@@ -51,6 +63,7 @@ def summary(divs: list[tuple[date, Decimal]], today: date, price: Decimal | None
             "yield_pct": (ttm_total / price * 100) if price and price > 0 and ttm_total > 0 else None,
         },  # fmt: skip
         "frequency": freq,
+        "indicated": _indicated(divs[-1][1], freq, price),
         "payments_per_year": per_year,
         "years": years[-12:],
         "growth_5y": growth,
@@ -72,5 +85,6 @@ async def dividend_summary(market: MarketDataService, symbol: str, today: date) 
         "currency": quote.value.instrument.currency if quote.value else None,
         "source": f"{market.source} corporate actions",
         "note": "Amounts per share as the provider reports them (ex-dates). Trailing yield = dividends with ex-dates "
-        "in the last 365 days ÷ the latest price; it is not a forecast. Growth uses complete calendar years only.",
+        "in the last 365 days ÷ the latest price. Indicated = latest payment × payments a year (a convention, "
+        "not a forecast). Growth uses complete calendar years only.",
     }
