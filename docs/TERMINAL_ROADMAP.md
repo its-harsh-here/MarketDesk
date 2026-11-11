@@ -119,7 +119,7 @@ Extends M12: a per-security "context" strip (benchmark, sector index, currency, 
 economic calendar from official release schedules, and FRED series for the US; Indian series from RBI/MOSPI once
 verified. Each series shows vintage and release date.
 
-### T9 — Workstation UX — 🟡 partly done 11 Nov 2026 (movers monitor, terminal density; linked layouts remain)
+### T9 — Workstation UX — ✅ done 11 Nov 2026 (movers, terminal density, linked Desk, tab keys; layouts saved per browser)
 Linked panels (one symbol drives chart, description, news and holders), saved multi-panel layouts (extends M14),
 a movers monitor across the owner's universes, keyboard-only navigation across every view, and a dense "terminal"
 density preset. Accessibility and the existing design tokens stay; no imitation of any vendor's look.

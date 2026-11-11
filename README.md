@@ -282,7 +282,7 @@ The former overview (chart, fundamentals, actions, your alerts and notes, compar
 
 **Function codes** in the command palette: type a symbol and a code — `RELIANCE.NS FA`, `AAPL ERN`, `TCS.NS RV` —
 or just the code on an instrument page; `?` lists them. Security codes: DES, GP, FA, CN, DVD, CACS, ERN, RV, BETA, SI,
-DCF, HDS, ANR, ASK, EXP, FIL. Section codes: TOP, WL, EQS, MOV, ECO, PORT, ALRT, JRNL, LAB. The codes are a familiar checklist only.
+DCF, HDS, ANR, ASK, EXP, FIL. Section codes: TOP, WL, EQS, MOV, DESK, ECO, PORT, ALRT, JRNL, LAB. The codes are a familiar checklist only.
 
 ## Financial analysis (terminal T2)
 

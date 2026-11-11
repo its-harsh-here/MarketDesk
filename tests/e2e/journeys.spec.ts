@@ -1027,3 +1027,28 @@ test("watchlist key figures: market cap, P/E and 1Y from stored snapshots, with 
   await expect(row.getByText(/^\d+(\.\d+)?×$/)).toBeVisible(); // trailing P/E
   await expect(row.getByText(/Cr|L|K|M|B/).first()).toBeVisible(); // market cap in compact units
 });
+
+test("desk: one linked symbol drives every panel; slot choice is remembered; g d opens it", async ({ page }) => {
+  await page.goto("/instrument/SX%3ABANYAN");
+  await ready(page);
+  await expect(page.getByRole("heading", { name: "Price history" })).toBeVisible(); // the page has loaded and recorded the visit
+  await page.keyboard.press("g");
+  await page.keyboard.press("d");
+  await expect(page).toHaveURL(/\/desk/);
+  // the most recently viewed instrument is the starting symbol
+  await expect(page.getByRole("region", { name: "SX:BANYAN price" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("list", { name: "Latest news and filings for SX:BANYAN" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Performance overview" })).toBeVisible();
+  await pickSymbol(page, /Linked symbol/, "AURORA", "SX:AURORA");
+  await expect(page).toHaveURL(/s=SX%3AAURORA/);
+  await expect(page.getByRole("region", { name: "SX:AURORA price" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Latest news and filings for SX:AURORA" })).toBeVisible();
+  const slot4 = page.getByRole("combobox", { name: "Panel 4 shows" });
+  await expect(slot4.locator("option", { hasText: "Price chart (in use)" })).toHaveJSProperty("disabled", true);
+  await slot4.selectOption("earnings");
+  await expect(page.getByRole("region", { name: "Earnings history" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("combobox", { name: "Panel 4 shows" })).toHaveValue("earnings");
+  await page.getByRole("button", { name: "Default layout" }).click();
+  await expect(page.getByRole("combobox", { name: "Panel 4 shows" })).toHaveValue("events");
+});

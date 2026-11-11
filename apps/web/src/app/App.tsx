@@ -41,6 +41,7 @@ const overview = page(() => import("@/features/overview/OverviewPage"), "Overvie
 const watchlists = <WatchlistsPage />;
 const screener = page(() => import("@/features/screener/ScreenerPage"), "ScreenerPage");
 const movers = page(() => import("@/features/movers/MoversPage"), "MoversPage");
+const desk = page(() => import("@/features/desk/DeskPage"), "DeskPage");
 const macro = page(() => import("@/features/macro/MacroPage"), "MacroPage");
 const lab = page(() => import("@/features/lab/LabPage"), "LabPage");
 const instrument = page(() => import("@/features/instrument/InstrumentPage"), "InstrumentPage");
@@ -165,6 +166,7 @@ const router = createBrowserRouter([
           { path: "watchlists", element: watchlists },
           { path: "screener", element: screener },
           { path: "movers", element: movers },
+          { path: "desk", element: desk },
           { path: "macro", element: macro },
           { path: "lab", element: lab },
           { path: "instrument/:symbol", element: instrument },

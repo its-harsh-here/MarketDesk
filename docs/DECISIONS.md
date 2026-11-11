@@ -336,3 +336,9 @@ Consequential choices, newest last. Routine choices live in code comments.
     4-decimal serialiser would have rounded small rates such as INR→USD. The live check showed yfinance's ticker news
     endpoint (finance.yahoo.com/xhr/ncp) refusing server requests, so headlines fall back to Yahoo's search API,
     which symbol search already uses in production.
+59. **Desk: linked panels, layout kept per browser (terminal T9, 11 Nov 2026).** A Desk page (code DESK, g d) shows
+    four panels driven by one linked symbol (default: the most recently viewed instrument). Each slot picks a module —
+    price chart, news and filings, performance, events, earnings history — and a module can occupy only one slot so
+    panel labels stay unique for screen readers. The slot choice is a per-browser convenience in localStorage rather
+    than part of the server-side workspaces (M14), because it holds no data and differs by screen; "Default layout"
+    restores it. With the movers monitor, terminal density and `[`/`]` tab keys, T9 is complete.

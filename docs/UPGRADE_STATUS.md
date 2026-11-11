@@ -1101,6 +1101,10 @@ members not loaded yet return null and the table explains how to load them. The 
 on wide screens (market cap, P/E and 1Y from 1280 px, the 52-week bar from 1536 px). Checks: pytest 336, vitest 48,
 Playwright 36.
 
+## Desk: linked panels (11 Nov 2026)
+`/desk` (code DESK, g d): one linked symbol drives four panels chosen per slot (chart, news, performance, events,
+earnings history); layout remembered per browser (DECISIONS #59). T9 complete. Checks: vitest 48; Playwright 37.
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -1108,4 +1112,4 @@ Playwright 36.
 - Portfolio has INR and USD accounts; returns (M09) use daily closes, benchmarks are price indices, and cash earns no interest.
 
 ## Next concrete action
-The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Terminal roadmap: T1, T2, T4, T5 and T6 done, T9 partly; remaining T3 (needs an India ownership source), T7 (gated on an options entitlement), T8 (needs a FRED key), T10 (stretch). Owner inputs open: FINRA API credentials (short interest), Alpaca (M04), FRED key (M12/T8). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
+The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Terminal roadmap: T1, T2, T4, T5, T6 and T9 done; remaining T3 (needs an India ownership source), T7 (gated on an options entitlement), T8 (needs a FRED key), T10 (stretch). Owner inputs open: FINRA API credentials (short interest), Alpaca (M04), FRED key (M12/T8). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.

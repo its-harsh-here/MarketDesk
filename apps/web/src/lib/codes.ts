@@ -27,6 +27,7 @@ export const GLOBAL_CODES: GlobalCode[] = [
   { code: "WL", label: "Watchlists", to: "/watchlists" },
   { code: "EQS", label: "Screener", to: "/screener" },
   { code: "MOV", label: "Market movers across your universes", to: "/movers" },
+  { code: "DESK", label: "Desk: linked panels for one symbol", to: "/desk" },
   { code: "ECO", label: "Macro and economic context", to: "/macro" },
   { code: "PORT", label: "Portfolio", to: "/portfolio" },
   { code: "ALRT", label: "Alerts and inbox", to: "/alerts" },
