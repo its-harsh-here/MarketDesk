@@ -145,7 +145,8 @@ export function PriceChart({
       },
       grid: { vertLines: { color: p.grid }, horzLines: { color: p.grid } },
       rightPriceScale: { borderColor: p.border },
-      timeScale: { borderColor: p.border, rightOffset: 2, minBarSpacing: 0.5 },
+      // Keep the fitted range when the container resizes (e.g. the layout settling), so no empty band appears.
+      timeScale: { borderColor: p.border, rightOffset: 2, minBarSpacing: 0.5, lockVisibleTimeRangeOnResize: true, fixLeftEdge: true },
       crosshair: { mode: CrosshairMode.Magnet },
       localization: { priceFormatter: (v: number) => formatNumber(v, 2) },
     });

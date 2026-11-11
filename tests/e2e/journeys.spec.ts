@@ -1136,3 +1136,18 @@ test("intraday: 1D shows 5-minute bars with clock times; W/M are disabled; 5D sw
   await ranges.getByRole("radio", { name: "5D" }).click();
   await expect(page.getByText(/· 15-minute/).first()).toBeVisible({ timeout: 30_000 });
 });
+
+test("sidebar: an icon rail that expands while the pointer is on it and for keyboard focus", async ({ page }) => {
+  await page.goto("/");
+  const rail = page.getByRole("navigation", { name: "Primary" }).first();
+  const width = () => rail.evaluate((n) => n.getBoundingClientRect().width);
+  await expect.poll(width).toBeLessThan(70); // loads collapsed even with the pointer at the corner
+  await page.mouse.move(600, 400);
+  await page.mouse.move(28, 300, { steps: 4 });
+  await expect.poll(width).toBeGreaterThan(150);
+  await expect(rail.getByRole("link", { name: "Watchlists" })).toBeVisible();
+  await page.mouse.move(700, 400, { steps: 4 });
+  await expect.poll(width).toBeLessThan(70);
+  await rail.getByRole("link", { name: "Watchlists" }).focus();
+  await expect.poll(width).toBeGreaterThan(150);
+});

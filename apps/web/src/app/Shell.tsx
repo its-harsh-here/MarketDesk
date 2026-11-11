@@ -1,7 +1,7 @@
 import * as DM from "@radix-ui/react-dropdown-menu";
 import * as RD from "@radix-ui/react-dialog";
 import { Bell, BookOpen, Flame, LayoutGrid, Briefcase, Ellipsis, FlaskConical, Funnel, Globe, Keyboard, LayoutDashboard, ListChecks, LogOut, Moon, Search, Settings, Sun, UserRound } from "lucide-react";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDialogs } from "./dialogs";
@@ -53,62 +53,73 @@ function Logo({ compact }: { compact?: boolean }) {
         <path d="M7 21.5 12.5 15l4 3.5L25 9.5" fill="none" stroke={`url(#${gid})`} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
         <circle cx="25" cy="9.5" r="1.6" fill="var(--accent-2)" />
       </svg>
-      {!compact && <span className="md-title text-[15px] font-semibold tracking-tight">MarketDesk</span>}
+      {!compact && <span className="md-title md-fade text-[15px] font-semibold tracking-tight">MarketDesk</span>}
     </Link>
   );
 }
 
+/** Icon rail that expands over the page on hover or keyboard focus (labels fade in); 64px in the layout. */
 function Sidebar() {
   const { data: status } = useStatus();
+  // Opens when the pointer moves onto the rail (after a short intent delay), not because a page loaded under a
+  // resting cursor; keyboard focus opens it through CSS (:focus-within).
+  const [open, setOpen] = useState(false);
+  const timer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const enter = (e: ReactPointerEvent) => {
+    if (e.pointerType !== "mouse") return; // touch: a tap navigates, no hover state
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setOpen(true), 90);
+  };
+  const leave = () => {
+    window.clearTimeout(timer.current);
+    setOpen(false);
+  };
+  const item = "md-nav group flex h-10 items-center gap-3 rounded-[var(--radius-control)] px-4 text-[13px] font-medium";
   return (
-    <nav aria-label="Primary" className="md-sidebar sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-line-subtle md:flex md:w-16 xl:w-52">
-      <div className="flex h-16 items-center px-4 max-xl:justify-center">
-        <span className="max-xl:hidden"><Logo /></span>
-        <span className="xl:hidden"><Logo compact /></span>
-      </div>
-      <ul className="flex flex-col gap-0.5 px-2 pt-2">
-        {NAV.map(({ to, label, icon: Icon, end }) => (
-          <li key={to}>
-            <NavLink
-              to={to}
-              end={end}
-              title={label}
-              className={({ isActive }) =>
-                cn(
-                  "md-nav group flex h-10 items-center gap-3 rounded-[var(--radius-control)] px-3 text-[13px] font-medium max-xl:justify-center",
-                  isActive ? "text-fg" : "text-fg-2 hover:bg-hover/60 hover:text-fg",
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon aria-hidden className={cn("size-4 shrink-0", isActive ? "text-accent-text" : "text-fg-3 group-hover:text-fg-2")} />
-                  <span className="max-xl:sr-only">{label}</span>
-                </>
-              )}
-            </NavLink>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-auto space-y-1 px-2 pb-4">
-        <NavLink
-          to="/settings"
-          title="Settings"
-          className={({ isActive }) =>
-            cn("md-nav flex h-10 items-center gap-3 rounded-[var(--radius-control)] px-3 text-[13px] font-medium max-xl:justify-center", isActive ? "text-fg" : "text-fg-2 hover:bg-hover/60 hover:text-fg")
-          }
-        >
-          <Settings aria-hidden className="size-4 shrink-0 text-fg-3" />
-          <span className="max-xl:sr-only">Settings</span>
-        </NavLink>
-        {status && (
-          <div className="px-3 pt-2 text-[11px] leading-4 text-fg-3 max-xl:hidden">
-            {status.sample_data ? "Synthetic test harness" : "Data: Yahoo Finance via yfinance"}
-            <br />v{status.version}
-          </div>
-        )}
-      </div>
-    </nav>
+    <div className="relative hidden w-16 shrink-0 md:block">
+      <nav aria-label="Primary" data-open={open || undefined} onPointerEnter={enter} onPointerLeave={leave}
+        className="md-sidebar md-rail fixed top-0 left-0 z-40 flex h-dvh flex-col overflow-hidden border-r border-line-subtle">
+        <div className="flex h-16 items-center px-[18px]">
+          <Logo />
+        </div>
+        <ul className="flex flex-col gap-0.5 px-2 pt-2">
+          {NAV.map(({ to, label, icon: Icon, end }) => (
+            <li key={to}>
+              <NavLink
+                to={to}
+                end={end}
+                title={label}
+                className={({ isActive }) => cn(item, isActive ? "text-fg" : "text-fg-2 hover:bg-hover/60 hover:text-fg")}
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon aria-hidden className={cn("size-4 shrink-0", isActive ? "text-accent-text" : "text-fg-3 group-hover:text-fg-2")} />
+                    <span className="md-fade">{label}</span>
+                  </>
+                )}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-auto space-y-1 px-2 pb-4">
+          <NavLink
+            to="/settings"
+            title="Settings"
+            className={({ isActive }) => cn(item, isActive ? "text-fg" : "text-fg-2 hover:bg-hover/60 hover:text-fg")}
+          >
+            <Settings aria-hidden className="size-4 shrink-0 text-fg-3" />
+            <span className="md-fade">Settings</span>
+          </NavLink>
+          {status && (
+            <div className="md-fade px-4 pt-2 text-[11px] leading-4 text-fg-3">
+              {status.sample_data ? "Synthetic test harness" : "Data: Yahoo Finance via yfinance"}
+              <br />v{status.version}
+            </div>
+          )}
+        </div>
+      </nav>
+    </div>
   );
 }
 
