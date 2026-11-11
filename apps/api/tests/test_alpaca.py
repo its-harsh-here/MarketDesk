@@ -231,3 +231,22 @@ def test_alpaca_news_items_flag_broad_stories():
     many = alpaca_item({"title": "Market wrap", "publisher": "Benzinga", "url": None, "published_at": None,
                         "symbols": ["AAPL", "A", "B", "C", "D", "E", "F", "G"]}, "AAPL")  # fmt: skip
     assert many["broad"] and len(many["related"]) == 6 and many["precision"] == "unknown"
+
+
+def test_headline_relevance_terms_and_matching():
+    from types import SimpleNamespace as NS
+
+    from marketdesk.services.news_stream import about, name_terms
+
+    assert name_terms(NS(symbol="AAPL", name="Apple Inc.")) == ["AAPL", "Apple"]
+    assert name_terms(NS(symbol="RELIANCE.NS", name="Reliance Industries Limited")) == ["RELIANCE", "Reliance"]
+    assert name_terms(NS(symbol="NVDA", name="NVIDIA Corporation")) == ["NVDA", "NVIDIA"]
+    apple = name_terms(NS(symbol="AAPL", name="Apple Inc."))
+    assert about("Cramer says Apple investors missed gains", apple, "AAPL")
+    assert about("AAPL slips after the close", apple, "AAPL")
+    assert not about("Is Dell stock priced right against its peers?", apple, "AAPL")
+    assert not about("Pineapple prices rise", apple, "AAPL")  # whole words only
+    smr = name_terms(NS(symbol="SMR", name="NuScale Power Corporation"))
+    assert about("NuScale is still down 61%", smr, "SMR")
+    assert not about("Nuclear smr approval lifts the sector", smr, "SMR")  # ticker counts only in capitals
+    assert about("Nvidia removed as a top pick", name_terms(NS(symbol="NVDA", name="NVIDIA Corporation")), "NVDA")

@@ -433,4 +433,11 @@ Consequential choices, newest last. Routine choices live in code comments.
     comes from them; each news headline's publisher; and the live-trade tooltip still says the trades are from a
     single exchange (IEX), not consolidated data (CLAUDE.md §3 requires naming the feed). Internal keys and code
     identifiers are unchanged.
+70. **News from several publishers, kept only when about the company (12 Nov 2026, owner request).** The tagged
+    news feed (DECISIONS #67) carries one wire service only, so the News tab now merges it with the market-data
+    provider's headlines (Reuters, The Wall Street Journal, Barron's, Investor's Business Daily, Motley Fool,
+    company press-release wires…). The provider's ticker feed also returns stories about other companies, so a
+    provider headline is kept only when it names the company (leading word of its name, any case) or carries the
+    ticker in capitals; the panel says how many were left out. Duplicates across sources are merged. Title,
+    publisher, time and link only.
 

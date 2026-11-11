@@ -173,24 +173,82 @@ async def _alpaca_news(alpaca, inst: Instrument) -> list[dict] | None:
     return [alpaca_item(n, inst.symbol.replace("-", ".")) for n in rows]
 
 
+_LEGAL = {
+    "INC",
+    "CORP",
+    "CORPORATION",
+    "CO",
+    "COMPANY",
+    "LTD",
+    "LIMITED",
+    "PLC",
+    "HOLDINGS",
+    "GROUP",
+    "THE",
+    "SA",
+    "AG",
+    "NV",
+    "LLC",
+    "CLASS",
+    "A",
+    "B",
+    "C",
+    "&",
+    "AND",
+    "OF",
+    "INDUSTRIES",
+    "INTERNATIONAL",
+    "TECHNOLOGIES",
+}
+
+
+def name_terms(inst: Instrument) -> list[str]:
+    """Words that identify the company in a headline: the ticker (without exchange suffix) and the distinctive
+    leading word(s) of its name ("Apple Inc." → "Apple"; "NuScale Power Corporation" → "NuScale")."""
+    terms = []
+    base = inst.symbol.split(".")[0].split(":")[-1]
+    if len(base) >= 2:
+        terms.append(base)
+    words = [w for w in re.findall(r"[A-Za-z0-9&']+", inst.name or "") if w.upper() not in _LEGAL]
+    if words:
+        terms.append(words[0])
+        if len(words[0]) <= 3 and len(words) > 1:  # short first words ("Tata Consultancy" is fine; "AT&T" etc.)
+            terms.append(f"{words[0]} {words[1]}")
+    return [t for t in dict.fromkeys(terms) if len(t) >= 2]
+
+
+def about(headline: str, terms: list[str], ticker: str | None = None) -> bool:
+    """True when the headline names the company (any case) or carries the ticker in capitals (so "ALL" or "ON" in
+    ordinary words do not count)."""
+    for t in terms:
+        flags = 0 if t == ticker else re.IGNORECASE
+        if re.search(rf"(?<![A-Za-z0-9]){re.escape(t)}(?![A-Za-z0-9])", headline, flags):
+            return True
+    return False
+
+
 async def stream(db: Session, market: MarketDataService, research, inst: Instrument, alpaca=None) -> dict:
     sources, notes, items = [], [], []
     tagged = await _alpaca_news(alpaca, inst)
     news = await market.news(inst.symbol)
     if tagged:
         items += tagged
-        sources.append(
-            "Headlines tagged with this symbol; title, publisher and link only. Stories that "
-            "tag many symbols are marked as broad."
-        )
-    elif news.value is not None:
-        items += [news_item(n) for n in news.value]
-        sources.append(
-            f"Headlines: {market.label} ({news.meta.status}); title, publisher and link only. "
-            + ("Results for a symbol can include stories about related companies." if market.source == "yahoo" else "")
-        )
-    elif news.meta.message:
+    if news.value is not None:
+        terms = name_terms(inst)
+        provider_items = [news_item(n) for n in news.value]
+        ticker = inst.symbol.split(".")[0].split(":")[-1]
+        relevant = [it for it in provider_items if about(it["headline"], terms, ticker)] if terms else provider_items
+        items += relevant
+        dropped = len(provider_items) - len(relevant)
+        if dropped:
+            notes.append(f"{dropped} headline(s) about other companies were left out.")
+    elif news.meta.message and not tagged:
         notes.append(f"Headlines unavailable: {news.meta.message}")
+    if tagged or news.value is not None:
+        sources.append(
+            "Headlines from several publishers, kept only when they name this company or are tagged with its "
+            "symbol; title, publisher and link only. Stories that tag many symbols are marked as broad."
+        )
     sec_on = research is not None and research.client.enabled
     if inst.country == "US" and sec_on:
         env = await asyncio.to_thread(research.filings, db, inst, 80)
