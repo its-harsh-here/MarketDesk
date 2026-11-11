@@ -1965,6 +1965,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/terminal/dividends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dividend Summary
+         * @description Trailing dividends and yield, payment frequency, calendar-year totals and growth (provider actions).
+         */
+        get: operations["dividend_summary_api_terminal_dividends_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7919,6 +7939,37 @@ export interface operations {
                 amount?: number | string;
                 from: string;
                 to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dividend_summary_api_terminal_dividends_get: {
+        parameters: {
+            query: {
+                symbol: string;
             };
             header?: never;
             path?: never;

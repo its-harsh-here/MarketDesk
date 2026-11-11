@@ -10,6 +10,7 @@ import { api, errorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/cn";
 import { DASH, formatLargeMoney, formatMoney, formatPercent, formatRelative, formatSessionDate } from "@/lib/format";
 import { useWatchlists } from "@/features/watchlists/api";
+import { DividendsPanel } from "./DividendsPanel";
 
 /* ------------------------------------------------------------------ types (GET /api/terminal/events*) */
 export type EventKind = "results" | "dividend" | "split" | "report" | "proxy" | "meeting" | "buyback";
@@ -224,7 +225,8 @@ export function EventsTab({ symbol }: { symbol: string }) {
   if (q.isError || !d) return <Panel title="Events" titleId="ev-title" className="lg:col-span-12"><ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} /></Panel>;
   return (
     <>
-      <Panel title="Upcoming" titleId="ev-up-title" className="lg:col-span-4 lg:self-start" refreshing={q.isFetching} meta={`as of ${formatSessionDate(d.as_of)}`}>
+      <div className="space-y-4 lg:col-span-4 lg:space-y-5 lg:self-start">
+      <Panel title="Upcoming" titleId="ev-up-title" refreshing={q.isFetching} meta={`as of ${formatSessionDate(d.as_of)}`}>
         {upcoming.length ? (
           <ul className="divide-y divide-line-subtle">{upcoming.map((e, i) => <EventRow key={`${e.date}${e.kind}${i}`} e={e} today={today} />)}</ul>
         ) : d.upcoming.length ? (
@@ -244,6 +246,8 @@ export function EventsTab({ symbol }: { symbol: string }) {
           </p>
         </div>
       </Panel>
+      <DividendsPanel symbol={symbol} />
+      </div>
       <Panel title="Past events" titleId="ev-past-title" className="lg:col-span-8" refreshing={q.isFetching} wrapHeader
         meta={`${d.past.length} event${d.past.length === 1 ? "" : "s"}`}
         actions={<KindFilter counts={counts} hidden={hidden} onToggle={toggle} />}>

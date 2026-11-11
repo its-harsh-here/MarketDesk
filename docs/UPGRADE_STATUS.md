@@ -1105,6 +1105,12 @@ Playwright 36.
 `/desk` (code DESK, g d): one linked symbol drives four panels chosen per slot (chart, news, performance, events,
 earnings history); layout remembered per browser (DECISIONS #59). T9 complete. Checks: vitest 48; Playwright 37.
 
+## Dividend summary (11 Nov 2026)
+`GET /api/terminal/dividends` and a Dividends panel on the Events tab: trailing-12-month dividends per share and
+yield (on the latest quote), frequency from the last two years, calendar-year totals (current year marked as year to
+date), 5-year growth on complete years only, consecutive yearly increases. Provider amounts per share, no forecast.
+Checks: pytest 339, vitest 48, Playwright 37.
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.

@@ -12,7 +12,15 @@ from marketdesk.api.deps import market_dep, require_reader, settings_dep
 from marketdesk.asyncbridge import off_event_loop
 from marketdesk.config import Settings
 from marketdesk.db import get_db
-from marketdesk.services import converter, description, financial_view, news_stream, perf_overview, security_risk
+from marketdesk.services import (
+    converter,
+    description,
+    dividends,
+    financial_view,
+    news_stream,
+    perf_overview,
+    security_risk,
+)
 from marketdesk.services import events as ev
 from marketdesk.services import movers as mv
 from marketdesk.services.instruments import resolve_instrument
@@ -170,3 +178,15 @@ async def convert(
 ):
     """Convert an amount at the provider's latest quoted rate (indicative)."""
     return ev.jsonable(await converter.convert(market, amount, base, quote))
+
+
+@router.get("/dividends")
+@off_event_loop
+async def dividend_summary(
+    symbol: str = Query(min_length=1, max_length=32),
+    db: Session = Depends(get_db),
+    market: MarketDataService = Depends(market_dep),
+):
+    """Trailing dividends and yield, payment frequency, calendar-year totals and growth (provider actions)."""
+    inst = await resolve_instrument(db, market, symbol)
+    return ev.jsonable(await dividends.dividend_summary(market, inst.symbol, ev._today()))

@@ -633,6 +633,10 @@ test("events: calendar with status marks and sources, kind filter, reported earn
   await expect(past.getByText("Dividend 4.00 per share")).toHaveCount(0);
   await filter.getByRole("button", { name: "Show all" }).click();
   await expect(past.getByText("Dividend 4.00 per share").first()).toBeVisible();
+  const dv = page.getByRole("region", { name: "Dividends" });
+  await expect(dv.getByText("Trailing 12 months")).toBeVisible();
+  await expect(dv.getByText("annual", { exact: true })).toBeVisible();
+  await expect(dv.getByText(/12 Jun 2026 · ₹4\.00/)).toBeVisible();
 
   await page.getByRole("tab", { name: "Earnings" }).click();
   const hist = page.getByRole("region", { name: "Earnings history" });
