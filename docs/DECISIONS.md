@@ -397,4 +397,14 @@ Consequential choices, newest last. Routine choices live in code comments.
     09:30–16:00 New York session and in the same session as the quote (its previous close is the change basis);
     extended-hours trades are not shown as the session price. Alerts keep evaluating polled quotes in the worker.
     Indian prices stay polled. No orders, account data or trading endpoints are used.
+66. **Holders from SEC when Yahoo refuses; wider relationship wording (11 Nov 2026, owner report "Holders and
+    Relations aren't working").** Yahoo answers this server's ownership requests with HTTP 401 for every symbol; the
+    product does not work around Yahoo's checks (no crumb or user-agent tricks). US listings now show *holders above
+    5%* from the structured Schedule 13D/13G XML that holders have filed since December 2024 (latest filing per
+    holder; figures as of each filing's event date; a stake under 5% is shown as an exit; 13G passive vs 13D
+    active), and *insider holdings* — each insider's direct shares after their latest Form 4 trade. Yahoo's summary
+    and top-institution tables still appear when Yahoo answers. Indian listings still have no permitted
+    shareholding source and say so. Relationship rules now also match "single or limited sources", "outsourcing /
+    manufacturing partners", "dependent" and customer concentration in trade receivables; cached extractions were
+    invalidated (`sec:relations:v3`).
 

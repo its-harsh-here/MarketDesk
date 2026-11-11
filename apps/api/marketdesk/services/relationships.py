@@ -20,14 +20,18 @@ from marketdesk.services import earnings as er
 ANNUAL_FORMS = ("10-K", "10-K/A", "20-F", "40-F")
 _SENT = re.compile(r"(?<=[.;!?])\s+(?=[A-Z(\"“])")
 _PCT = re.compile(r"(\d{1,2}(?:\.\d+)?)\s?(%|percent)", re.IGNORECASE)
-_REVENUE = re.compile(r"\b(revenue|revenues|net sales|sales|total net revenue)\b", re.IGNORECASE)
+_REVENUE = re.compile(
+    r"\b(revenue|revenues|net sales|sales|total net revenue|trade receivables|accounts receivable)\b", re.IGNORECASE
+)
 _CUSTOMER = re.compile(r"\b(customers?|clients?|distributors?|resellers?|channel partners?)\b", re.IGNORECASE)
 _SUPPLIER = re.compile(
-    r"\b(suppliers?|vendors?|manufacturers?|foundr(?:y|ies)|contract manufacturers?)\b", re.IGNORECASE
+    r"\b(suppliers?|vendors?|manufacturers?|foundr(?:y|ies)|contract manufacturers?|outsourcing partners?|"
+    r"manufacturing partners?|(?:single|sole|limited) (?:or limited )?sources?|sources? of supply)\b",
+    re.IGNORECASE,
 )
 _DEPEND = re.compile(
     r"\b(sole[- ]source|single[- ]source|sole supplier|single supplier|limited number of|rely|relies|depend|"
-    r"depends|substantially all)\b",
+    r"depends|dependent|substantially all|single or limited|limited sources?|concentrated)\b",
     re.IGNORECASE,
 )
 _NAMED = re.compile(
@@ -110,7 +114,7 @@ async def relationships(db: Session, research, inst: Instrument) -> dict:
             "reason": env.get("reason") or "No annual report is listed for this company.",
         }
     filing, cik = rows[0], env["cik"]
-    key = f"sec:relations:v2:{filing['accession']}"
+    key = f"sec:relations:v3:{filing['accession']}"
     payload, _ = await asyncio.to_thread(research._cache_get, db, key)
     if payload is None:
         try:

@@ -201,15 +201,18 @@ class ResearchService:
 
         return self.envelope(db, inst, build)
 
-    def insider_filings(self, db: Session, inst: Instrument, limit: int = 40) -> dict:
-        """Form 4 (and 4/A) filings in the issuer's recent submissions, newest first, with the raw XML's name."""
+    def insider_filings(
+        self, db: Session, inst: Instrument, limit: int = 40, forms: tuple[str, ...] = ("4", "4/A")
+    ) -> dict:
+        """Filings of the given forms (default Form 4 and 4/A) in the issuer's recent submissions, newest first, with
+        the raw XML's name. Also used for the structured Schedule 13D/13G beneficial-ownership filings."""
 
         def build(cik):
             sub, fetched, status, note = self._submissions(db, inst, cik)
             recent = (sub.get("filings") or {}).get("recent") or {}
             rows = []
             for i, form in enumerate(recent.get("form") or []):
-                if form not in ("4", "4/A"):
+                if form not in forms:
                     continue
 
                 def col(name: str, i: int = i):

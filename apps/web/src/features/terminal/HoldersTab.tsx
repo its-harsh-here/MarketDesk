@@ -13,11 +13,15 @@ interface Txn {
   plan_10b5_1: boolean; filed: string; url: string | null; form: string;
 }
 interface Side { count: number; shares: string; value: string; insiders: number }
+interface Major { holder: string; type: string | null; shares: string | null; percent: string | null; event_date: string | null; filed: string; form: string;
+  url: string | null; kind: string; below_threshold: boolean; persons: number }
+interface Holding { insider: string; roles: string[]; shares: string; as_of: string | null; url: string | null }
 interface Ownership {
   symbol: string;
   holders: { status: string; reason?: string; source?: string; fetched_at?: string | null; insiders_pct?: string | null; institutions_pct?: string | null;
     institutions_float_pct?: string | null; institutions_count?: number | null; institutions?: HolderRow[]; funds?: HolderRow[] };
-  insiders: { status?: string; reason?: string; source: string; filings_read?: number; filings_failed?: number; transactions?: Txn[];
+  major?: { status?: string; reason?: string; source: string; filings_read?: number; holders?: Major[]; note?: string };
+  insiders: { status?: string; reason?: string; source: string; filings_read?: number; filings_failed?: number; transactions?: Txn[]; holdings?: Holding[];
     summary?: { days: number; buys: Side; sales: Side }[]; note?: string };
   notes: string[];
 }
@@ -73,6 +77,62 @@ function HolderTable({ rows, label, currency }: { rows: HolderRow[]; label: stri
   );
 }
 
+const TYPES: Record<string, string> = { IA: "Investment adviser", IV: "Investment company", BD: "Broker-dealer", BK: "Bank", HC: "Parent holding company",
+  IC: "Insurance company", EP: "Benefit plan", CO: "Corporation", PN: "Partnership", IN: "Individual", FI: "Non-US institution", OO: "Other" };
+
+function MajorHolders({ m, symbol }: { m: NonNullable<Ownership["major"]>; symbol: string }) {
+  if (!m.holders) return <InlineNotice>{m.reason}</InlineNotice>;
+  if (!m.holders.length)
+    return <p className="text-[13px] text-fg-3">No structured Schedule 13D/13G filings (since December 2024) are listed for this issuer.</p>;
+  const top = Math.max(...m.holders.map((h) => Number(h.percent ?? 0)), 5);
+  return (
+    <ul className="space-y-2.5" aria-label={`Holders above 5% of ${symbol}`}>
+      {m.holders.map((h) => (
+        <li key={h.holder + h.filed} className="text-[13px]">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="min-w-0 truncate text-fg" title={h.holder}>{h.holder}</span>
+            <span className={cn("num shrink-0 font-semibold", h.below_threshold ? "text-fg-3" : "text-fg")}>
+              {h.percent !== null ? formatPercent(Number(h.percent), { signed: false }) : DASH}
+            </span>
+          </div>
+          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-elevated" aria-hidden>
+            <span className={cn("block h-full rounded-full transition-[width] duration-700", h.below_threshold ? "bg-fg-3/50" : "bg-info")}
+              style={{ width: `${(Number(h.percent ?? 0) / top) * 100}%` }} />
+          </div>
+          <div className="mt-0.5 text-xs text-fg-3">
+            {formatCompact(h.shares)} shares · {h.kind === "13D" ? "13D (active)" : "13G (passive)"}
+            {h.type ? ` · ${TYPES[h.type] ?? h.type}` : ""}
+            {h.below_threshold ? " · reported falling below 5%" : ""} · as of {h.event_date ? formatSessionDate(h.event_date) : formatSessionDate(h.filed)} ·{" "}
+            {h.url ? <a href={h.url} target="_blank" rel="noopener noreferrer" className="underline decoration-fg-3/40 underline-offset-2 hover:text-fg-2">{h.form} filed {formatSessionDate(h.filed)} <ExternalLink className="inline size-3" aria-hidden /></a> : h.form}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function InsiderHoldings({ rows, symbol }: { rows: Holding[]; symbol: string }) {
+  if (!rows.length) return <p className="text-[13px] text-fg-3">No direct holdings reported in the latest Form 4 filings.</p>;
+  return (
+    <div tabIndex={0} className="scroll-x scrollbar-thin max-h-[24rem] overflow-auto">
+      <table className="w-full min-w-[26rem] text-[13px]" aria-label={`Insider holdings in ${symbol}`}>
+        <thead className="sticky top-0 bg-panel"><tr className="border-b border-line-subtle text-xs text-fg-3">
+          <th scope="col" className="py-1.5 text-left font-medium">Insider</th>
+          <th scope="col" className="px-2 text-right font-medium">Shares held (direct)</th>
+          <th scope="col" className="pl-2 text-right font-medium">As of</th>
+        </tr></thead>
+        <tbody>{rows.map((r) => (
+          <tr key={r.insider} className="border-b border-line-subtle/60 align-top">
+            <th scope="row" className="py-1.5 text-left font-normal"><span className="text-fg">{r.insider}</span><span className="block text-xs text-fg-3">{r.roles.join(", ") || "—"}</span></th>
+            <td className="num px-2 text-right">{formatCompact(r.shares)}</td>
+            <td className="num pl-2 text-right text-fg-3">{r.url ? <a href={r.url} target="_blank" rel="noopener noreferrer" className="underline decoration-fg-3/40 underline-offset-2 hover:text-fg-2">{r.as_of ? formatSessionDate(r.as_of) : "filing"}</a> : r.as_of ? formatSessionDate(r.as_of) : DASH}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+  );
+}
+
 /** Terminal T3: who owns the company and what insiders have been doing. */
 export function HoldersTab({ symbol, currency }: { symbol: string; currency: string | null }) {
   const q = useQuery({
@@ -87,11 +147,24 @@ export function HoldersTab({ symbol, currency }: { symbol: string; currency: str
   const h = d.holders, ins = d.insiders;
   return (
     <>
-      <Panel title="Ownership" titleId="own-title" className="lg:col-span-5 lg:self-start" refreshing={q.isFetching}
-        meta={h.source ? `${h.source}${h.fetched_at ? ` · fetched ${formatRelative(h.fetched_at)}` : ""}` : undefined}>
-        {h.reason && !h.source ? <InlineNotice>{h.reason}</InlineNotice> : <Breakdown h={h} />}
-        {d.notes.map((n) => <p key={n} className="mt-3 text-xs text-fg-3">{n}</p>)}
-      </Panel>
+      <div className="space-y-4 lg:col-span-5 lg:self-start">
+        {d.major && d.major.status !== "not_applicable" && (
+          <Panel title="Holders above 5%" titleId="major-title" refreshing={q.isFetching} meta={d.major.source} wrapHeader>
+            <MajorHolders m={d.major} symbol={symbol} />
+            {d.major.note && <p className="mt-3 text-xs leading-4 text-fg-3">{d.major.note}</p>}
+          </Panel>
+        )}
+        <Panel title="Ownership summary" titleId="own-title" refreshing={q.isFetching}
+          meta={h.source ? `${h.source}${h.fetched_at ? ` · fetched ${formatRelative(h.fetched_at)}` : ""}` : undefined}>
+          {h.reason && !h.source ? <InlineNotice>{h.reason}</InlineNotice> : <Breakdown h={h} />}
+          {d.notes.map((n) => <p key={n} className="mt-3 text-xs text-fg-3">{n}</p>)}
+        </Panel>
+        {ins.holdings && (
+          <Panel title="Insider holdings" titleId="insh-title" meta="SEC Form 4 · shares held after each insider's latest reported trade" wrapHeader>
+            <InsiderHoldings rows={ins.holdings} symbol={symbol} />
+          </Panel>
+        )}
+      </div>
       <Panel title="Insider transactions" titleId="ins-title" className="lg:col-span-7" meta={ins.source} wrapHeader>
         {!ins.transactions ? (
           <InlineNotice>{ins.reason}</InlineNotice>

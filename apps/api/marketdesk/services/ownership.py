@@ -47,6 +47,8 @@ CODES = {
 }
 MAX_FILINGS = 25
 MAX_CONCURRENT = 4
+MAX_13DG = 30
+SCHEDULE_FORMS = ("SCHEDULE 13G", "SCHEDULE 13G/A", "SCHEDULE 13D", "SCHEDULE 13D/A")
 
 
 def _t(node, path: str) -> str | None:
@@ -100,6 +102,145 @@ def parse_form4(xml_text: str) -> dict:
     return {"owners": owners, "transactions": txns, "period": _t(root, "periodOfReport")}
 
 
+def _local(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1]
+
+
+def _first(node, name: str) -> str | None:
+    for el in node.iter():
+        if _local(el.tag) == name and el.text and el.text.strip():
+            return el.text.strip()
+    return None
+
+
+def _all(node, name: str) -> list:
+    return [el for el in node.iter() if _local(el.tag) == name]
+
+
+def _dec(v: str | None) -> Decimal | None:
+    try:
+        return Decimal(v.replace(",", "")) if v else None
+    except InvalidOperation:
+        return None
+
+
+def parse_schedule13(xml_text: str) -> dict:
+    """Reporting persons of one structured Schedule 13D or 13G (EDGAR XML, filed since December 2024).
+
+    13G cover pages list `coverPageHeaderReportingPersonDetails` (aggregate shares, `classPercent`); 13D cover pages
+    list `reportingPersonInfo` (`aggregateAmountOwned`, `percentOfClass`). Namespaces are ignored."""
+    root = ET.fromstring(xml_text)  # noqa: S314 - see the import note
+    if _local(root.tag) != "edgarSubmission":
+        raise ET.ParseError("not a Schedule 13D/G submission")
+    persons = []
+    g = _all(root, "coverPageHeaderReportingPersonDetails")
+    for p in g:
+        persons.append({
+            "name": _first(p, "reportingPersonName"),
+            "shares": _dec(_first(p, "reportingPersonBeneficiallyOwnedAggregateNumberOfShares")),
+            "percent": _dec(_first(p, "classPercent")),
+            "type": _first(p, "typeOfReportingPerson"),
+        })  # fmt: skip
+    if not g:
+        for p in _all(root, "reportingPersonInfo"):
+            persons.append({
+                "name": _first(p, "reportingPersonName"),
+                "shares": _dec(_first(p, "aggregateAmountOwned")),
+                "percent": _dec(_first(p, "percentOfClass")),
+                "type": _first(p, "typeOfReportingPerson"),
+            })  # fmt: skip
+    persons = [p for p in persons if p["name"]]
+    return {
+        "kind": "13G" if g else "13D",
+        "event_date": _first(root, "eventDateRequiresFilingThisStatement") or _first(root, "dateOfEvent"),
+        "security": _first(root, "securitiesClassTitle"),
+        "persons": persons,
+    }
+
+
+def _lead(persons: list[dict]) -> dict | None:
+    """The person reporting the largest position — usually the parent (the others restate parts of it)."""
+    ranked = [p for p in persons if p.get("shares") is not None]  # cached rows hold numbers as strings
+    return max(ranked, key=lambda p: Decimal(p["shares"])) if ranked else (persons[0] if persons else None)
+
+
+def _norm(name: str) -> str:
+    return " ".join(name.upper().replace(",", " ").replace(".", " ").split())
+
+
+def major_rows(filings: list[dict], parsed: list[dict]) -> list[dict]:
+    """Latest Schedule 13D/13G per holder (newest filing wins), largest stake first; below 5% is marked as an exit."""
+    seen: dict[str, dict] = {}
+    for f, p in sorted(zip(filings, parsed, strict=True), key=lambda x: x[0]["filing_date"] or "", reverse=True):
+        lead = _lead(p.get("persons") or []) if not p.get("error") else None
+        if not lead:
+            continue
+        key = _norm(lead["name"])
+        if key in seen:
+            continue
+        pct = Decimal(lead["percent"]) if lead.get("percent") is not None else None
+        seen[key] = {
+            "holder": lead["name"], "type": lead.get("type"),
+            "shares": Decimal(lead["shares"]) if lead.get("shares") is not None else None, "percent": pct,
+            "event_date": p.get("event_date"), "filed": f["filing_date"], "form": f["form"], "url": f["index_url"],
+            "kind": p.get("kind"), "below_threshold": pct is not None and pct < 5,
+            "persons": len(p.get("persons") or []),
+        }  # fmt: skip
+    return sorted(seen.values(), key=lambda r: (r["percent"] is None, -(r["percent"] or 0)))
+
+
+def _jsonable_13(parsed: dict) -> dict:
+    return {**parsed, "persons": [{k: (format(v, "f") if isinstance(v, Decimal) else v) for k, v in p.items()}
+                                  for p in parsed["persons"]]}  # fmt: skip
+
+
+async def major_holders(db: Session, research, inst: Instrument) -> dict:
+    base = {"source": "SEC EDGAR Schedules 13D and 13G (beneficial owners of more than 5%)"}
+    if inst.country != "US":
+        return {**base, "status": "not_applicable", "reason": "Schedules 13D/13G cover US-registered issuers."}
+    if research is None or not research.client.enabled:
+        return {**base, "status": "not_configured", "reason": "SEC data is not configured on this server."}
+    env = await asyncio.to_thread(research.insider_filings, db, inst, MAX_13DG, SCHEDULE_FORMS)
+    if env.get("data") is None:
+        return {**base, "status": env.get("status"), "reason": env.get("reason")}
+    cik = env["cik"]
+    filings = [f for f in env["data"] if f.get("xml")]
+
+    def spec(f: dict):
+        async def compute():
+            try:
+                xml = await asyncio.to_thread(research.client.filing_xml, cik, f["accession"], f["xml"])
+                return _jsonable_13(await asyncio.to_thread(parse_schedule13, xml))
+            except (ProviderError, ET.ParseError) as err:
+                return {"error": getattr(err, "message", "The filing's XML could not be parsed.")}
+
+        return f"sec:13dg:{f['accession']}", compute
+
+    parsed = await _cached_many(db, research, [spec(f) for f in filings], kind="sec_13dg")
+    rows = major_rows(filings, parsed)
+    return {
+        **base,
+        "status": env.get("status"),
+        "filings_read": sum(1 for p in parsed if not p.get("error")),
+        "holders": rows,
+        "note": "Each holder's latest structured Schedule 13D/13G (EDGAR XML, filed since December 2024). Holders "
+        "file when they cross 5% and amend on material changes, so figures are as of each filing's event date, not "
+        "today; a stake under 5% marks a holder that reported falling below the threshold. 13G filers are passive "
+        "investors; 13D filers may seek influence. Older paper-style filings are not read.",
+    }
+
+
+def insider_holdings(rows: list[dict]) -> list[dict]:
+    """Each insider's direct holding after their most recent reported transaction (Form 4, column 5)."""
+    latest: dict[str, dict] = {}
+    for r in sorted(rows, key=lambda r: (r.get("date") or "", r.get("filed") or ""), reverse=True):
+        if not r.get("direct") or r.get("owned_after") is None or r["insider"] in latest:
+            continue
+        latest[r["insider"]] = {"insider": r["insider"], "roles": r["roles"], "shares": r["owned_after"],
+                                "as_of": r.get("date"), "url": r.get("url")}  # fmt: skip
+    return sorted(latest.values(), key=lambda h: -h["shares"])
+
+
 def summarize(rows: list[dict], today: date, days: int) -> dict:
     """Open-market buys (P) and sales (S) in the last `days`: counts, shares, value, distinct insiders."""
     since = (today - timedelta(days=days)).isoformat()
@@ -116,7 +257,7 @@ def summarize(rows: list[dict], today: date, days: int) -> dict:
     return out
 
 
-async def _cached_many(db: Session, research, specs: list[tuple[str, Callable]]) -> list[dict]:
+async def _cached_many(db: Session, research, specs: list[tuple[str, Callable]], kind: str = "sec_form4") -> list[dict]:
     """Cache reads, then at most MAX_CONCURRENT fetches, then cache writes — the Session on one thread at a time."""
     results: list[dict | None] = []
     for key, _ in specs:
@@ -131,7 +272,7 @@ async def _cached_many(db: Session, research, specs: list[tuple[str, Callable]])
 
     await asyncio.gather(*(run(i) for i in missing))
     for i in missing:
-        await asyncio.to_thread(research._cache_put, db, specs[i][0], "sec_form4", results[i])
+        await asyncio.to_thread(research._cache_put, db, specs[i][0], kind, results[i])
     return [r or {} for r in results]
 
 
@@ -187,6 +328,7 @@ async def insiders(db: Session, research, inst: Instrument, today: date) -> dict
         "filings_read": len(filings) - failed,
         "filings_failed": failed,
         "transactions": rows[:60],
+        "holdings": insider_holdings(rows)[:25],
         "summary": [summarize(rows, today, 90), summarize(rows, today, 365)],
         "note": "Non-derivative transactions from the latest Form 4 filings. Codes P and S are open-market trades; "
         "awards, tax withholding and option exercises are not purchases or sales by choice.",
@@ -195,6 +337,7 @@ async def insiders(db: Session, research, inst: Instrument, today: date) -> dict
 
 async def ownership(db: Session, market: MarketDataService, research, inst: Instrument, today: date) -> dict:
     h, ins = await asyncio.gather(market.holders(inst.symbol), insiders(db, research, inst, today))
+    major = await major_holders(db, research, inst)
     holders: dict
     if h.value is None:
         holders = {"status": h.meta.status, "reason": h.meta.message or "No holder data."}
@@ -211,4 +354,14 @@ async def ownership(db: Session, market: MarketDataService, research, inst: Inst
             "(BSE licence or verified NSE terms) and is not shown; Yahoo's insider and institution percentages are "
             "a summary, not that filing."
         )
-    return {"symbol": inst.symbol, "holders": holders, "insiders": ins, "notes": notes}
+    if h.value is None and inst.country == "US":
+        holders["reason"] = (
+            "Yahoo's ownership summary (institutional percentages and largest institutions) is refused for this "
+            "server. Holders above 5% from SEC Schedules 13D/13G and insiders' holdings from Form 4 are shown instead."
+        )
+    elif h.value is None and er.is_india(inst):
+        holders["reason"] = (
+            "Yahoo's ownership summary is refused for this server, and the exchange shareholding pattern needs a "
+            "permitted source; no holder data can be shown for this listing yet."
+        )
+    return {"symbol": inst.symbol, "holders": holders, "major": major, "insiders": ins, "notes": notes}
