@@ -151,6 +151,53 @@ class NewsItem:
     kind: str = "news"  # "news", "press_release", "video" … as the provider labels it
 
 
+@dataclass(frozen=True)
+class HolderRow:
+    holder: str
+    shares: Decimal | None
+    pct_held: Decimal | None  # fraction of shares outstanding (0.05 = 5%)
+    value: Decimal | None  # in the listing currency
+    reported: date | None
+    pct_change: Decimal | None  # change in the position since the previous report, as a fraction
+
+
+@dataclass(frozen=True)
+class Holders:
+    """Ownership breakdown and largest holders as the provider reports them."""
+
+    insiders_pct: Decimal | None  # fraction
+    institutions_pct: Decimal | None
+    institutions_float_pct: Decimal | None
+    institutions_count: int | None
+    institutions: list[HolderRow]
+    funds: list[HolderRow]
+    source: str
+
+
+@dataclass(frozen=True)
+class OptionQuote:
+    contract: str
+    strike: Decimal
+    last: Decimal | None
+    bid: Decimal | None
+    ask: Decimal | None
+    volume: int | None
+    open_interest: int | None
+    implied_vol: Decimal | None  # annualised, as a fraction (0.32 = 32%)
+    in_the_money: bool | None
+    last_trade: datetime | None
+
+
+@dataclass(frozen=True)
+class OptionChain:
+    expiries: list[date]
+    expiry: date
+    calls: list[OptionQuote]
+    puts: list[OptionQuote]
+    currency: str | None
+    source: str
+
+
 class MarketDataProvider(Protocol):
     name: str
     is_sample: bool
@@ -168,6 +215,10 @@ class MarketDataProvider(Protocol):
     def annual_statements(self, symbol: str) -> AnnualStatements: ...
 
     def news(self, symbol: str) -> list[NewsItem]: ...
+
+    def holders(self, symbol: str) -> Holders: ...
+
+    def options(self, symbol: str, expiry: date | None) -> OptionChain: ...
 
     def validate_symbol(self, symbol: str) -> str: ...
 

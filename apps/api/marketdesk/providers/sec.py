@@ -28,6 +28,7 @@ TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 _UA_RE = re.compile(r"^\S.{2,}\s\S+@\S+\.\S+$")
 _ACCESSION_RE = re.compile(r"^\d{10}-\d{2}-\d{6}$")
 _DOC_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.(htm|html|txt)$", re.IGNORECASE)
+_XML_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.xml$", re.IGNORECASE)
 _TAG_RE = re.compile(r"<(script|style)[^>]*>.*?</\1>|<[^>]+>", re.IGNORECASE | re.DOTALL)
 
 
@@ -154,6 +155,17 @@ class SecClient:
             raise ProviderError("unsupported", "Only plain filing documents (.htm, .html, .txt) can be read.")
         raw = self._fetch(filing_document_url(int(cik), _accession(accession), name), "text/html", max_bytes)
         return html_to_text(raw.decode("utf-8", errors="replace"))[:max_chars]
+
+    def filing_xml(self, cik: int, accession: str, name: str, max_bytes: int = 1_000_000) -> str:
+        """Raw XML of one filing document (e.g. a Form 4 ownership document). Documents with a DOCTYPE are refused,
+        so no entity declaration from a filing is ever processed."""
+        if not _XML_RE.match(name or ""):
+            raise ProviderError("unsupported", "Only plain .xml filing documents can be read.")
+        raw = self._fetch(filing_document_url(int(cik), _accession(accession), name), "application/xml", max_bytes)
+        text = raw.decode("utf-8", errors="replace")
+        if "<!DOCTYPE" in text[:4000].upper():
+            raise ProviderError("malformed", "The filing's XML declares a DOCTYPE and was not read.")
+        return text
 
     def ticker_map(self) -> dict[str, tuple[int, str]]:
         """Ticker -> (CIK, registrant name) from SEC's published association file."""

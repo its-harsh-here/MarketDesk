@@ -281,7 +281,7 @@ others don't (e.g. consensus estimates are licensed data; insider transactions a
 The former overview (chart, fundamentals, actions, your alerts and notes, compare) is the **Chart** tab.
 
 **Function codes** in the command palette: type a symbol and a code — `RELIANCE.NS FA`, `AAPL ERN`, `TCS.NS RV` —
-or just the code on an instrument page; `?` lists them. Security codes: DES, GP, FA, CN, DVD, CACS, ERN, RV, BETA, SI,
+or just the code on an instrument page; `?` lists them. Security codes: DES, GP, FA, CN, DVD, CACS, ERN, RV, BETA, SI, OMON, SPLC,
 DCF, HDS, ANR, ASK, EXP, FIL. Section codes: TOP, WL, EQS, MOV, DESK, ECO, PORT, ALRT, JRNL, LAB. The codes are a familiar checklist only.
 
 ## Financial analysis (terminal T2)

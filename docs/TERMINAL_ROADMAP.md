@@ -86,7 +86,7 @@ US from SEC companyfacts (and frames for cross-sectional percentiles within the 
 Yahoo statements, labelled unofficial, until an owner-approved exchange source exists. Segment data (US) parsed from
 filing XBRL instances is a stretch goal.
 
-### T3 — Ownership and insiders
+### T3 — Ownership and insiders — ✅ done 11 Nov 2026 (Form 4 insiders, Yahoo holders; India shareholding pattern gated)
 US: insider transactions from Form 4 XML (per filing, via submissions) for tracked issuers, with role, transaction
 code in words, shares, price, holdings after; quarterly institutional holders from the DERA 13F data sets processed
 offline into a compact per-CUSIP table for tracked instruments only. India: quarterly shareholding pattern
@@ -110,7 +110,7 @@ Peer multiples over time, z-scores within the declared universe, beta and correl
 aligned daily returns), drawdown profile, liquidity (ADV, spread proxy), and US short interest with days to cover
 (FINRA). Builds on M06 snapshots and M09 risk calculations.
 
-### T7 — Options and derivatives (gated)
+### T7 — Options and derivatives — ✅ done 11 Nov 2026 (Yahoo chains, read-only, owner directive; NSE F&O gated)
 Read-only option chains with OI, volume, implied volatility and put/call ratios, only from a source the owner is
 entitled to (verify Alpaca's options data plan; NSE F&O only with verified terms). No strategy builder or trading.
 
@@ -124,7 +124,7 @@ Linked panels (one symbol drives chart, description, news and holders), saved mu
 a movers monitor across the owner's universes, keyboard-only navigation across every view, and a dense "terminal"
 density preset. Accessibility and the existing design tokens stay; no imitation of any vendor's look.
 
-### T10 — Relationships (stretch)
+### T10 — Relationships (stretch) — ✅ done 11 Nov 2026 (quoted from the latest annual report; low confidence)
 Major customers and suppliers from US 10-K disclosures (model extraction, every item cited to the filing text),
 plus the owner's own annotations. Marked low confidence by design; never presented as complete.
 

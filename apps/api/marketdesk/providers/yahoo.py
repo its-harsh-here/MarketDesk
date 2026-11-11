@@ -25,8 +25,12 @@ from marketdesk.providers.base import (
     DailyBar,
     Fundamentals,
     HistoryRange,
+    HolderRow,
+    Holders,
     InstrumentRef,
     NewsItem,
+    OptionChain,
+    OptionQuote,
     PriceHistory,
     ProviderError,
     QuoteSnapshot,
@@ -540,6 +544,37 @@ class YahooProvider:
 
         return self._call(run, "corporate actions")
 
+    def holders(self, symbol: str) -> Holders:
+        symbol = self.validate_symbol(symbol)
+
+        def run():
+            t = self._yf.Ticker(symbol)
+            h = normalize_holders(t.major_holders, t.institutional_holders, t.mutualfund_holders)
+            if h.insiders_pct is None and h.institutions_pct is None and not h.institutions and not h.funds:
+                raise ProviderError("missing", "Yahoo reports no holder data for this listing.")
+            return h
+
+        return self._call(run, "holders")
+
+    def options(self, symbol: str, expiry: date | None) -> OptionChain:
+        symbol = self.validate_symbol(symbol)
+
+        def run():
+            t = self._yf.Ticker(symbol)
+            expiries = sorted(date.fromisoformat(e) for e in (t.options or ()))
+            if not expiries:
+                raise ProviderError("missing", "Yahoo lists no option expiries for this symbol.")
+            chosen = expiry if expiry in expiries else expiries[0]
+            chain = t.option_chain(chosen.isoformat())
+            ccy = None
+            calls = _records(chain.calls)
+            if calls:
+                ccy = calls[0].get("currency")
+            return OptionChain(expiries, chosen, _option_rows(chain.calls), _option_rows(chain.puts), ccy,
+                               "Yahoo option chain (unofficial, delayed)")  # fmt: skip
+
+        return self._call(run, "options")
+
     def news(self, symbol: str) -> list[NewsItem]:
         symbol = self.validate_symbol(symbol)
 
@@ -600,6 +635,86 @@ def normalize_news(raw: Any, limit: int = 30, symbol: str | None = None) -> list
         if len(out) >= limit:
             break
     return out
+
+
+def _records(df: Any) -> list[dict]:
+    """A yfinance DataFrame (or list of dicts) as plain records; anything else → []."""
+    if df is None:
+        return []
+    if isinstance(df, list):
+        return [r for r in df if isinstance(r, dict)]
+    try:
+        return [] if df.empty else df.to_dict("records")
+    except AttributeError:
+        return []
+
+
+def _holder_rows(df: Any, limit: int = 10) -> list[HolderRow]:
+    out = []
+    for r in _records(df):
+        name = str(r.get("Holder") or r.get("organization") or "").strip()
+        if not name:
+            continue
+        rep = r.get("Date Reported") or r.get("reportDate")
+        try:
+            reported = rep.date() if hasattr(rep, "date") else (date.fromisoformat(str(rep)[:10]) if rep else None)
+        except ValueError:
+            reported = None
+        out.append(HolderRow(name[:120], _dec(r.get("Shares")), _dec(r.get("pctHeld")), _dec(r.get("Value")), reported,
+                             _dec(r.get("pctChange"))))  # fmt: skip
+        if len(out) >= limit:
+            break
+    return out
+
+
+def normalize_holders(major: Any, institutions: Any, funds: Any) -> Holders:
+    """yfinance major_holders (index → Value) and institutional / mutual-fund holder tables → Holders."""
+    breakdown: dict[str, Any] = {}
+    try:
+        if major is not None and not major.empty:
+            col = "Value" if "Value" in major.columns else major.columns[0]
+            breakdown = {str(k): v for k, v in major[col].items()}
+    except AttributeError:
+        breakdown = dict(major) if isinstance(major, dict) else {}
+    count = _dec(breakdown.get("institutionsCount"))
+    return Holders(
+        _dec(breakdown.get("insidersPercentHeld")),
+        _dec(breakdown.get("institutionsPercentHeld")),
+        _dec(breakdown.get("institutionsFloatPercentHeld")),
+        int(count) if count is not None else None,
+        _holder_rows(institutions),
+        _holder_rows(funds),
+        "Yahoo holders (unofficial)",
+    )
+
+
+def _option_rows(df: Any) -> list[OptionQuote]:
+    out = []
+    for r in _records(df):
+        strike = _dec(r.get("strike"))
+        if strike is None:
+            continue
+        lt = r.get("lastTradeDate")
+        try:
+            last_trade = lt.to_pydatetime().astimezone(UTC) if hasattr(lt, "to_pydatetime") else None
+        except (ValueError, TypeError):
+            last_trade = None
+        vol, oi = _dec(r.get("volume")), _dec(r.get("openInterest"))
+        out.append(
+            OptionQuote(
+                contract=str(r.get("contractSymbol") or "")[:40],
+                strike=strike,
+                last=_dec(r.get("lastPrice")),
+                bid=_dec(r.get("bid")),
+                ask=_dec(r.get("ask")),
+                volume=int(vol) if vol is not None else None,
+                open_interest=int(oi) if oi is not None else None,
+                implied_vol=_dec(r.get("impliedVolatility")),
+                in_the_money=bool(r["inTheMoney"]) if r.get("inTheMoney") is not None else None,
+                last_trade=last_trade,
+            )
+        )
+    return sorted(out, key=lambda o: o.strike)
 
 
 def _http_status(exc: BaseException) -> int | None:

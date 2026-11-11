@@ -12,8 +12,12 @@ from marketdesk.providers.base import (
     CorporateAction,
     DailyBar,
     Fundamentals,
+    HolderRow,
+    Holders,
     InstrumentRef,
     NewsItem,
+    OptionChain,
+    OptionQuote,
     PriceHistory,
     QuoteSnapshot,
 )
@@ -179,6 +183,46 @@ def news_from(v: list) -> list[NewsItem]:
     return [NewsItem(a[0], a[1], a[2], datetime.fromisoformat(a[3]) if a[3] else None, a[4]) for a in v]
 
 
+def _row_to(r: HolderRow) -> list:
+    return [r.holder, _d(r.shares), _d(r.pct_held), _d(r.value), r.reported.isoformat() if r.reported else None,
+            _d(r.pct_change)]  # fmt: skip
+
+
+def _row_from(a: list) -> HolderRow:
+    return HolderRow(a[0], _pd(a[1]), _pd(a[2]), _pd(a[3]), _date(a[4]), _pd(a[5]))
+
+
+def holders_to(h: Holders) -> dict:
+    return {"i": _d(h.insiders_pct), "n": _d(h.institutions_pct), "f": _d(h.institutions_float_pct),
+            "c": h.institutions_count, "inst": [_row_to(r) for r in h.institutions],
+            "funds": [_row_to(r) for r in h.funds], "src": h.source}  # fmt: skip
+
+
+def holders_from(d: dict) -> Holders:
+    return Holders(_pd(d["i"]), _pd(d["n"]), _pd(d["f"]), d["c"], [_row_from(a) for a in d["inst"]],
+                   [_row_from(a) for a in d["funds"]], d["src"])  # fmt: skip
+
+
+def _oq_to(o: OptionQuote) -> list:
+    return [o.contract, _d(o.strike), _d(o.last), _d(o.bid), _d(o.ask), o.volume, o.open_interest, _d(o.implied_vol),
+            o.in_the_money, o.last_trade.isoformat() if o.last_trade else None]  # fmt: skip
+
+
+def _oq_from(a: list) -> OptionQuote:
+    return OptionQuote(a[0], Decimal(a[1]), _pd(a[2]), _pd(a[3]), _pd(a[4]), a[5], a[6], _pd(a[7]), a[8],
+                       datetime.fromisoformat(a[9]) if a[9] else None)  # fmt: skip
+
+
+def options_to(c: OptionChain) -> dict:
+    return {"e": [d.isoformat() for d in c.expiries], "x": c.expiry.isoformat(), "c": [_oq_to(o) for o in c.calls],
+            "p": [_oq_to(o) for o in c.puts], "ccy": c.currency, "src": c.source}  # fmt: skip
+
+
+def options_from(d: dict) -> OptionChain:
+    return OptionChain([date.fromisoformat(x) for x in d["e"]], date.fromisoformat(d["x"]),
+                       [_oq_from(a) for a in d["c"]], [_oq_from(a) for a in d["p"]], d["ccy"], d["src"])  # fmt: skip
+
+
 def search_to(refs: list[InstrumentRef]) -> list:
     return [ref_to(r) for r in refs]
 
@@ -195,4 +239,6 @@ CODECS = {
     "actions": (actions_to, actions_from),
     "search": (search_to, search_from),
     "news": (news_to, news_from),
+    "holders": (holders_to, holders_from),
+    "options": (options_to, options_from),
 }

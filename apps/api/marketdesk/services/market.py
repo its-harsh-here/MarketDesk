@@ -21,7 +21,7 @@ from collections import OrderedDict
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Generic, Literal, TypeVar
 
 from sqlalchemy import delete, func, select
@@ -35,8 +35,10 @@ from marketdesk.providers.base import (
     CorporateAction,
     Fundamentals,
     HistoryRange,
+    Holders,
     InstrumentRef,
     NewsItem,
+    OptionChain,
     PriceHistory,
     ProviderError,
     QuoteSnapshot,
@@ -53,6 +55,8 @@ CIRCUIT_GROUPS = {
     "statements": "fundamentals",
     "search": "search",
     "news": "search",  # a news outage must not pause price requests
+    "holders": "fundamentals",
+    "options": "fundamentals",
 }
 Status = Literal["sample", "available", "cached", "stale", "missing", "unsupported", "unavailable"]
 
@@ -167,6 +171,8 @@ class MarketDataService:
             "statements": settings.fundamentals_ttl_seconds,
             "search": settings.search_ttl_seconds,
             "news": 15 * 60,
+            "holders": settings.fundamentals_ttl_seconds,
+            "options": 15 * 60,
         }
 
     # ------------------------------------------------------------------ public API
@@ -197,6 +203,13 @@ class MarketDataService:
 
     async def actions(self, symbol: str) -> Result[list[CorporateAction]]:
         return await self._get("actions", symbol, lambda: self.provider.corporate_actions(symbol))
+
+    async def holders(self, symbol: str) -> Result[Holders]:
+        return await self._get("holders", symbol, lambda: self.provider.holders(symbol))
+
+    async def options(self, symbol: str, expiry: date | None) -> Result[OptionChain]:
+        key = f"{symbol}|{expiry.isoformat() if expiry else 'next'}"
+        return await self._get("options", key, lambda: self.provider.options(symbol, expiry))
 
     async def news(self, symbol: str) -> Result[list[NewsItem]]:
         return await self._get("news", symbol, lambda: self.provider.news(symbol))

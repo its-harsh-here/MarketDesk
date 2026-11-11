@@ -201,6 +201,37 @@ class ResearchService:
 
         return self.envelope(db, inst, build)
 
+    def insider_filings(self, db: Session, inst: Instrument, limit: int = 40) -> dict:
+        """Form 4 (and 4/A) filings in the issuer's recent submissions, newest first, with the raw XML's name."""
+
+        def build(cik):
+            sub, fetched, status, note = self._submissions(db, inst, cik)
+            recent = (sub.get("filings") or {}).get("recent") or {}
+            rows = []
+            for i, form in enumerate(recent.get("form") or []):
+                if form not in ("4", "4/A"):
+                    continue
+
+                def col(name: str, i: int = i):
+                    values = recent.get(name) or []
+                    return values[i] if i < len(values) else None
+
+                doc = col("primaryDocument") or ""
+                accn = col("accessionNumber")
+                rows.append(
+                    {
+                        "form": form,
+                        "filing_date": col("filingDate"),
+                        "accession": accn,
+                        "xml": doc.rsplit("/", 1)[-1] if doc.lower().endswith(".xml") else None,
+                        "index_url": filing_index_url(cik, accn) if accn else None,
+                    }
+                )
+            rows.sort(key=lambda r: r["filing_date"] or "", reverse=True)
+            return rows[:limit], {"status": status, "fetched_at": fetched, "reason": note}
+
+        return self.envelope(db, inst, build)
+
     def events(self, db: Session, inst: Instrument) -> dict:
         def build(cik):
             sub, fetched, status, note = self._submissions(db, inst, cik)

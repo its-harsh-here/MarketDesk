@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -27,8 +28,12 @@ from marketdesk.providers.base import (
     DailyBar,
     Fundamentals,
     HistoryRange,
+    HolderRow,
+    Holders,
     InstrumentRef,
     NewsItem,
+    OptionChain,
+    OptionQuote,
     PriceHistory,
     ProviderError,
     QuoteSnapshot,
@@ -93,6 +98,15 @@ def load_dataset(fixtures_dir: str) -> FixtureDataset:
         starter_watchlist=meta["starter_watchlist"],
         statements=statements,
     )
+
+
+def _bs(spot: float, strike: float, t: float, vol: float, r: float = 0.05) -> tuple[float, float]:
+    """Black–Scholes call and put prices (for the fictitious sample chain only)."""
+    d1 = (math.log(spot / strike) + (r + vol * vol / 2) * t) / (vol * math.sqrt(t))
+    d2 = d1 - vol * math.sqrt(t)
+    n = lambda x: 0.5 * (1 + math.erf(x / math.sqrt(2)))  # noqa: E731
+    call = spot * n(d1) - strike * math.exp(-r * t) * n(d2)
+    return call, call - spot + strike * math.exp(-r * t)
 
 
 class FixtureProvider:
@@ -287,6 +301,67 @@ class FixtureProvider:
         if not periods:
             raise ProviderError("missing", "The sample dataset has no annual statements for this instrument.")
         return AnnualStatements(self._ref(symbol), periods, "Sample annual statements (fictitious)", [])
+
+    def holders(self, symbol: str) -> Holders:
+        """Fictitious holders for the fictitious sample companies, derived deterministically from the symbol."""
+        self._check_fault()
+        symbol = self.validate_symbol(symbol)
+        seed = sum(ord(c) for c in symbol)
+        cursor = self.cursor_date()
+        reported = date(cursor.year, ((cursor.month - 1) // 3) * 3 + 1, 1) - relativedelta(days=1)
+        names = ["Northwind Pension Trust", "Harbourline Mutual Fund", "Kestrel Insurance Co.", "Juniper Index Fund",
+                 "Altamira Capital", "Bluefin Sovereign Fund"]  # fmt: skip
+        rows = []
+        for i, n in enumerate(names):
+            pct = Decimal(30 + (seed * (i + 3)) % 40) / Decimal(1000) / (i + 1)
+            shares = Decimal(1_000_000 * (6 - i) + seed * 100)
+            change = Decimal((seed % 7) - 3) / Decimal(100)
+            rows.append(HolderRow(f"{n} (fictitious)", shares, pct.quantize(Decimal("0.0001")), None, reported, change))
+        insiders = Decimal(35 + seed % 30) / Decimal(100)
+        inst = Decimal(15 + seed % 25) / Decimal(100)
+        return Holders(insiders, inst, inst / (1 - insiders), 40 + seed % 60, rows[:4], rows[4:],
+                       "Sample holders (fictitious)")  # fmt: skip
+
+    def options(self, symbol: str, expiry: date | None) -> OptionChain:
+        """A fictitious chain for the fictitious companies: Black–Scholes prices on the sample close with a volatility
+        smile, deterministic open interest. Monthly expiries (third Friday) after the dataset date."""
+        self._check_fault()
+        symbol = self.validate_symbol(symbol)
+        cursor = self.cursor_date()
+        spot = float(self.quote(symbol).last_price)
+        expiries = []
+        for months in range(0, 7):
+            first = cursor.replace(day=1) + relativedelta(months=months)
+            third_friday = first + relativedelta(days=(4 - first.weekday()) % 7 + 14)
+            if third_friday > cursor:
+                expiries.append(third_friday)
+        expiries = expiries[:4]
+        chosen = expiry if expiry in expiries else expiries[0]
+        t = max((chosen - cursor).days, 1) / 365
+        seed = sum(ord(c) for c in symbol)
+        step = max(1.0, round(spot * 0.025))
+        calls, puts = [], []
+        for k in range(-8, 9):
+            strike = round(spot / step) * step + k * step
+            if strike <= 0:
+                continue
+            m = strike / spot
+            iv = 0.28 + 0.6 * (m - 1) ** 2 + (seed % 5) / 100
+            c, p = _bs(spot, strike, t, iv)
+            oi_c = int(4000 * math.exp(-abs(k - 2) / 3) + seed % 97)
+            oi_p = int(3500 * math.exp(-abs(k + 2) / 3) + seed % 89)
+            for side, price, oi, itm, out in (
+                ("C", c, oi_c, strike < spot, calls),
+                ("P", p, oi_p, strike > spot, puts),
+            ):
+                q = Decimal(str(round(price, 2)))
+                code = f"SX{symbol[3:]}{chosen:%y%m%d}{side}{int(strike * 1000):08d}"
+                bid, ask = max(Decimal("0.01"), q - Decimal("0.05")), q + Decimal("0.05")
+                iv_d = Decimal(str(round(iv, 4)))
+                out.append(OptionQuote(code, Decimal(str(strike)), q, bid, ask, oi // 9, oi, iv_d, itm, None))
+        return OptionChain(
+            expiries, chosen, calls, puts, self._ref(symbol).currency, "Sample option chain (fictitious)"
+        )
 
     def news(self, symbol: str) -> list[NewsItem]:
         """Sample headlines for the fictitious companies, written from the dataset's own dividends and annual

@@ -20,6 +20,6 @@ describe("function codes", () => {
     const des = parseCommand("SX:AURORA DES");
     expect(des && des.kind === "security" && securityPath("SX:AURORA", des.def)).toBe("/instrument/SX%3AAURORA");
     const hds = parseCommand("AAPL HDS");
-    expect(hds && hds.kind === "security" && securityPath("AAPL", hds.def)).toBe("/instrument/AAPL#coverage");
+    expect(hds && hds.kind === "security" && securityPath("AAPL", hds.def)).toBe("/instrument/AAPL?tab=holders");
   });
 });

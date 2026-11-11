@@ -342,3 +342,27 @@ Consequential choices, newest last. Routine choices live in code comments.
     panel labels stay unique for screen readers. The slot choice is a per-browser convenience in localStorage rather
     than part of the server-side workspaces (M14), because it holds no data and differs by screen; "Default layout"
     restores it. With the movers monitor, terminal density and `[`/`]` tab keys, T9 is complete.
+60. **Ownership from Form 4 and Yahoo holders; India's shareholding pattern stays gated (terminal T3, 11 Nov 2026).**
+    The owner asked for every remaining roadmap phase. US insider transactions are read from each Form 4's raw XML
+    (listed in the issuer's submissions; the XSL-rendered path is mapped to the raw file), parsed with the standard
+    library's expat parser (≥2.4 limits entity expansion) after refusing any document that declares a DOCTYPE, and
+    cached per accession. Codes are shown in words; P and S are summarised as open-market buys and sales over 90 days
+    and 12 months, while awards, tax withholding and exercises are listed but never counted as buying or selling.
+    The ownership breakdown and top institutional/fund holders come from Yahoo (unofficial, labelled), which also
+    covers Indian listings; the exchange shareholding pattern (promoter, FII, DII, pledges) still needs a permitted
+    source and is explained rather than approximated. DERA 13F processing was not needed for a first version.
+61. **Read-only option chains from Yahoo (terminal T7, owner directive, 11 Nov 2026).** CLAUDE.md §2 excluded option
+    chains from the first release and the roadmap gated T7 on an entitlement; the owner has now asked for every
+    phase, so the chain comes from yfinance (unofficial, delayed, labelled) like the rest of Yahoo's data. One
+    expiry at a time: calls and puts by strike with last, bid–ask, volume, open interest and the provider's implied
+    volatility; open-interest and volume put/call ratios, max pain, at-the-money IV and the smile. No pricing model,
+    strategy builder or trading. NSE F&O chains stay off until terms are verified. Fixture mode gets a fictitious
+    Black–Scholes chain for tests.
+62. **Relationships by quotation, not extraction by a model (terminal T10, 11 Nov 2026).** The roadmap suggested
+    model extraction with citations. Text rules are enough and stronger on truthfulness: from the latest 10-K (or
+    20-F/40-F) every sentence stating a customer's share of revenue (customer word + revenue word + a percentage, or
+    a company-looking name such as "… Inc. accounted for 18% of net sales") or a dependence on suppliers (sole/single
+    source, rely, depend…) is quoted verbatim with the filing link; named counterparties and their share are pulled
+    out only from the "X accounted for/represented N%" pattern, and a name without the word "customer" must look
+    like a company, so regions are not read as customers. Labelled low confidence; absence means nothing was
+    disclosed in those words. The owner's own annotations go to the journal from the same tab.

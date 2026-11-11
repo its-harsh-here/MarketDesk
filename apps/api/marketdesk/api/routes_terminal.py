@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 from typing import Literal
 
@@ -18,7 +19,10 @@ from marketdesk.services import (
     dividends,
     financial_view,
     news_stream,
+    options,
+    ownership,
     perf_overview,
+    relationships,
     security_risk,
 )
 from marketdesk.services import events as ev
@@ -190,3 +194,42 @@ async def dividend_summary(
     """Trailing dividends and yield, payment frequency, calendar-year totals and growth (provider actions)."""
     inst = await resolve_instrument(db, market, symbol)
     return ev.jsonable(await dividends.dividend_summary(market, inst.symbol, ev._today()))
+
+
+@router.get("/ownership")
+@off_event_loop
+async def ownership_view(
+    request: Request,
+    symbol: str = Query(min_length=1, max_length=32),
+    db: Session = Depends(get_db),
+    market: MarketDataService = Depends(market_dep),
+):
+    """Holders breakdown and largest holders (provider) and US insider transactions from Form 4 (T3)."""
+    inst = await resolve_instrument(db, market, symbol)
+    return ev.jsonable(await ownership.ownership(db, market, request.app.state.research, inst, ev._today()))
+
+
+@router.get("/options")
+@off_event_loop
+async def options_chain(
+    symbol: str = Query(min_length=1, max_length=32),
+    expiry: date | None = Query(default=None),
+    db: Session = Depends(get_db),
+    market: MarketDataService = Depends(market_dep),
+):
+    """One expiry of the option chain with put/call ratios, max pain and the volatility smile; read-only (T7)."""
+    inst = await resolve_instrument(db, market, symbol)
+    return ev.jsonable(await options.chain_view(market, inst, expiry))
+
+
+@router.get("/relationships")
+@off_event_loop
+async def relationships_view(
+    request: Request,
+    symbol: str = Query(min_length=1, max_length=32),
+    db: Session = Depends(get_db),
+    market: MarketDataService = Depends(market_dep),
+):
+    """Customer-concentration and supplier-dependence sentences quoted from the latest annual report (T10)."""
+    inst = await resolve_instrument(db, market, symbol)
+    return await relationships.relationships(db, request.app.state.research, inst)

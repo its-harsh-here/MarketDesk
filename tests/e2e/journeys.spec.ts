@@ -810,6 +810,10 @@ test("description: tiles with sources, coverage with reasons, function codes fro
   await page.keyboard.press(`${MOD}+k`);
   await palette.getByRole("combobox").fill("hds");
   await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/tab=holders/); // T3: holders have their own tab now
+  await page.keyboard.press(`${MOD}+k`);
+  await palette.getByRole("combobox").fill("anr");
+  await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/#coverage$/);
   await expect(page.getByRole("heading", { name: "Coverage for this listing" })).toBeInViewport();
 });
@@ -1055,4 +1059,53 @@ test("desk: one linked symbol drives every panel; slot choice is remembered; g d
   await expect(page.getByRole("combobox", { name: "Panel 4 shows" })).toHaveValue("earnings");
   await page.getByRole("button", { name: "Default layout" }).click();
   await expect(page.getByRole("combobox", { name: "Panel 4 shows" })).toHaveValue("events");
+});
+
+test("holders: HDS opens ownership breakdown and fictitious top holders; insiders explain why they do not apply", async ({ page }) => {
+  await page.goto("/instrument/SX%3AAURORA");
+  await ready(page);
+  await page.keyboard.press(`${MOD}+k`);
+  await page.getByRole("dialog", { name: "Command palette" }).getByRole("combobox").fill("hds");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/tab=holders/);
+  const own = page.getByRole("region", { name: "Ownership" });
+  await expect(own.getByRole("img", { name: /Insiders \d+\.\d+%, institutions \d+\.\d+%/ })).toBeVisible({ timeout: 30_000 });
+  await expect(own.getByText(/shareholding pattern/)).toBeVisible();
+  const inst = page.getByRole("table", { name: "Top institutional holders of SX:AURORA" });
+  await expect(inst.getByRole("rowheader", { name: /Northwind Pension Trust \(fictitious\)/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Insider transactions" }).getByText(/US-registered issuers/)).toBeVisible();
+});
+
+test("options: OMON opens a read-only chain with summary, expiry switch and smile; India is gated", async ({ page }) => {
+  await page.goto("/instrument/SX%3AHALCYON");
+  await ready(page);
+  await page.keyboard.press(`${MOD}+k`);
+  await page.getByRole("dialog", { name: "Command palette" }).getByRole("combobox").fill("omon");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/tab=options/);
+  const chain = page.getByRole("region", { name: "Option chain" });
+  await expect(chain.getByRole("table", { name: /SX:HALCYON options expiring .*: calls left, puts right/ })).toBeVisible({ timeout: 30_000 });
+  const sum = page.getByRole("region", { name: "Chain summary" });
+  await expect(sum.getByText("Max pain")).toBeVisible();
+  await expect(sum.getByRole("img", { name: /Implied volatility by strike/ })).toBeVisible();
+  const expiry = chain.getByRole("combobox", { name: "Expiry" });
+  const second = await expiry.locator("option").nth(1).getAttribute("value");
+  await expiry.selectOption(second!);
+  await expect(expiry).toHaveValue(second!);
+  await page.goto("/instrument/SX%3AAURORA?tab=options");
+  await expect(page.getByText(/Indian F&O chains \(NSE\) need verified terms/)).toBeVisible({ timeout: 30_000 });
+});
+
+test("relations: SPLC opens customer and supplier disclosures with a low-confidence label and a note entry", async ({ page }) => {
+  await page.goto("/instrument/SX%3AAURORA");
+  await ready(page);
+  await page.keyboard.press(`${MOD}+k`);
+  await page.getByRole("dialog", { name: "Command palette" }).getByRole("combobox").fill("splc");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/tab=relations/);
+  await expect(page.getByRole("region", { name: "Customers" }).getByText(/US SEC filers/)).toBeVisible({ timeout: 30_000 });
+  const about = page.getByRole("region", { name: "About these relationships" });
+  await expect(about.getByText("low confidence")).toBeVisible();
+  await about.getByRole("button", { name: "Add your own note" }).click();
+  await expect(page.getByRole("dialog", { name: /journal/i })).toBeVisible();
 });

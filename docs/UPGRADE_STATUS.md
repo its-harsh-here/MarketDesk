@@ -1118,6 +1118,19 @@ one was not yet reported → an "indicated annual" figure (latest payment × pay
 are now shown. Watchlist key figures loaded and fresh for the owner's list (e.g. NVDA P/E 22.59, −30.6% from the
 52-week high).
 
+## Terminal T3, T7, T10 (11 Nov 2026)
+- **T3 Holders tab** (code HDS, `GET /api/terminal/ownership`): ownership breakdown and top institutional/fund
+  holders (Yahoo, unofficial; fictitious in fixture mode), US insider transactions from Form 4 XML with codes in
+  words and 90-day/12-month open-market buy/sale summaries. India: the exchange shareholding pattern stays gated.
+- **T7 Options tab** (code OMON, `GET /api/terminal/options`): one expiry at a time, calls|strike|puts with last,
+  bid–ask, volume, open interest (bars) and IV; put/call ratios, max pain, ATM IV and the smile. Yahoo, read-only,
+  delayed; NSE F&O gated; fictitious Black–Scholes chain in fixture mode.
+- **T10 Relations tab** (code SPLC, `GET /api/terminal/relationships`): customer-concentration and
+  supplier-dependence sentences quoted from the latest annual report, low confidence, with a journal note button.
+- **Schema:** none (holders, chains and Form 4/10-K scans live in the market cache).
+- Checks: pytest 348 passed; vitest 48; Playwright 40 journeys (new: holders, options, relations).
+- Live data for these three is checked after deploy (Yahoo holders and chains cannot be reached from the sandbox).
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.
@@ -1125,4 +1138,4 @@ are now shown. Watchlist key figures loaded and fresh for the owner's list (e.g.
 - Portfolio has INR and USD accounts; returns (M09) use daily closes, benchmarks are price indices, and cash earns no interest.
 
 ## Next concrete action
-The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Terminal roadmap: T1, T2, T4, T5, T6 and T9 done; remaining T3 (needs an India ownership source), T7 (gated on an options entitlement), T8 (needs a FRED key), T10 (stretch). Owner inputs open: FINRA API credentials (short interest), Alpaca (M04), FRED key (M12/T8). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.
+The roadmap (M00–M14) is complete except M04, which waits for the owner's Alpaca key/secret and feed choice. Terminal roadmap: T1–T7, T9 and T10 done; remaining T3 (needs an India ownership source), T7 (gated on an options entitlement), T8 (needs a FRED key), T10 (stretch). Owner inputs open: FINRA API credentials (short interest), Alpaca (M04), FRED key (M12/T8). Owner input still open: Alpaca key/secret + feed (M04). M03 runs on Groq's free tier; an `xai-` key would switch it to xAI.

@@ -28,6 +28,9 @@ import { ComparePanel } from "@/features/market/ComparePanel";
 import { FilingsTab, FinancialsTab } from "@/features/research/ResearchTabs";
 import { EventsTab } from "@/features/terminal/EventsTab";
 import { NewsTab } from "@/features/terminal/NewsTab";
+import { HoldersTab } from "@/features/terminal/HoldersTab";
+import { OptionsTab } from "@/features/terminal/OptionsTab";
+import { RelationsTab } from "@/features/terminal/RelationsTab";
 import { PeersTab } from "@/features/screener/PeersTab";
 import { EarningsTab } from "@/features/earnings/EarningsTab";
 import { DescriptionTab } from "@/features/terminal/DescriptionTab";
@@ -238,6 +241,12 @@ export function InstrumentPage() {
         <FinancialsTab symbol={symbol} />
       ) : tab === "filings" ? (
         <FilingsTab symbol={symbol} />
+      ) : tab === "relations" ? (
+        <RelationsTab symbol={symbol} />
+      ) : tab === "options" ? (
+        <OptionsTab symbol={symbol} />
+      ) : tab === "holders" ? (
+        <HoldersTab symbol={symbol} currency={ccy} />
       ) : tab === "news" ? (
         <NewsTab symbol={symbol} />
       ) : tab === "events" ? (
@@ -365,6 +374,9 @@ const TABS = [
   { value: "events", label: "Events" },
   { value: "earnings", label: "Earnings" },
   { value: "peers", label: "Peers" },
+  { value: "holders", label: "Holders" },
+  { value: "options", label: "Options" },
+  { value: "relations", label: "Relations" },
   { value: "risk", label: "Risk" },
   { value: "valuation", label: "Valuation" },
 ] as const;
