@@ -237,3 +237,49 @@ class AlpacaClient:
         data = self._get(DATA, "/v2/stocks/trades/latest", {"symbols": ",".join(syms), "feed": "iex"})
         trades = data.get("trades") or {}
         return {k: v for k, v in trades.items() if isinstance(v, dict)} if isinstance(trades, dict) else {}
+
+    # ---- news (Benzinga via Alpaca) and the market screener ---------------------------------------------------------
+    def news(self, symbol: str, limit: int = 30) -> list[dict]:
+        """Headlines tagged with the symbol: {title, publisher, url, published_at, symbols}. No article bodies."""
+        sym = us_symbol(symbol)
+        if sym is None:
+            raise ProviderError("unsupported", "Alpaca news covers US listings only.")
+
+        def load() -> list[dict]:
+            data = self._get(DATA, "/v1beta1/news", {"symbols": sym, "limit": min(limit, 50), "sort": "desc"})
+            out = []
+            for n in data.get("news") or []:
+                if not isinstance(n, dict) or not n.get("headline"):
+                    continue
+                url = n.get("url") if isinstance(n.get("url"), str) and n["url"].startswith("https://") else None
+                src = str(n.get("source") or "").strip()
+                out.append({
+                    "title": str(n["headline"]).strip()[:300],
+                    "publisher": src.capitalize() if src else None,
+                    "url": url,
+                    "published_at": _ts(n.get("created_at")),
+                    "symbols": [s for s in n.get("symbols") or [] if isinstance(s, str)][:20],
+                })  # fmt: skip
+            return out
+
+        return self._cached(("news", sym), load)
+
+    def movers(self, top: int = 50) -> dict:
+        """Market-wide top gainers and losers by percent change, as Alpaca's screener computes them."""
+        return self._cached(("movers", top), lambda: self._get(DATA, "/v1beta1/screener/stocks/movers", {"top": top}))
+
+    def most_actives(self, top: int = 50) -> dict:
+        return self._cached(
+            ("actives", top),
+            lambda: self._get(DATA, "/v1beta1/screener/stocks/most-actives", {"by": "volume", "top": top}),
+        )
+
+    def snapshots_stock(self, symbols: list[str]) -> dict:
+        """IEX snapshots (latest trade, daily bars) for up to 100 US symbols."""
+        syms = sorted({s for s in (us_symbol(x) for x in symbols) if s})[:100]
+        if not syms:
+            return {}
+        return self._cached(
+            ("stock_snap", tuple(syms)),
+            lambda: self._get(DATA, "/v2/stocks/snapshots", {"symbols": ",".join(syms), "feed": "iex"}),
+        )

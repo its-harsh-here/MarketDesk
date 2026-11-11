@@ -10,6 +10,7 @@ off until then).
 from __future__ import annotations
 
 import asyncio
+import re
 import xml.etree.ElementTree as ET  # noqa: S405 - expat ≥2.4 limits entity expansion; DOCTYPEs are refused upstream
 from collections.abc import Callable
 from datetime import date, timedelta
@@ -150,12 +151,24 @@ def parse_schedule13(xml_text: str) -> dict:
                 "type": _first(p, "typeOfReportingPerson"),
             })  # fmt: skip
     persons = [p for p in persons if p["name"]]
+    cik = _first(root, "issuerCik") or _first(root, "issuerCIK")
     return {
         "kind": "13G" if g else "13D",
-        "event_date": _first(root, "eventDateRequiresFilingThisStatement") or _first(root, "dateOfEvent"),
+        "issuer_cik": int(cik) if cik and cik.isdigit() else None,
+        "event_date": _iso(_first(root, "eventDateRequiresFilingThisStatement") or _first(root, "dateOfEvent")),
         "security": _first(root, "securitiesClassTitle"),
         "persons": persons,
     }
+
+
+def _iso(v: str | None) -> str | None:
+    """Schedule 13D/G dates come as MM/DD/YYYY (cover page) or ISO; returned as ISO, or None if unreadable."""
+    if not v:
+        return None
+    m = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})$", v.strip())
+    if m:
+        return f"{m.group(3)}-{int(m.group(1)):02d}-{int(m.group(2)):02d}"
+    return v.strip()[:10] if re.match(r"^\d{4}-\d{2}-\d{2}", v.strip()) else None
 
 
 def _lead(persons: list[dict]) -> dict | None:
@@ -164,14 +177,23 @@ def _lead(persons: list[dict]) -> dict | None:
     return max(ranked, key=lambda p: Decimal(p["shares"])) if ranked else (persons[0] if persons else None)
 
 
+_SUFFIXES = {"INC", "CORP", "CORPORATION", "CO", "COMPANY", "LLC", "LP", "L", "P", "LTD", "LIMITED", "PLC", "THE",
+             "GROUP", "N", "A", "NA", "SA", "AG"}  # fmt: skip
+
+
 def _norm(name: str) -> str:
-    return " ".join(name.upper().replace(",", " ").replace(".", " ").split())
+    """Holder identity for de-duplication: case, punctuation and legal suffixes ignored ("Van Eck Associates Corp")."""
+    words = re.sub(r"[^A-Z0-9 ]", " ", name.upper()).split()
+    return " ".join(w for w in words if w not in _SUFFIXES) or " ".join(words)
 
 
-def major_rows(filings: list[dict], parsed: list[dict]) -> list[dict]:
-    """Latest Schedule 13D/13G per holder (newest filing wins), largest stake first; below 5% is marked as an exit."""
+def major_rows(filings: list[dict], parsed: list[dict], issuer_cik: int | None = None) -> list[dict]:
+    """Latest Schedule 13D/13G per holder (newest filing wins), largest stake first; below 5% is marked as an exit.
+    Filings about another issuer (the company itself reporting a stake it holds elsewhere) are left out."""
     seen: dict[str, dict] = {}
     for f, p in sorted(zip(filings, parsed, strict=True), key=lambda x: x[0]["filing_date"] or "", reverse=True):
+        if issuer_cik and p.get("issuer_cik") and int(p["issuer_cik"]) != int(issuer_cik):
+            continue
         lead = _lead(p.get("persons") or []) if not p.get("error") else None
         if not lead:
             continue
@@ -214,10 +236,10 @@ async def major_holders(db: Session, research, inst: Instrument) -> dict:
             except (ProviderError, ET.ParseError) as err:
                 return {"error": getattr(err, "message", "The filing's XML could not be parsed.")}
 
-        return f"sec:13dg:{f['accession']}", compute
+        return f"sec:13dg:v2:{f['accession']}", compute
 
     parsed = await _cached_many(db, research, [spec(f) for f in filings], kind="sec_13dg")
-    rows = major_rows(filings, parsed)
+    rows = major_rows(filings, parsed, cik)
     return {
         **base,
         "status": env.get("status"),

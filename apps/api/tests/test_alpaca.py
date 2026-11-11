@@ -199,3 +199,35 @@ def test_stream_endpoint_off_in_fixture_mode(api):
         assert r.headers["content-type"].startswith("text/event-stream")
         body = "".join(r.iter_text())
     assert body.startswith("event: status") and '"status":"off"' in body and '"polled":["AAPL","RELIANCE.NS"]' in body
+
+
+def test_us_movers_filter_and_actives_join():
+    from marketdesk.services.us_market import actives_view, filter_movers
+
+    raw = {"gainers": [{"symbol": "NXXT", "price": 2.75, "percent_change": 1374.5, "change": 2.5},
+                       {"symbol": "PARAW", "price": 9.0, "percent_change": 120.0},
+                       {"symbol": "BRK.B", "price": 580.0, "percent_change": 3.1, "change": 17.4},
+                       {"symbol": "CRWX", "price": 7.94, "percent_change": 53.0}],
+           "losers": [{"symbol": "ENGS", "price": 0.69, "percent_change": -86.0}],
+           "last_updated": "2026-11-11T18:03Z"}  # fmt: skip
+    m = filter_movers(raw)
+    assert [r["symbol"] for r in m["gainers"]] == ["BRK.B", "CRWX"]  # no penny stock, no warrant
+    assert m["losers"] == [] and m["as_of"] == "2026-11-11T18:03Z"
+    act = {"most_actives": [{"symbol": "NVDA", "volume": 177_000_000, "trade_count": 2_800_000},
+                            {"symbol": "SHFS", "volume": 2_000_000_000}, {"symbol": "ZZZZ", "volume": 5}]}  # fmt: skip
+    snaps = {"NVDA": {"latestTrade": {"p": 176.0}, "prevDailyBar": {"c": 160.0}},
+             "SHFS": {"latestTrade": {"p": 0.05}, "prevDailyBar": {"c": 0.04}}}  # fmt: skip
+    rows = actives_view(act, snaps)
+    assert len(rows) == 1 and rows[0]["symbol"] == "NVDA" and rows[0]["change_pct"] == 10.0
+
+
+def test_alpaca_news_items_flag_broad_stories():
+    from marketdesk.services.news_stream import alpaca_item
+
+    when = datetime(2026, 11, 11, 17, 55, tzinfo=UTC)
+    one = alpaca_item({"title": "Apple story", "publisher": "Benzinga", "url": "https://x/1", "published_at": when,
+                       "symbols": ["AAPL", "NVDA"]}, "AAPL")  # fmt: skip
+    assert one["related"] == ["NVDA"] and not one["broad"] and one["at"] == when.isoformat()
+    many = alpaca_item({"title": "Market wrap", "publisher": "Benzinga", "url": None, "published_at": None,
+                        "symbols": ["AAPL", "A", "B", "C", "D", "E", "F", "G"]}, "AAPL")  # fmt: skip
+    assert many["broad"] and len(many["related"]) == 6 and many["precision"] == "unknown"

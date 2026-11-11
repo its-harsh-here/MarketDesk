@@ -407,4 +407,13 @@ Consequential choices, newest last. Routine choices live in code comments.
     shareholding source and say so. Relationship rules now also match "single or limited sources", "outsourcing /
     manufacturing partners", "dependent" and customer concentration in trade receivables; cached extractions were
     invalidated (`sec:relations:v3`).
+67. **Alpaca news and market-wide US movers (11 Nov 2026).** For US listings the News tab now takes headlines
+    tagged with the symbol from Alpaca's news API (Benzinga and partners): headline, publisher, time and link only,
+    no article text. Stories that tag six or more other symbols are marked "broad market story"; Yahoo headlines
+    remain the fallback. The Movers page gains "US market — all listings" from Alpaca's screener: gainers, losers
+    and most active by volume, limited to common-stock tickers priced at $5 or more (Nasdaq fifth-letter W/R/U
+    warrants, rights and units excluded); ETFs, including leveraged ones, stay in and the panel says so.
+    Most-active prices are the latest IEX trade. Schedule 13D/G rows now keep only filings whose subject company
+    is this issuer (a company's own stake in another issuer is not its holder), de-duplicate holder names that
+    differ only in case or legal suffix, and normalise MM/DD/YYYY event dates (cache `sec:13dg:v2`).
 

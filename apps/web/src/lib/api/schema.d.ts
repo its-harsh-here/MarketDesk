@@ -1925,6 +1925,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/terminal/us-movers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Us Movers
+         * @description Market-wide US gainers, losers and most-active stocks (Alpaca screener), filtered to common stock ≥ $5.
+         */
+        get: operations["us_movers_api_terminal_us_movers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/terminal/movers": {
         parameters: {
             query?: never;
@@ -8027,6 +8047,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    us_movers_api_terminal_us_movers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };

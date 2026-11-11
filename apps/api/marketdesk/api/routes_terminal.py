@@ -25,6 +25,7 @@ from marketdesk.services import (
     perf_overview,
     relationships,
     security_risk,
+    us_market,
 )
 from marketdesk.services import events as ev
 from marketdesk.services import movers as mv
@@ -144,7 +145,16 @@ async def news(
 ):
     """Filings (plain-language 8-K items) and provider headlines for one security, newest first; links only (T5)."""
     inst = await resolve_instrument(db, market, symbol)
-    return await news_stream.stream(db, market, request.app.state.research, inst)
+    alpaca = request.app.state.alpaca if request.app.state.settings.data_provider == "yahoo" else None
+    return await news_stream.stream(db, market, request.app.state.research, inst, alpaca)
+
+
+@router.get("/us-movers")
+@off_event_loop
+async def us_movers(request: Request, settings: Settings = Depends(settings_dep)):
+    """Market-wide US gainers, losers and most-active stocks (Alpaca screener), filtered to common stock ≥ $5."""
+    alpaca = request.app.state.alpaca if settings.data_provider == "yahoo" else None
+    return await us_market.us_movers(alpaca)
 
 
 @router.get("/movers")

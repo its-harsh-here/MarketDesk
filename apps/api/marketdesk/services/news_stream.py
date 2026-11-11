@@ -15,6 +15,8 @@ from datetime import UTC, datetime
 from sqlalchemy.orm import Session
 
 from marketdesk.models import Instrument
+from marketdesk.providers.alpaca import us_symbol
+from marketdesk.providers.base import ProviderError
 from marketdesk.services import earnings as er
 from marketdesk.services.market import MarketDataService
 
@@ -144,10 +146,44 @@ def merge(items: list[dict]) -> list[dict]:
     return sorted(out, key=sort_key, reverse=True)[:MAX_ITEMS]
 
 
-async def stream(db: Session, market: MarketDataService, research, inst: Instrument) -> dict:
+def alpaca_item(n: dict, symbol: str) -> dict:
+    others = [s for s in n.get("symbols") or [] if s != symbol]
+    return {
+        "at": n["published_at"].isoformat() if n.get("published_at") else None,
+        "precision": "instant" if n.get("published_at") else "unknown",
+        "category": "news",
+        "headline": n["title"],
+        "kind": "news",
+        "important": False,
+        "source": "provider",
+        "publisher": n.get("publisher"),
+        "url": n.get("url"),
+        "related": others[:6],
+        "broad": len(others) >= 6,  # a market-wide piece that merely tags this symbol among many
+    }
+
+
+async def _alpaca_news(alpaca, inst: Instrument) -> list[dict] | None:
+    if alpaca is None or not alpaca.enabled or inst.country != "US" or us_symbol(inst.symbol) is None:
+        return None
+    try:
+        rows = await asyncio.to_thread(alpaca.news, inst.symbol, 40)
+    except ProviderError:
+        return None
+    return [alpaca_item(n, inst.symbol.replace("-", ".")) for n in rows]
+
+
+async def stream(db: Session, market: MarketDataService, research, inst: Instrument, alpaca=None) -> dict:
     sources, notes, items = [], [], []
+    tagged = await _alpaca_news(alpaca, inst)
     news = await market.news(inst.symbol)
-    if news.value is not None:
+    if tagged:
+        items += tagged
+        sources.append(
+            "Headlines: Benzinga via Alpaca, tagged with this symbol; title, publisher and link only. Stories that "
+            "tag many symbols are marked as broad."
+        )
+    elif news.value is not None:
         items += [news_item(n) for n in news.value]
         sources.append(
             f"Headlines: {market.source} ({news.meta.status}); title, publisher and link only. "

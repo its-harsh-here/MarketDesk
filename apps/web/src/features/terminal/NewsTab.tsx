@@ -26,6 +26,8 @@ export interface StreamItem {
   url: string | null;
   index_url?: string | null;
   kind?: string;
+  related?: string[];
+  broad?: boolean;
 }
 interface Stream {
   symbol: string;
@@ -126,6 +128,8 @@ export function NewsTab({ symbol }: { symbol: string }) {
                             {it.form && <span className="num">· {it.form}</span>}
                             {it.items && it.items.length > 0 && <span className="num">· items {it.items.map((x) => x.code).join(", ")}</span>}
                             <span>· {it.publisher ?? "unknown publisher"}</span>
+                            {it.broad && <span title="This story tags many symbols; it may be about the market rather than this company.">· broad market story</span>}
+                            {!it.broad && it.related && it.related.length > 0 && <span className="num">· also {it.related.join(", ")}</span>}
                             {it.at && it.precision === "instant" && <span className="num">· {formatInstant(it.at, tz)}</span>}
                             {it.precision === "date" && <span>· filing date</span>}
                             {it.index_url && it.index_url !== it.url && (

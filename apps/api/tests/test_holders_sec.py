@@ -13,7 +13,9 @@ G = """<?xml version="1.0"?>
 <edgarSubmission xmlns="http://www.sec.gov/edgar/schedule13g" xmlns:com="http://www.sec.gov/edgar/common">
  <formData>
   <coverPageHeader><securitiesClassTitle>Common Stock</securitiesClassTitle>
-   <eventDateRequiresFilingThisStatement>2026-03-31</eventDateRequiresFilingThisStatement></coverPageHeader>
+   <eventDateRequiresFilingThisStatement>03/31/2026</eventDateRequiresFilingThisStatement>
+   <issuerInfo><issuerCik>0000320193</issuerCik><issuerName>Fictional Devices Inc.</issuerName></issuerInfo>
+  </coverPageHeader>
   <coverPageHeaderReportingPersonDetails>
    <reportingPersonName>Big Index Group, Inc.</reportingPersonName>
    <reportingPersonBeneficiallyOwnedAggregateNumberOfShares>1,250,000,000</reportingPersonBeneficiallyOwnedAggregateNumberOfShares>
@@ -38,9 +40,11 @@ D13 = """<edgarSubmission xmlns="http://www.sec.gov/edgar/schedule13D"><formData
 def test_parse_schedule_13g_and_13d():
     g = own.parse_schedule13(G)
     assert g["kind"] == "13G" and g["event_date"] == "2026-03-31" and g["security"] == "Common Stock"
+    assert g["issuer_cik"] == 320193
     assert [p["name"] for p in g["persons"]] == ["Big Index Group, Inc.", "Big Index Fund Trust"]
     assert g["persons"][0]["shares"] == D(1_250_000_000) and g["persons"][0]["percent"] == D("8.4")
     d = own.parse_schedule13(D13)
+    assert d["event_date"] == "2026-01-15" and d["issuer_cik"] is None
     assert d["kind"] == "13D" and d["persons"][0] == {"name": "Activist Partners LP", "shares": D(52_000_000),
                                                       "percent": D("6.1"), "type": "PN"}  # fmt: skip
 
@@ -52,8 +56,11 @@ def test_major_rows_latest_per_holder_and_exits():
     newer = own._jsonable_13(own.parse_schedule13(G))
     older = own._jsonable_13(own.parse_schedule13(G.replace("8.4", "7.9")))
     exit_ = own._jsonable_13(own.parse_schedule13(D13.replace("6.1", "4.2")))
-    rows = own.major_rows([f("2025-02-01", "a"), f("2026-04-29", "b"), f("2026-01-20", "c"), f("2026-02-01", "d")],
-                          [older, newer, exit_, {"error": "unreadable"}])  # fmt: skip
+    elsewhere = {**newer, "issuer_cik": 999}  # the company reporting its own stake in another issuer
+    renamed = own._jsonable_13(own.parse_schedule13(G.replace("Big Index Group, Inc.", "BIG INDEX GROUP INC")))
+    rows = own.major_rows([f("2025-02-01", "a"), f("2026-04-29", "b"), f("2026-01-20", "c"), f("2026-02-01", "d"),
+                           f("2026-05-01", "e"), f("2024-12-31", "f")],
+                          [older, newer, exit_, {"error": "unreadable"}, elsewhere, renamed], 320193)  # fmt: skip
     assert [r["holder"] for r in rows] == ["Big Index Group, Inc.", "Activist Partners LP"]
     top = rows[0]
     assert top["percent"] == D("8.4") and top["filed"] == "2026-04-29" and top["persons"] == 2

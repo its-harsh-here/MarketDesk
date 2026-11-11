@@ -6,7 +6,7 @@ import { ChangeText } from "@/components/ui/Change";
 import { Panel } from "@/components/ui/Panel";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/States";
 import { api, errorMessage } from "@/lib/api/client";
-import { formatLargeMoney, formatMoney, formatSessionDate, formatVolume } from "@/lib/format";
+import { formatInstant, formatLargeMoney, formatMoney, formatSessionDate, formatVolume } from "@/lib/format";
 import { useWatchlists } from "@/features/watchlists/api";
 
 interface MoverRow {
@@ -35,6 +35,58 @@ interface Movers {
   breadth: { advancing: number; declining: number; unchanged: number; no_quote: number };
   currencies: string[];
   notes: string[];
+}
+
+interface UsRow { symbol: string; price: number; change_pct: number | null; volume?: number }
+interface UsMovers { status: string; reason?: string; source: string; filter: string; as_of?: string; gainers?: UsRow[]; losers?: UsRow[]; actives?: UsRow[]; note?: string }
+
+function UsList({ rows, label, volume }: { rows: UsRow[]; label: string; volume?: boolean }) {
+  if (!rows.length) return <p className="py-4 text-center text-[13px] text-fg-3">None after filtering.</p>;
+  return (
+    <ol className="divide-y divide-line-subtle" aria-label={label}>
+      {rows.map((r, i) => (
+        <li key={r.symbol}>
+          <Link to={`/instrument/${encodeURIComponent(r.symbol)}`} className="flex items-center gap-3 px-1 py-1.5 text-[13px] transition-colors hover:bg-hover/50">
+            <span className="num w-5 shrink-0 text-xs text-fg-3">{i + 1}</span>
+            <span className="num min-w-0 flex-1 font-semibold text-fg">{r.symbol}</span>
+            {volume && <span className="num text-xs text-fg-3">{formatVolume(r.volume ?? null)}</span>}
+            <span className="num w-20 text-right text-fg-2">{formatMoney(String(r.price), "USD")}</span>
+            <span className="w-20 text-right"><ChangeText percent={r.change_pct === null ? null : String(r.change_pct)} /></span>
+          </Link>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** Market-wide US lists from Alpaca's screener (all listings, not just the owner's universe). */
+function UsMarket() {
+  const q = useQuery({
+    queryKey: ["terminal", "us-movers"],
+    queryFn: ({ signal }) => api.get<UsMovers>("/api/terminal/us-movers", undefined, signal),
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+    refetchIntervalInBackground: false,
+  });
+  const d = q.data;
+  if (d && d.status === "not_configured") return null;
+  return (
+    <Panel title="US market — all listings" titleId="mv-us" className="lg:col-span-12" refreshing={q.isFetching && !q.isLoading} wrapHeader
+      meta={d ? `${d.source}${d.as_of ? ` · as of ${formatInstant(d.as_of)}` : ""}` : undefined}>
+      {q.isLoading ? <SkeletonRows rows={5} /> : q.isError || !d ? <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} /> : !d.gainers ? (
+        <p className="text-[13px] text-fg-2">{d.reason}</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+            <section aria-labelledby="us-g"><h3 id="us-g" className="mb-1 flex items-center gap-1 text-xs font-semibold text-fg-2"><TrendingUp className="size-3.5 text-pos" aria-hidden />Gainers</h3><UsList rows={d.gainers} label="US top gainers" /></section>
+            <section aria-labelledby="us-l"><h3 id="us-l" className="mb-1 flex items-center gap-1 text-xs font-semibold text-fg-2"><TrendingDown className="size-3.5 text-neg" aria-hidden />Losers</h3><UsList rows={d.losers ?? []} label="US top losers" /></section>
+            <section aria-labelledby="us-a"><h3 id="us-a" className="mb-1 flex items-center gap-1 text-xs font-semibold text-fg-2"><Activity className="size-3.5 text-info" aria-hidden />Most active by volume</h3><UsList rows={d.actives ?? []} label="US most active" volume /></section>
+          </div>
+          <p className="mt-3 text-xs leading-4 text-fg-3">{d.filter} ETFs, including leveraged ones, are included. {d.note}</p>
+        </>
+      )}
+    </Panel>
+  );
 }
 
 function useMovers(universe: string) {
@@ -143,6 +195,7 @@ export function MoversPage() {
           <div className="space-y-1 text-xs text-fg-3 lg:col-span-12">{d.notes.map((n) => <p key={n}>{n}</p>)}</div>
         </>
       )}
+      <UsMarket />
     </div>
   );
 }
