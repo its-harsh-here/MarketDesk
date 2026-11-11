@@ -1176,3 +1176,15 @@ The roadmap (M00–M14) is complete, including M04 (Alpaca IEX streaming). Termi
   single exchange, not consolidated".
 - Local runs: pytest 366 passed / 3 skipped; vitest 53; Playwright journeys 41/41 (one first failed only because
   the shell's real FRED key reached the local e2e server; scripts/e2e-server.sh now unsets real keys).
+
+### Live check — Holders and Relations fixed; Alpaca news and US movers (11 Nov 2026)
+- Holders (owner reported "not working": Yahoo returns HTTP 401 to this server for every symbol). Now from SEC:
+  AAPL Vanguard Capital Management 7.48% (13G, 31 Mar 2026); SMR VanEck 8.50%, BlackRock 6.50%, Vanguard 5.25% plus
+  holders that reported falling below 5%; NVDA no longer lists NVIDIA's own 13G about another company. Insider
+  holdings from Form 4 shown. Indian listings say no permitted shareholding source exists yet. No overflow at 390px.
+- Relations: AAPL now quotes its single/limited-source and outsourcing-partner dependence (was empty) and the trade
+  receivables concentration; repeated quotes merged (`sec:relations:v4`).
+- News (AAPL): Benzinga headlines via Alpaca tagged with the symbol; a market-wide story is marked "broad".
+- Movers: "US market — all listings" (gainers, losers, most active) from Alpaca's screener, ≥ $5 common tickers.
+- Instrument header: pre-market / after-hours IEX trade on its own line (unit-tested; appears outside 09:30–16:00 ET).
+- Local: pytest 373 passed / 3 skipped; vitest 55; affected Playwright journeys pass.

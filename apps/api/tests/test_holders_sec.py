@@ -95,3 +95,9 @@ def test_relationship_rules_cover_limited_sources_and_outsourcing():
     out = extract(text)
     assert len(out["suppliers"]) == 2 and len(out["customers"]) == 1
     assert "trade receivables" in out["customers"][0]["quote"]
+
+
+def test_relationship_quotes_are_not_repeated_with_a_heading_glued_on():
+    sentence = "Certain components are currently obtained from single or limited sources for the Company's products."
+    out = extract(f"{sentence} Supply of Materials and Components. Other text here. Supply of Components {sentence}")
+    assert len(out["suppliers"]) == 1

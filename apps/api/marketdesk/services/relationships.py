@@ -90,7 +90,18 @@ def extract(text: str) -> dict:
         elif _SUPPLIER.search(s) and _DEPEND.search(s) and not _NOT_SUPPLY.search(s):
             seen.add(s)
             suppliers.append({"quote": s, "named": []})
-    return {"customers": customers[:MAX_ITEMS], "suppliers": suppliers[:MAX_ITEMS]}
+    return {"customers": _distinct(customers)[:MAX_ITEMS], "suppliers": _distinct(suppliers)[:MAX_ITEMS]}
+
+
+def _distinct(items: list[dict]) -> list[dict]:
+    """Drop a quote whose words are contained in another kept quote (a heading glued to a repeated sentence)."""
+    keys = [" ".join(re.findall(r"[a-z0-9]+", it["quote"].lower())) for it in items]
+    out = []
+    for i, it in enumerate(items):
+        if any(j != i and keys[i] in keys[j] and (len(keys[i]) < len(keys[j]) or j < i) for j in range(len(items))):
+            continue
+        out.append(it)
+    return out
 
 
 async def relationships(db: Session, research, inst: Instrument) -> dict:
@@ -114,7 +125,7 @@ async def relationships(db: Session, research, inst: Instrument) -> dict:
             "reason": env.get("reason") or "No annual report is listed for this company.",
         }
     filing, cik = rows[0], env["cik"]
-    key = f"sec:relations:v3:{filing['accession']}"
+    key = f"sec:relations:v4:{filing['accession']}"
     payload, _ = await asyncio.to_thread(research._cache_get, db, key)
     if payload is None:
         try:
