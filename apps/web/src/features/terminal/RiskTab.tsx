@@ -22,7 +22,7 @@ interface Risk {
   volatility?: Record<"1Y" | "3Y", { value: number | null; n: number; why: string | null }>;
   drawdowns?: { current?: number; high?: { date: string; close: number }; windows?: Record<string, { max: number | null; peak?: string; trough?: string; recovered?: string | null; why?: string }>; episodes?: Episode[]; why?: string };
   liquidity?: { adv_20: string | null; adv_60: string | null; value_20: string | null; median_range_pct: number | null; sessions: number };
-  relative?: { universe: { label: string; members: number; with_snapshot: number }; rows: { key: string; label: string; unit: string; value: string | null; n: number; mean?: string; median?: string; z?: string | null; percentile?: string; why: string | null }[]; note: string };
+  relative?: { why?: string; universe?: { label: string; members: number; with_snapshot: number }; rows: { key: string; label: string; unit: string; value: string | null; n: number; mean?: string; median?: string; z?: string | null; percentile?: string; why: string | null }[]; note: string };
   peer_valuation?: { source: string; rows: { symbol: string; n?: number; min?: number; median?: number; max?: number; current?: number | null; percentile?: number | null; why?: string | null }[] };
   short_interest?: { status: string; reason?: string | null; source: string; fetched_at?: string | null; rows?: { settlement_date: string; short_position: number; change_pct: number; avg_daily_volume: number; days_to_cover: number; revised: boolean; split: boolean }[]; note?: string };
 }
@@ -54,7 +54,7 @@ export function RiskTab({ symbol, currency }: { symbol: string; currency: string
   if (q.isError || !d) return <Panel title="Risk and relative value" titleId="rk-title" className="lg:col-span-12"><ErrorState message={errorMessage(q.error)} onRetry={() => (bench ? set("bench", null) : q.refetch())} /></Panel>;
   if (d.status === "missing") return <Panel title="Risk and relative value" titleId="rk-title" className="lg:col-span-12"><InlineNotice>{d.reason}</InlineNotice></Panel>;
   const sens = d.sensitivity && "1Y" in d.sensitivity ? d.sensitivity : null;
-  const few = (d.relative?.universe.with_snapshot ?? 0) < 5;
+  const few = (d.relative?.universe?.with_snapshot ?? 0) < 5;
   const dd = d.drawdowns;
   return (
     <>
@@ -146,19 +146,19 @@ export function RiskTab({ symbol, currency }: { symbol: string; currency: string
               </Select>
             )}
           </Field>
-          <span className="pb-2 text-xs text-fg-3">{d.relative?.universe.members ?? 0} members · {d.relative?.universe.with_snapshot ?? 0} with data</span>
+          <span className="pb-2 text-xs text-fg-3">{d.relative?.universe?.members ?? 0} members · {d.relative?.universe?.with_snapshot ?? 0} with data</span>
         </div>
         {few && (
           <InlineNotice className="mb-3">
-            z-scores and percentiles need at least 5 members with data; {d.relative?.universe.label ?? "this universe"} has {d.relative?.universe.with_snapshot ?? 0}. Add comparable instruments to a watchlist and load their data on the <Link to="/screener" className="text-info underline decoration-info/40 underline-offset-2 hover:decoration-info">Screener</Link>.
+            z-scores and percentiles need at least 5 members with data; {d.relative?.universe?.label ?? "this universe"} has {d.relative?.universe?.with_snapshot ?? 0}. Add comparable instruments to a watchlist and load their data on the <Link to="/screener" className="text-info underline decoration-info/40 underline-offset-2 hover:decoration-info">Screener</Link>.
           </InlineNotice>
         )}
         <div tabIndex={0} className="scroll-x scrollbar-thin overflow-x-auto">
           <table className="w-full text-[13px]" style={{ minWidth: few ? 0 : 520 }}>
-            <caption className="sr-only">Where {symbol} sits within {d.relative?.universe.label}</caption>
+            <caption className="sr-only">Where {symbol} sits within {d.relative?.universe?.label}</caption>
             <thead><tr className="border-b border-line-subtle text-xs text-fg-3"><th scope="col" className="py-1.5 text-left font-medium">Metric</th><th scope="col" className="py-1.5 text-right font-medium">{symbol}</th>{!few && <><th scope="col" className="py-1.5 text-right font-medium">Median</th><th scope="col" className="py-1.5 text-right font-medium">z-score</th><th scope="col" className="py-1.5 text-right font-medium">At or above</th></>}</tr></thead>
             <tbody>
-              {d.relative?.rows.map((r) => (
+              {(d.relative?.rows ?? []).map((r) => (
                 <tr key={r.key} className="border-b border-line-subtle/60">
                   <th scope="row" className="py-1.5 text-left font-normal">{r.label}</th>
                   <td className="num py-1.5 text-right">{r.value === null ? DASH : num(r.value)}</td>
@@ -174,16 +174,17 @@ export function RiskTab({ symbol, currency }: { symbol: string; currency: string
             </tbody>
           </table>
         </div>
+        {d.relative?.why && <p className="text-[13px] text-warn">{d.relative.why}</p>}
         <p className="mt-2 text-xs leading-4 text-fg-3">z = (value − universe mean) ÷ standard deviation; "at or above" is the share of members whose value is at or below this security's. {d.relative?.note} <Link to="/screener" className="text-info underline decoration-info/40 underline-offset-2 hover:decoration-info">Open the screener</Link></p>
       </Panel>
 
       <Panel title="Peer P/E history" titleId="ppe-title" className="lg:col-span-6">
-        {!d.peer_valuation?.rows.length ? <p className="text-[13px] text-fg-3">No peers: choose some on the Peers tab.</p> : (
+        {!d.peer_valuation?.rows?.length ? <p className="text-[13px] text-fg-3">{(d.peer_valuation as { why?: string } | undefined)?.why ?? "No peers: choose some on the Peers tab."}</p> : (
           <table className="w-full text-[13px]">
             <caption className="sr-only">Five-year P/E range of {symbol} and its peers</caption>
             <thead><tr className="border-b border-line-subtle text-xs text-fg-3"><th scope="col" className="py-1.5 text-left font-medium">Instrument</th><th scope="col" className="py-1.5 text-right font-medium">Min</th><th scope="col" className="py-1.5 text-right font-medium">Median</th><th scope="col" className="py-1.5 text-right font-medium">Max</th><th scope="col" className="py-1.5 text-right font-medium">Latest</th></tr></thead>
             <tbody>
-              {d.peer_valuation.rows.map((r) => (
+              {d.peer_valuation!.rows.map((r) => (
                 <tr key={r.symbol} className="border-b border-line-subtle/60">
                   <th scope="row" className="py-1.5 text-left font-normal"><Link to={`/instrument/${encodeURIComponent(r.symbol)}?tab=risk`} className="num text-info underline decoration-info/40 underline-offset-2 hover:decoration-info">{r.symbol}</Link></th>
                   {!r.n ? <td colSpan={4} className="py-1.5 text-right text-xs text-fg-3">{r.why}</td> : (

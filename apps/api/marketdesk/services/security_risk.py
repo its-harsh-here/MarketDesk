@@ -326,6 +326,28 @@ async def build(
     out["volatility"] = volatility(closes, end)
     out["drawdowns"] = drawdown_profile(closes)
     out["liquidity"] = liquidity(bars)
+    # Each remaining section stands alone: one failing (a provider surprise) is reported in its panel and never
+    # takes the whole risk view down.
+    out["relative"] = await _guard("relative", _relative(db, market, settings, inst, universe))
+    out["peer_valuation"] = await _guard("peer_valuation", _peer_bands(db, market, research, inst, settings))
+    out["short_interest"] = await _guard("short_interest", _async(_short_interest, db, finra, inst))
+    return out
+
+
+async def _async(fn, *args):
+    return fn(*args)
+
+
+async def _guard(section: str, coro) -> dict:
+    try:
+        return await coro
+    except Exception as exc:  # noqa: BLE001 - reported in the section; the traceback goes to the server log
+        log.exception("risk section %s failed", section)
+        return {"status": "unavailable", "why": f"This section could not be computed ({type(exc).__name__}).",
+                "reason": f"This section could not be computed ({type(exc).__name__}).", "rows": []}  # fmt: skip
+
+
+async def _relative(db: Session, market: MarketDataService, settings, inst: Instrument, universe: dict | None) -> dict:
     # relative to the universe (stored snapshots only; refresh happens on the Screener page)
     target = db.get(ScreenMetric, inst.id)
     if (
@@ -340,7 +362,7 @@ async def build(
         ScreenMetric.instrument_id.in_([m.id for m in members]), ScreenMetric.provider == market.source))}  # fmt: skip
     vals = [s.values for s in snaps.values()]
     catalog = {m.key: m for m in screener.METRICS}
-    out["relative"] = {
+    return {
         "universe": {"label": uni["label"], "members": len(members), "with_snapshot": len(vals)},
         "rows": [
             {**r, "label": catalog[r["key"]].label, "unit": catalog[r["key"]].unit}
@@ -349,9 +371,6 @@ async def build(
         "note": "Members are compared on their stored snapshots (refresh them on the Screener page); the security "
         "itself is not counted among the members.",
     }
-    out["peer_valuation"] = await _peer_bands(db, market, research, inst, settings)
-    out["short_interest"] = _short_interest(db, finra, inst)
-    return out
 
 
 def jsonable(x):
