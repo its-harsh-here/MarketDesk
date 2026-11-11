@@ -112,7 +112,7 @@ function Sidebar() {
             <span className="md-fade">Settings</span>
           </NavLink>
           {status && (
-            <div className="md-fade px-4 pt-2 text-[11px] leading-4 text-fg-3">
+            <div className="md-fade w-48 px-4 pt-2 text-[11px] leading-4 !whitespace-normal text-fg-3">
               {status.sample_data ? "Synthetic test harness" : "Data: Yahoo Finance via yfinance"}
               <br />v{status.version}
             </div>
