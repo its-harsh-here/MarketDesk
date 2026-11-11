@@ -229,7 +229,7 @@ def _short_interest(db: Session, finra, inst: Instrument) -> dict:
     if finra is None or not finra.enabled:
         return {**base, "status": "not_configured", "reason": finra.problem if finra else "Not configured."}
     symbol = inst.symbol.replace("-", ".")
-    key = f"finra:si:{symbol}"
+    key = f"finra:si:v2:{symbol}"  # v2: records filtered to the last ~13 months (v1 held the oldest ones)
     row = db.get(MarketCacheEntry, key)
     now = datetime.now(UTC)
     fetched = row.fetched_at if row is not None else None
@@ -260,10 +260,14 @@ def _short_interest(db: Session, finra, inst: Instrument) -> dict:
     else:
         raw, status = row.payload, "cached"
     rows = short_interest_rows(raw or [])
+    latest = rows[0]["settlement_date"] if rows else None
+    old = latest is not None and str(latest) < (now - timedelta(days=60)).date().isoformat()
     return {
         **base,
         "status": status if rows else "missing",
-        "reason": None if rows else "FINRA has no short-interest records for this symbol in the last year.",
+        "reason": (f"The latest FINRA record is from {latest}; nothing newer was returned." if old else None)
+        if rows
+        else "FINRA has no short-interest records for this symbol in the last year.",
         "fetched_at": fetched,
         "rows": rows[:12],
         "note": "Short positions reported by broker-dealers twice a month; days to cover = short position ÷ average "

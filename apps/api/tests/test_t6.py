@@ -114,6 +114,8 @@ def test_finra_client_token_query_and_fallback(monkeypatch):
     assert data.headers["Authorization"] == "Bearer tok" and data.headers["Accept"] == "application/json"
     flt = json.loads(data.data)["compareFilters"][0]
     assert flt == {"compareType": "equal", "fieldName": "symbolCode", "fieldValue": "AAPL"}
+    rng = json.loads(data.data)["dateRangeFilters"][0]
+    assert rng["fieldName"] == "settlementDate" and rng["startDate"] < rng["endDate"]  # newest year, not the oldest
     c.short_interest("aapl")
     assert sum("oauth2" in r.full_url for r in seen) == 1  # token cached
 
@@ -214,6 +216,6 @@ def test_short_interest_is_cached_on_every_database(tmp_path):
         db.commit()
         a = sr._short_interest(db, Fake(), inst)
         b = sr._short_interest(db, Fake(), inst)
-        row = db.get(MarketCacheEntry, "finra:si:EXIC")
+        row = db.get(MarketCacheEntry, "finra:si:v2:EXIC")
     assert a["status"] == "available" and b["status"] == "cached" and Fake.calls == 1
     assert row is not None and len(row.kind) <= 16

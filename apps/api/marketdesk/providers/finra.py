@@ -15,6 +15,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from datetime import UTC, datetime, timedelta
 
 from marketdesk.providers.base import ProviderError
 
@@ -98,15 +99,20 @@ class FinraClient:
             self._token = (tok, time.monotonic() + max(60.0, min(life - 60, 1800.0) if life else 1800.0))
             return tok
 
-    def short_interest(self, symbol: str, limit: int = 30) -> list[dict]:
+    def short_interest(self, symbol: str, limit: int = 60, since: str | None = None) -> list[dict]:
         """The symbol's short-interest records (about one rolling year, two per month), newest first.
         Sorting on the server needs an equality filter on the settlement date, so records are sorted here."""
         last_err: ProviderError | None = None
         for compare in ("EQUAL", "equal"):  # the docs show both spellings
+            # Without a date filter FINRA returns the oldest records first, so the newest year would be cut off.
+            start = since or (datetime.now(UTC).date() - timedelta(days=400)).isoformat()
             body = {
                 "limit": limit,
                 "fields": FIELDS,
                 "compareFilters": [{"compareType": compare, "fieldName": "symbolCode", "fieldValue": symbol.upper()}],
+                "dateRangeFilters": [
+                    {"fieldName": "settlementDate", "startDate": start, "endDate": datetime.now(UTC).date().isoformat()}
+                ],
             }
             req = urllib.request.Request(
                 DATA_URL,
