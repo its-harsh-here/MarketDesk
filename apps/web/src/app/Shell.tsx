@@ -81,6 +81,7 @@ function Sidebar() {
   const select = (e: ReactMouseEvent) => {
     window.clearTimeout(timer.current);
     chosen.current = e.detail > 0; // a pointer click (Enter on a focused link has detail 0)
+    (e.currentTarget as HTMLElement).blur(); // collapse now, not once the next page has mounted
     setOpen(false);
     requestAnimationFrame(() => document.getElementById("main")?.focus({ preventScroll: true }));
   };
