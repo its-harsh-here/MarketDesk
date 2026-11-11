@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyLive, etClock, liveSummary, streamable, type LiveTick } from "@/lib/live";
+import { applyLive, etClock, extendedLive, liveSummary, streamable, type LiveTick } from "@/lib/live";
 
 const quote = {
   last_price: "100",
@@ -46,5 +46,20 @@ describe("live IEX overlay", () => {
     expect(liveSummary({ ...base, status: "live" })?.text).toContain("not consolidated");
     expect(liveSummary({ ...base, status: "reconnecting" })?.text).toContain("polled");
     expect(liveSummary({ ...base, status: "off" })).toBeNull();
+  });
+});
+
+describe("extended-hours IEX trades", () => {
+  it("labels pre-market and after-hours trades against the latest regular price", () => {
+    const after = extendedLive(quote, tick("2026-11-11T21:30:00Z", 99)); // 16:30 New York
+    expect(after?.label).toBe("After hours");
+    expect(after?.change).toBeCloseTo(-1);
+    expect(after?.changePercent).toBeCloseTo(-1);
+    expect(extendedLive(quote, tick("2026-11-12T13:00:00Z", 102))?.label).toBe("Pre-market"); // 08:00 New York
+  });
+  it("ignores regular-session, stale and cancelled trades", () => {
+    expect(extendedLive(quote, tick("2026-11-11T17:05:00Z"))).toBeNull();
+    expect(extendedLive(quote, tick("2026-11-11T12:00:00Z"))).toBeNull(); // before the quote's market time
+    expect(extendedLive(quote, tick("2026-11-11T21:30:00Z", 99, true))).toBeNull();
   });
 });

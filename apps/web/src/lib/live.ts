@@ -132,3 +132,24 @@ export function liveSummary(s: LiveState): { tone: "live" | "warn" | "muted"; te
       return null; // "off" (not configured) and "idle": polling is the normal state; nothing to announce
   }
 }
+
+/**
+ * An IEX trade outside the regular session, shown separately (Yahoo-style "Pre-market" / "After hours") with its
+ * change from the latest regular-session price. Never replaces the session price itself.
+ */
+export function extendedLive(quote: NonNullable<Snapshot["quote"]> | null | undefined, tick: LiveTick | undefined) {
+  if (!quote || !tick || tick.cancelled) return null;
+  const clock = etClock(tick.time);
+  if (!clock || (clock.minutes >= 570 && clock.minutes < 960)) return null;
+  if (quote.market_time && new Date(tick.time) <= new Date(quote.market_time)) return null;
+  const base = Number(quote.last_price);
+  if (!Number.isFinite(base) || base <= 0) return null;
+  const change = tick.price - base;
+  return {
+    label: clock.minutes < 570 ? "Pre-market" : "After hours",
+    price: tick.price,
+    change,
+    changePercent: (change / base) * 100,
+    time: tick.time,
+  };
+}

@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
 import { ChangeText } from "@/components/ui/Change";
 import { FreshnessBadge, LiveBadge, Pill } from "@/components/ui/Badges";
-import { applyLive, useLiveTrades } from "@/lib/live";
+import { applyLive, extendedLive, useLiveTrades } from "@/lib/live";
 import { EmptyState, ErrorState, InlineNotice, Skeleton, SkeletonRows } from "@/components/ui/States";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { errorMessage } from "@/lib/api/client";
@@ -104,6 +104,7 @@ export function InstrumentPage() {
   const polled = snap.data?.[0];
   const liveFeed = useLiveTrades(useMemo(() => [symbol], [symbol]));
   const liveQuote = applyLive(polled?.quote, liveFeed.ticks[symbol]);
+  const extended = extendedLive(polled?.quote, liveFeed.ticks[symbol]);
   const s = polled && liveQuote ? { ...polled, quote: liveQuote } : polled;
   const sessions = useSessions();
   const [params, setParams] = useSearchParams();
@@ -200,6 +201,14 @@ export function InstrumentPage() {
                   {liveQuote ? "Last IEX trade" : "Last observed"} · market time {formatInstant(s.quote.market_time, tz, { seconds: !!liveQuote })}
                   {s.quote.session_date && ` · session ${formatSessionDate(s.quote.session_date)}`}
                 </div>
+                {extended && (
+                  <div className="mt-1 flex flex-wrap items-baseline gap-x-2 text-[13px]" title="Latest IEX trade outside the regular 09:30–16:00 New York session (one exchange, not consolidated). Change is from the latest regular-session price.">
+                    <span className="text-xs text-fg-3">{extended.label} (IEX)</span>
+                    <span className="num text-fg">{formatMoney(String(extended.price), ccy)}</span>
+                    <ChangeText value={extended.change.toFixed(4)} percent={extended.changePercent.toFixed(4)} currency={ccy} className="text-xs" />
+                    <span className="num text-xs text-fg-3">{formatInstant(extended.time, tz)}</span>
+                  </div>
+                )}
               </>
             ) : (
               <div className="max-w-xs text-[13px] text-fg-2">
