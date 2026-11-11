@@ -11,6 +11,7 @@ estimated from daily prices proved unreliable for liquid stocks).
 from __future__ import annotations
 
 import asyncio
+import logging
 import math
 import statistics
 from datetime import UTC, date, datetime, timedelta
@@ -24,6 +25,8 @@ from marketdesk.providers.base import ProviderError
 from marketdesk.services import risk_math as rm
 from marketdesk.services import screener
 from marketdesk.services.market import MarketDataService
+
+log = logging.getLogger("marketdesk.risk")
 
 WINDOWS = (("1Y", 365), ("3Y", 365 * 3))
 DD_WINDOWS = (("1Y", 365), ("3Y", 365 * 3), ("5Y", 365 * 5))
@@ -238,6 +241,11 @@ def _short_interest(db: Session, finra, inst: Instrument) -> dict:
         except ProviderError as err:
             if row is None:
                 return {**base, "status": "unavailable", "reason": f"FINRA: {err.message}"}
+            raw, status = row.payload, "stale"
+        except Exception as exc:  # noqa: BLE001 - a FINRA surprise must never take the whole risk view down
+            log.warning("finra short interest failed: %s", type(exc).__name__)
+            if row is None:
+                return {**base, "status": "unavailable", "reason": f"FINRA request failed ({type(exc).__name__})."}
             raw, status = row.payload, "stale"
         else:
             entry = row or MarketCacheEntry(key=key, kind="finra_short_interest", provider="finra")

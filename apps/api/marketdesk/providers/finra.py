@@ -36,6 +36,15 @@ FIELDS = [
 ATTRIBUTION = "FINRA (owner and source of the short interest data)"
 
 
+def _json(raw: bytes, what: str):
+    """Parse a FINRA response; anything that is not JSON becomes a ProviderError (never an unhandled error)."""
+    try:
+        return json.loads(raw)
+    except ValueError:
+        head = raw[:20].decode("utf-8", errors="replace").strip().split("\n")[0][:20]
+        raise ProviderError("malformed", f"FINRA's {what} response was not JSON (starts {head!r}).") from None
+
+
 class FinraClient:
     def __init__(self, client_id: str | None, client_secret: str | None, timeout: float = 20.0):
         self.client_id = (client_id or "").strip()
@@ -75,7 +84,9 @@ class FinraClient:
                 return self._token[0]
             basic = base64.b64encode(f"{self.client_id}:{self.client_secret}".encode()).decode()
             req = urllib.request.Request(TOKEN_URL, method="POST", headers={"Authorization": f"Basic {basic}"})
-            body = json.loads(self._request(req) or b"{}")
+            body = _json(self._request(req) or b"{}", "token")
+            if not isinstance(body, dict):
+                raise ProviderError("malformed", "FINRA's token response was not a JSON object.")
             tok = body.get("access_token")
             if not tok:
                 raise ProviderError("unauthorized", "FINRA did not issue an access token; check the credentials.")
@@ -114,7 +125,7 @@ class FinraClient:
                     last_err = err
                     continue
                 raise
-            rows = json.loads(raw or b"[]")
+            rows = _json(raw or b"[]", "data")
             if not isinstance(rows, list):
                 raise ProviderError("malformed", "FINRA returned an unexpected response shape.")
             rows = [r for r in rows if isinstance(r, dict) and r.get("settlementDate")]

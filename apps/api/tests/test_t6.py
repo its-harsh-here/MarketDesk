@@ -145,3 +145,45 @@ def test_risk_api_on_sample_data(api):
 @pytest.mark.parametrize("bad", ["", "list:x"])
 def test_universe_param_is_validated(api, bad):
     assert api.get("/api/terminal/risk", params={"symbol": "SX:AURORA", "universe": bad}).status_code == 422
+
+
+def test_finra_non_json_and_unexpected_errors_never_break_the_risk_view(monkeypatch, tmp_path):
+    from marketdesk.api.app import create_app
+    from marketdesk.db import db_session
+    from marketdesk.models import Instrument
+
+    from .conftest import make_settings, migrated
+
+    c = fin.FinraClient("id", "secret")
+
+    class R:
+        def __init__(self, body):
+            self.body = body
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self, n=-1):
+            return self.body
+
+    monkeypatch.setattr(fin.urllib.request, "urlopen", lambda req, timeout=None: R(b"<html>Service Unavailable</html>"))
+    with pytest.raises(fin.ProviderError, match="not JSON"):
+        c.token()
+
+    class Boom:
+        enabled, problem = True, None
+
+        def short_interest(self, symbol):
+            raise KeyError("surprise")
+
+    s = migrated(make_settings(tmp_path, marketdesk_env="development", dev_auth_bypass=True))
+    create_app(s)
+    with db_session() as db:
+        inst = Instrument(provider="fixture", symbol="EXIC", country="US", currency="USD")
+        db.add(inst)
+        db.commit()
+        out = sr._short_interest(db, Boom(), inst)
+    assert out["status"] == "unavailable" and "KeyError" in out["reason"]
