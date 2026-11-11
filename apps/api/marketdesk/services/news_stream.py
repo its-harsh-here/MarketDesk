@@ -149,7 +149,14 @@ async def stream(db: Session, market: MarketDataService, research, inst: Instrum
     news = await market.news(inst.symbol)
     if news.value is not None:
         items += [news_item(n) for n in news.value]
-        sources.append(f"Headlines: {market.source} ({news.meta.status}); title, publisher and link only")
+        sources.append(
+            f"Headlines: {market.source} ({news.meta.status}); title, publisher and link only. "
+            + (
+                "Yahoo's results for a symbol can include stories about related companies."
+                if market.source == "yahoo"
+                else ""
+            )
+        )
     elif news.meta.message:
         notes.append(f"Headlines unavailable: {news.meta.message}")
     sec_on = research is not None and research.client.enabled

@@ -1077,6 +1077,11 @@ but ₹50,000 → €475.00 because Yahoo quotes INR→EUR to 4 decimals (0.0095
 reverse pair (EURINR=X), inverted. All twelve new watchboard series returned "available". AAPL 5Y now shows +135.7%
 (18.7% a year) from 11 Nov 2021 vs the S&P 500's +61.8%.
 
+**Re-check after deploying 69c7800.** Converter: ₹50,000 → €476.68 from EURINR=X inverted (was €475.00). AAPL
+headlines still include stories Yahoo tags with AAPL but that are about other companies (Netflix, Nvidia), so the
+related-ticker filter does not remove them; the stream now says so in its source line. Known limitation: no
+reliable per-company relevance signal in Yahoo's search news.
+
 ## World markets and currency converter (11 Nov 2026)
 Macro watchboard: world indices, more FX, silver, natural gas, crypto. Currency converter panel on Macro
 (`GET /api/terminal/convert`). Yahoo headlines fall back to the search API. No schema change.
