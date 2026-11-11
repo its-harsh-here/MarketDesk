@@ -1165,3 +1165,14 @@ settlement 30 Oct 2026 short 144.8M shares, 3.36 days to cover (+10.0%); SMR 97.
 
 ## Next concrete action
 The roadmap (M00–M14) is complete, including M04 (Alpaca IEX streaming). Terminal roadmap T1–T10 is done; live inputs configured: SEC, FINRA, FRED, Groq. US option chains now come from Alpaca's indicative feed. Not available from the hosted server: Yahoo holders (Yahoo refuses the requests). India's shareholding pattern needs a permitted source.
+
+### Live check — Alpaca option chains and IEX streaming (11 Nov 2026, US session open)
+- `/api/terminal/options`: AAPL 24 expiries, default 13 Nov (first after today), 82 calls, put/call OI 1.12, max pain 345,
+  ATM IV 25.6% at 355, open interest dated 9 Nov; SPY 35 expiries. Source shown as "Alpaca indicative options feed
+  (delayed; not OPRA)". RELIANCE.NS still says Indian F&O is not fetched.
+- `/api/stream/quotes` from the browser: status `live`, AAPL/MSFT IEX trades arriving within seconds; RELIANCE.NS
+  reported as polled. Instrument header shows "IEX live · HH:MM:SS" (New York time) and "Last IEX trade"; the watchlist
+  marks the streamed US rows, Indian rows keep their Yahoo freshness badge, and the feed line reads "IEX (Alpaca) —
+  single exchange, not consolidated".
+- Local runs: pytest 366 passed / 3 skipped; vitest 53; Playwright journeys 41/41 (one first failed only because
+  the shell's real FRED key reached the local e2e server; scripts/e2e-server.sh now unsets real keys).
