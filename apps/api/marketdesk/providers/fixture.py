@@ -13,7 +13,7 @@ import math
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
@@ -31,6 +31,9 @@ from marketdesk.providers.base import (
     HolderRow,
     Holders,
     InstrumentRef,
+    IntradayBar,
+    IntradayHistory,
+    IntradayRange,
     NewsItem,
     OptionChain,
     OptionQuote,
@@ -166,6 +169,38 @@ class FixtureProvider:
         ct = inst.get("close_time") or {"hour": 15, "minute": 30}
         local = datetime.combine(session, time(ct["hour"], ct["minute"]), tzinfo=ZoneInfo(inst["timezone"]))
         return local.astimezone(UTC)
+
+    def intraday(self, symbol: str, range_: IntradayRange) -> IntradayHistory:
+        """Synthetic regular-session bars for the sample dataset's last session(s): a deterministic path from each
+        daily bar's open to its close that stays inside its high/low. Fictitious, like every sample price."""
+        self._check_fault()
+        symbol = self.validate_symbol(symbol)
+        if range_ not in ("1D", "5D"):
+            raise ProviderError("unsupported", f"Range {range_} is not supported.")
+        daily = self._bars_to_cursor(symbol)
+        sessions = daily[-1:] if range_ == "1D" else daily[-5:]
+        if not sessions:
+            raise ProviderError("missing", "No history in the sample dataset.")
+        step, count = (5, 75) if range_ == "1D" else (15, 25)
+        seed = sum(ord(c) for c in symbol)
+        bars: list[IntradayBar] = []
+        for d in sessions:
+            start = self._market_time(symbol, d.session_date) - timedelta(minutes=step * count)
+            o, c = float(d.open or d.close), float(d.close)
+            hi, lo = float(d.high or max(o, c)), float(d.low or min(o, c))
+            prev = o
+            for i in range(count):
+                f = (i + 1) / count
+                wave = math.sin((i + seed) * 0.7) * 0.35 + math.sin((i * 3 + seed) * 0.23) * 0.25
+                px = o + (c - o) * f + (hi - lo) * wave * (1 - abs(2 * f - 1))
+                px = c if i == count - 1 else min(hi, max(lo, px))
+                q = Decimal(str(round(px, 2)))
+                bars.append(IntradayBar(start + timedelta(minutes=step * i), Decimal(str(round(prev, 2))),
+                                        Decimal(str(round(max(prev, px), 2))), Decimal(str(round(min(prev, px), 2))), q,
+                                        int((d.volume or 0) / count) or None))  # fmt: skip
+                prev = px
+        before = daily[-len(sessions) - 1].close if len(daily) > len(sessions) else None
+        return IntradayHistory(self._ref(symbol), range_, f"{step}m", bars, before if range_ == "1D" else None)
 
     # -- interface ---------------------------------------------------------------
     def search(self, query: str, limit: int) -> list[InstrumentRef]:

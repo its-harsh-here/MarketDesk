@@ -51,6 +51,18 @@ export function cleanBars(bars: Bar[]): { bars: CleanBar[]; dropped: number; can
   return { bars: out, dropped, candleGaps: out.filter((b) => b.open === null).length };
 }
 
+/** Chart time: a session date ("2026-11-11") stays a business day; an instant becomes a UTC timestamp in seconds. */
+export function chartTime(t: string): Time {
+  return (t.length > 10 ? Math.floor(Date.parse(t) / 1000) : t) as Time;
+}
+
+/** A bar's label: its session date, or for intraday bars the clock time in the given zone. */
+export function barLabel(t: string, tz?: string) {
+  if (t.length <= 10) return formatSessionDate(t);
+  const d = new Date(t);
+  return d.toLocaleString("en-GB", { timeZone: tz ?? "Asia/Kolkata", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
 function cssVar(name: string) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
@@ -87,6 +99,7 @@ export function PriceChart({
   className,
   resetSignal,
   indicators = [],
+  timeZone,
 }: {
   bars: CleanBar[];
   kind: ChartKind;
@@ -96,6 +109,8 @@ export function PriceChart({
   className?: string;
   resetSignal?: number;
   indicators?: IndicatorKey[];
+  /** Set for intraday bars: axis, crosshair and legend show clock times in this zone. */
+  timeZone?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -106,7 +121,7 @@ export function PriceChart({
   // Width of the plot area (chart minus the price axis), so the legend never runs under the axis labels.
   const [plotWidth, setPlotWidth] = useState(0);
   const [theme, setTheme] = useState(() => document.documentElement.getAttribute("data-theme"));
-  const byTime = useMemo(() => new Map(bars.map((b) => [b.time, b])), [bars]);
+  const byTime = useMemo(() => new Map(bars.map((b) => [String(chartTime(b.time)), b])), [bars]);
 
   useEffect(() => {
     const obs = new MutationObserver(() => setTheme(document.documentElement.getAttribute("data-theme")));
@@ -145,6 +160,22 @@ export function PriceChart({
       indRef.current = [];
     };
   }, []);
+
+  // Intraday bars: show clock times in the chosen zone on the axis and crosshair (the chart itself works in UTC).
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    const fmt = (opts: Intl.DateTimeFormatOptions) => (t: Time) =>
+      typeof t === "number" ? new Date(t * 1000).toLocaleString("en-GB", { timeZone: timeZone ?? "Asia/Kolkata", hour12: false, ...opts }) : String(t);
+    if (timeZone) {
+      chart.applyOptions({
+        timeScale: { timeVisible: true, secondsVisible: false, tickMarkFormatter: fmt({ hour: "2-digit", minute: "2-digit" }) },
+        localization: { timeFormatter: fmt({ day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) },
+      });
+    } else {
+      chart.applyOptions({ timeScale: { timeVisible: false }, localization: { timeFormatter: undefined } });
+    }
+  }, [timeZone]);
 
   // theme colours
   useEffect(() => {
@@ -188,13 +219,13 @@ export function PriceChart({
       });
       s.setData(
         bars.map((b) =>
-          b.open === null ? { time: b.time as Time } : { time: b.time as Time, open: b.open, high: b.high!, low: b.low!, close: b.close },
+          b.open === null ? { time: chartTime(b.time) } : { time: chartTime(b.time), open: b.open, high: b.high!, low: b.low!, close: b.close },
         ),
       );
       priceRef.current = s as unknown as ISeriesApi<SeriesType>;
     } else {
       const s = chart.addSeries(LineSeries, { color: p.accent, lineWidth: 2, priceLineVisible: false, crosshairMarkerRadius: 3 });
-      s.setData(bars.map((b) => ({ time: b.time as Time, value: b.close })));
+      s.setData(bars.map((b) => ({ time: chartTime(b.time), value: b.close })));
       priceRef.current = s as unknown as ISeriesApi<SeriesType>;
     }
     if (showVolume && bars.some((b) => b.volume)) {
@@ -205,7 +236,7 @@ export function PriceChart({
           .filter((b) => b.volume !== null)
           .map((b, i, arr) => {
             const prev = i > 0 ? arr[i - 1].close : b.open ?? b.close;
-            return { time: b.time as Time, value: b.volume!, color: hexAlpha(b.close >= prev ? p.pos : p.neg, 0.35) };
+            return { time: chartTime(b.time), value: b.volume!, color: hexAlpha(b.close >= prev ? p.pos : p.neg, 0.35) };
           }),
       );
       volRef.current = v;
@@ -214,7 +245,7 @@ export function PriceChart({
     const closes = bars.map((b) => b.close);
     const line = (vals: Series, color: string, pane = 0, extra: object = {}) => {
       const s = chart.addSeries(LineSeries, { color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, ...extra }, pane);
-      s.setData(bars.map((b, i) => (vals[i] === null ? { time: b.time as Time } : { time: b.time as Time, value: vals[i]! })));
+      s.setData(bars.map((b, i) => (vals[i] === null ? { time: chartTime(b.time) } : { time: chartTime(b.time), value: vals[i]! })));
       indRef.current.push(s as unknown as ISeriesApi<SeriesType>);
       return s;
     };
@@ -239,7 +270,7 @@ export function PriceChart({
     if (on.has("macd")) {
       const m = macd(closes);
       const h = chart.addSeries(HistogramSeries, { priceLineVisible: false, lastValueVisible: false }, pane);
-      h.setData(bars.map((b, i) => (m.hist[i] === null ? { time: b.time as Time } : { time: b.time as Time, value: m.hist[i]!, color: hexAlpha(m.hist[i]! >= 0 ? p.pos : p.neg, 0.5) })));
+      h.setData(bars.map((b, i) => (m.hist[i] === null ? { time: chartTime(b.time) } : { time: chartTime(b.time), value: m.hist[i]!, color: hexAlpha(m.hist[i]! >= 0 ? p.pos : p.neg, 0.5) })));
       indRef.current.push(h as unknown as ISeriesApi<SeriesType>);
       line(m.macd, p.info, pane, { lineWidth: 2, title: "MACD" });
       line(m.signal, p.a3, pane, { title: "signal" });
@@ -281,7 +312,7 @@ export function PriceChart({
           style={plotWidth > 0 ? { maxWidth: Math.max(120, plotWidth - 16) } : undefined}
           aria-hidden
         >
-          <span className="num font-semibold text-fg">{formatSessionDate(shown.time)}</span>
+          <span className="num font-semibold text-fg">{barLabel(shown.time, timeZone)}</span>
           {kind === "candle" && shown.open !== null && (
             <>
               <span className="num">O {formatNumber(shown.open)}</span>

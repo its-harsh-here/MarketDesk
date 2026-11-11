@@ -416,4 +416,11 @@ Consequential choices, newest last. Routine choices live in code comments.
     Most-active prices are the latest IEX trade. Schedule 13D/G rows now keep only filings whose subject company
     is this issuer (a company's own stake in another issuer is not its holder), de-duplicate holder names that
     differ only in case or legal suffix, and normalise MM/DD/YYYY event dates (cache `sec:13dg:v2`).
+68. **Intraday 1D / 5D charts (11 Nov 2026).** `/api/market/intraday` returns regular-session bars — 1D in
+    5-minute bars, 5D in 15-minute bars — from Yahoo (`prepost=False`, unadjusted), cached for the quote TTL under
+    the prices circuit. Bars keep true UTC instants; the chart formats its axis, crosshair, legend and table in the
+    owner's display time zone, and W/M aggregation is disabled for these ranges. 1D compares with the provider's
+    previous close when reported, otherwise with the first bar's open, and says which. The fixture provider draws
+    a deterministic path inside each sample session's high/low ending at its close (fictitious, like all sample
+    prices). Indicators work on intraday bars as on daily ones.
 

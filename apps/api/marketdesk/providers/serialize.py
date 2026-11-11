@@ -15,6 +15,8 @@ from marketdesk.providers.base import (
     HolderRow,
     Holders,
     InstrumentRef,
+    IntradayBar,
+    IntradayHistory,
     NewsItem,
     OptionChain,
     OptionQuote,
@@ -92,6 +94,21 @@ def history_to(h: PriceHistory) -> dict:
 
 def history_from(d: dict) -> PriceHistory:
     return PriceHistory(ref_from(d["instrument"]), d["range"], [bar_from(b) for b in d["bars"]], d["adjustment"])
+
+
+def intraday_to(h: IntradayHistory) -> dict:
+    bars = [[b.time.isoformat(), _d(b.open), _d(b.high), _d(b.low), _d(b.close), b.volume] for b in h.bars]
+    return {"instrument": ref_to(h.instrument), "range": h.range, "interval": h.interval,
+            "previous_close": _d(h.previous_close), "bars": bars}  # fmt: skip
+
+
+def intraday_from(d: dict) -> IntradayHistory:
+    def dec(v):
+        return Decimal(v) if v is not None else None
+
+    bars = [IntradayBar(datetime.fromisoformat(t), dec(o), dec(h), dec(lo), Decimal(c), v)
+            for t, o, h, lo, c, v in d["bars"]]  # fmt: skip
+    return IntradayHistory(ref_from(d["instrument"]), d["range"], d["interval"], bars, dec(d.get("previous_close")))
 
 
 _FUND_DEC = (
@@ -234,6 +251,7 @@ def search_from(v: list) -> list[InstrumentRef]:
 CODECS = {
     "quote": (quote_to, quote_from),
     "history": (history_to, history_from),
+    "intraday": (intraday_to, intraday_from),
     "fundamentals": (fundamentals_to, fundamentals_from),
     "statements": (statements_to, statements_from),
     "actions": (actions_to, actions_from),

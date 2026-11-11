@@ -18,6 +18,7 @@ from marketdesk.schemas import (
     CompareOut,
     FundamentalsOut,
     HistoryOut,
+    IntradayOut,
     MarketSessionOut,
     SearchResultOut,
     SnapshotOut,
@@ -30,6 +31,7 @@ from marketdesk.services.market_views import (
     build_snapshots,
     fundamentals_payload,
     history_payload,
+    intraday_payload,
 )
 from marketdesk.services.sessions import market_sessions
 
@@ -112,6 +114,16 @@ async def history(
     market: MarketDataService = Depends(market_dep),
 ):
     return await history_payload(market, validate_symbol(market, symbol), range)
+
+
+@router.get("/intraday", response_model=IntradayOut)
+async def intraday(
+    symbol: str = Query(min_length=1, max_length=32),
+    range: Literal["1D", "5D"] = Query(default="1D"),  # noqa: A002
+    market: MarketDataService = Depends(market_dep),
+):
+    """Regular-session intraday bars: 1D in 5-minute bars, 5D in 15-minute bars (unadjusted)."""
+    return await intraday_payload(market, validate_symbol(market, symbol), range)
 
 
 @router.get("/sessions", response_model=list[MarketSessionOut])

@@ -28,6 +28,9 @@ from marketdesk.providers.base import (
     HolderRow,
     Holders,
     InstrumentRef,
+    IntradayBar,
+    IntradayHistory,
+    IntradayRange,
     NewsItem,
     OptionChain,
     OptionQuote,
@@ -129,6 +132,30 @@ def normalize_bars(df: Any, places: int, is_index: bool) -> list[DailyBar]:
             )
         )
     return validate_bars(bars)
+
+
+_INTRADAY = {"1D": ("1d", "5m"), "5D": ("5d", "15m")}
+
+
+def normalize_intraday(df: Any, places: int, is_index: bool) -> list[IntradayBar]:
+    """yfinance intraday DataFrame → ascending UTC bars; rows without a close and duplicate instants dropped."""
+    if df is None or getattr(df, "empty", True):
+        return []
+    if "Close" not in df.columns:
+        raise ProviderError("malformed", "Intraday response did not include closing prices.")
+    out: dict[datetime, IntradayBar] = {}
+    for idx, row in df.iterrows():
+        close = _dec(row.get("Close"), places)
+        if close is None or close <= 0:
+            continue
+        ts = idx.to_pydatetime() if hasattr(idx, "to_pydatetime") else idx
+        if ts.tzinfo is None:
+            raise ProviderError("malformed", "Intraday bars had no timezone.")
+        ts = ts.astimezone(UTC)
+        vol = _int(row.get("Volume")) if "Volume" in df.columns else None
+        out[ts] = IntradayBar(ts, _dec(row.get("Open"), places), _dec(row.get("High"), places),
+                              _dec(row.get("Low"), places), close, None if is_index or not vol else vol)  # fmt: skip
+    return [out[k] for k in sorted(out)]
 
 
 def instrument_from_meta(symbol: str, meta: dict) -> InstrumentRef:
@@ -371,6 +398,27 @@ class YahooProvider:
             return PriceHistory(instrument=ref, range=range_, bars=bars, adjustment=ADJUSTMENT_NOTE)
 
         return self._call(run, "history")
+
+    def intraday(self, symbol: str, range_: IntradayRange) -> IntradayHistory:
+        symbol = self.validate_symbol(symbol)
+        if range_ not in _INTRADAY:
+            raise ProviderError("unsupported", f"Range {range_} is not supported.")
+        period, interval = _INTRADAY[range_]
+
+        def run():
+            t = self._yf.Ticker(symbol)
+            df = t.history(period=period, interval=interval, prepost=False, auto_adjust=False, actions=False,
+                           timeout=self.timeout)  # fmt: skip
+            meta = dict(t.history_metadata or {})
+            ref = instrument_from_meta(symbol, meta)
+            places = int(meta.get("priceHint") or 2)
+            bars = normalize_intraday(df, places, (ref.kind or "").upper() == "INDEX")
+            if not bars:
+                raise ProviderError("missing", "Yahoo returned no intraday bars for this listing.")
+            prev = _dec(meta.get("chartPreviousClose") if range_ == "1D" else None, places)
+            return IntradayHistory(instrument=ref, range=range_, interval=interval, bars=bars, previous_close=prev)
+
+        return self._call(run, "intraday history")
 
     def fundamentals(self, symbol: str) -> Fundamentals:
         """Company summary (quoteSummary) when Yahoo allows it; otherwise derived fields.

@@ -100,6 +100,25 @@ class HistoryOut(Model):
     supported_ranges: list[str]
 
 
+class IntradayBarOut(Model):
+    time: datetime
+    open: Dec | None = None
+    high: Dec | None = None
+    low: Dec | None = None
+    close: Dec
+    volume: int | None = None
+
+
+class IntradayOut(Model):
+    symbol: str
+    range: str
+    interval: str | None = None
+    previous_close: Dec | None = None
+    bars: list[IntradayBarOut] = []
+    meta: DataMetaOut
+    note: str
+
+
 class MarketSessionOut(Model):
     market: str
     name: str

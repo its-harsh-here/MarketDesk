@@ -14,6 +14,8 @@ from typing import Literal, Protocol
 ErrorKind = Literal["missing", "unsupported", "upstream_unavailable", "rate_limited", "malformed", "timeout"]
 HistoryRange = Literal["1M", "3M", "6M", "1Y", "5Y"]
 HISTORY_RANGES: tuple[HistoryRange, ...] = ("1M", "3M", "6M", "1Y", "5Y")
+IntradayRange = Literal["1D", "5D"]
+INTRADAY_RANGES: tuple[IntradayRange, ...] = ("1D", "5D")
 
 
 class ProviderError(Exception):
@@ -90,6 +92,27 @@ class PriceHistory:
     range: HistoryRange
     bars: list[DailyBar]
     adjustment: str  # human-readable adjustment basis
+
+
+@dataclass(frozen=True)
+class IntradayBar:
+    time: datetime  # UTC instant at the start of the bar
+    open: Decimal | None
+    high: Decimal | None
+    low: Decimal | None
+    close: Decimal
+    volume: int | None
+
+
+@dataclass(frozen=True)
+class IntradayHistory:
+    """Regular-session intraday bars (1D: 5-minute, 5D: 15-minute). Unadjusted trade prices."""
+
+    instrument: InstrumentRef
+    range: IntradayRange
+    interval: str
+    bars: list[IntradayBar]
+    previous_close: Decimal | None  # close of the session before the first bar, when the provider reports it
 
 
 @dataclass(frozen=True)
@@ -207,6 +230,8 @@ class MarketDataProvider(Protocol):
     def quote(self, symbol: str) -> QuoteSnapshot: ...
 
     def history(self, symbol: str, range_: HistoryRange) -> PriceHistory: ...
+
+    def intraday(self, symbol: str, range_: IntradayRange) -> IntradayHistory: ...
 
     def fundamentals(self, symbol: str) -> Fundamentals: ...
 

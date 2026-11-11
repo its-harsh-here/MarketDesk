@@ -7,13 +7,14 @@ import { IconButton } from "@/components/ui/Button";
 import { ErrorState, EmptyState, InlineNotice, Skeleton } from "@/components/ui/States";
 import { FreshnessBadge } from "@/components/ui/Badges";
 import { errorMessage } from "@/lib/api/client";
-import { formatMoney, formatNumber, formatSessionDate, formatVolume } from "@/lib/format";
+import { formatMoney, formatNumber, formatVolume } from "@/lib/format";
 import { useMediaQuery } from "@/lib/hooks";
 import { INDICATORS, type IndicatorKey } from "@/lib/indicators";
 import { resample, type Frequency } from "@/lib/resample";
 import { ChangeText } from "@/components/ui/Change";
-import { RANGES, useHistory, type Range } from "./api";
-import { PriceChart, cleanBars, summarizeBars, type ChartKind } from "./PriceChart";
+import { RANGES, useHistory, useIntraday, type IntradayRange, type Range } from "./api";
+import { usePrefs } from "@/features/settings/api";
+import { PriceChart, barLabel, cleanBars, summarizeBars, type ChartKind } from "./PriceChart";
 
 /** Daily bars as CSV (session, OHLC, volume). Cells are numbers or ISO dates only, so no formula can be injected. */
 function downloadBars(symbol: string, range: string, bars: { time: string; open: number | null; high: number | null; low: number | null; close: number; volume: number | null }[], freq = "daily") {
@@ -43,7 +44,10 @@ export function ChartPanel({
   className?: string;
   defaultRange?: Range;
 }) {
-  const [range, setRange] = useState<Range>(defaultRange);
+  const [range, setRange] = useState<Range | IntradayRange>(defaultRange);
+  const intraday = range === "1D" || range === "5D";
+  const { data: prefs } = usePrefs();
+  const tz = prefs?.display_timezone ?? "Asia/Kolkata";
   const [kind, setKind] = useState<ChartKind>("line");
   const [volume, setVolume] = useState(true);
   const [table, setTable] = useState(false);
@@ -69,14 +73,25 @@ export function ChartPanel({
   const titleId = useId();
   const phone = useMediaQuery("(max-width: 639px)");
   const chartHeight = phone ? Math.min(height, 280) : height;
-  const q = useHistory(symbol, range);
-  const supported = (q.data?.supported_ranges ?? RANGES) as Range[];
+  const qd = useHistory(intraday ? null : symbol, intraday ? "6M" : (range as Range));
+  const qi = useIntraday(intraday ? symbol : null, intraday ? (range as IntradayRange) : "1D");
+  const q = intraday ? qi : qd;
+  const supported = (qd.data?.supported_ranges ?? RANGES) as Range[];
+  const adjustment = intraday ? qi.data?.note : qd.data?.adjustment;
   const clean = useMemo(() => cleanBars(q.data?.bars ?? []), [q.data]);
-  const summary = useMemo(() => summarizeBars(clean.bars, currency), [clean.bars, currency]);
+  const summary = useMemo(() => {
+    if (!intraday) return summarizeBars(clean.bars, currency);
+    const b = clean.bars;
+    if (b.length < 2) return "Not enough intraday data to summarize.";
+    const prev = qi.data?.previous_close != null ? Number(qi.data.previous_close) : null;
+    const base = prev ?? b[0].open ?? b[0].close;
+    const last = b[b.length - 1];
+    return `${range === "1D" ? "5-minute" : "15-minute"} bars from ${barLabel(b[0].time, tz)} to ${barLabel(last.time, tz)} (${b.length} bars): last ${formatMoney(last.close, currency)}, ${((last.close - base) / base * 100).toFixed(2)}% from ${prev != null ? "the previous close" : "the first bar's open"}.`;
+  }, [intraday, clean.bars, currency, qi.data, range, tz]);
   const hasVolume = clean.bars.some((b) => b.volume !== null);
   // Weekly/monthly views aggregate the validated daily bars (first open, high, low, last close, summed volume).
-  const shownBars = useMemo(() => resample(clean.bars, freq), [clean.bars, freq]);
-  const freqWord = freq === "daily" ? "daily" : freq === "weekly" ? "weekly" : "monthly";
+  const shownBars = useMemo(() => resample(clean.bars, intraday ? "daily" : freq), [clean.bars, freq, intraday]);
+  const freqWord = intraday ? (range === "1D" ? "5-minute" : "15-minute") : freq === "daily" ? "daily" : freq === "weekly" ? "weekly" : "monthly";
 
   return (
     <Panel
@@ -91,7 +106,7 @@ export function ChartPanel({
             <FreshnessBadge meta={q.data.meta} />
             {clean.bars.length > 0 && (
               <span className="max-sm:hidden">
-                {formatSessionDate(clean.bars[0].time)} – {formatSessionDate(clean.bars[clean.bars.length - 1].time)} · {freqWord}
+                {barLabel(clean.bars[0].time, tz)} – {barLabel(clean.bars[clean.bars.length - 1].time, tz)} · {freqWord}
               </span>
             )}
           </span>
@@ -105,7 +120,11 @@ export function ChartPanel({
           label="Chart range"
           value={range}
           onChange={setRange}
-          options={RANGES.map((r) => ({ value: r, label: r, disabled: !supported.includes(r), title: supported.includes(r) ? undefined : "Not supported by the provider" }))}
+          options={[
+            { value: "1D" as const, label: "1D", title: "Today's session in 5-minute bars (or the latest session)" },
+            { value: "5D" as const, label: "5D", title: "Five sessions in 15-minute bars" },
+            ...RANGES.map((r) => ({ value: r, label: r, disabled: !supported.includes(r), title: supported.includes(r) ? undefined : "Not supported by the provider" })),
+          ]}
         />
         <Segmented
           label="Chart type"
@@ -123,9 +142,9 @@ export function ChartPanel({
         />
         <Segmented
           label="Interval"
-          value={freq}
+          value={intraday ? "daily" : freq}
           onChange={setFreq}
-          options={[{ value: "daily", label: "D", title: "Daily bars" }, { value: "weekly", label: "W", title: "Weekly bars (last session of each week)" }, { value: "monthly", label: "M", title: "Monthly bars (last session of each month)" }]}
+          options={[{ value: "daily", label: "D", title: "Daily bars", disabled: intraday }, { value: "weekly", label: "W", title: intraday ? "Not for intraday ranges" : "Weekly bars (last session of each week)", disabled: intraday }, { value: "monthly", label: "M", title: intraday ? "Not for intraday ranges" : "Monthly bars (last session of each month)", disabled: intraday }]}
         />
         <div className="ml-auto flex items-center gap-1">
           <DM.Root>
@@ -184,7 +203,7 @@ export function ChartPanel({
       </div>
       <figure aria-labelledby={titleId} aria-describedby={`${titleId}-sum`} className="m-0 flex min-h-0 flex-1 flex-col">
         <figcaption id={`${titleId}-sum`} className="sr-only">
-          {summary} {q.data?.adjustment}
+          {summary} {adjustment}
         </figcaption>
         {q.isLoading ? (
           <div className="p-[var(--panel-pad)]" style={{ height: chartHeight }}>
@@ -194,7 +213,7 @@ export function ChartPanel({
           <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />
         ) : !clean.bars.length ? (
           <EmptyState title="No price history" className="py-16">
-            {q.data?.meta.message ?? "The provider returned no daily bars for this range."}
+            {q.data?.meta.message ?? `The provider returned no ${intraday ? "intraday" : "daily"} bars for this range.`}
           </EmptyState>
         ) : table ? (
           <div className="scrollbar-thin relative overflow-auto" style={{ height: chartHeight }}>
@@ -202,7 +221,7 @@ export function ChartPanel({
               <caption className="sr-only">{freqWord[0].toUpperCase() + freqWord.slice(1)} prices for {symbol}</caption>
               <thead className="sticky top-0 bg-panel">
                 <tr className="border-b border-line-subtle text-xs text-fg-3">
-                  {[freq === "daily" ? "Session" : freq === "weekly" ? "Week to" : "Month to", "Open", "High", "Low", "Close", "Change", "Volume"].map((h, i) => (
+                  {[intraday ? "Time" : freq === "daily" ? "Session" : freq === "weekly" ? "Week to" : "Month to", "Open", "High", "Low", "Close", "Change", "Volume"].map((h, i) => (
                     <th key={h} scope="col" className={i === 0 ? "px-4 py-2 text-left font-medium" : "px-3 py-2 text-right font-medium"}>
                       {h}
                     </th>
@@ -212,7 +231,7 @@ export function ChartPanel({
               <tbody>
                 {shownBars.map((b, i) => ({ b, prev: shownBars[i - 1] })).reverse().map(({ b, prev }) => (
                   <tr key={b.time} className="border-b border-line-subtle">
-                    <td className="num px-4 py-1.5 text-fg-2" title={b.sessions > 1 ? `${b.sessions} sessions` : undefined}>{formatSessionDate(b.time)}</td>
+                    <td className="num px-4 py-1.5 text-fg-2" title={b.sessions > 1 ? `${b.sessions} sessions` : undefined}>{barLabel(b.time, tz)}</td>
                     <td className="num px-3 text-right">{formatNumber(b.open)}</td>
                     <td className="num px-3 text-right">{formatNumber(b.high)}</td>
                     <td className="num px-3 text-right">{formatNumber(b.low)}</td>
@@ -225,14 +244,14 @@ export function ChartPanel({
             </table>
           </div>
         ) : (
-          <PriceChart bars={shownBars} kind={kind} showVolume={volume && hasVolume} currency={currency} height={chartHeight + indicators.filter((k) => k === "rsi" || k === "macd").length * Math.round(chartHeight * 0.25)} resetSignal={reset} indicators={indicators} className="mx-1 my-2 flex-1" />
+          <PriceChart bars={shownBars} kind={kind} showVolume={volume && hasVolume} currency={currency} height={chartHeight + indicators.filter((k) => k === "rsi" || k === "macd").length * Math.round(chartHeight * 0.25)} resetSignal={reset} indicators={indicators} timeZone={intraday ? tz : undefined} className="mx-1 my-2 flex-1" />
         )}
       </figure>
-      {(q.data?.adjustment || clean.dropped > 0 || q.data?.meta.status === "stale") && (
+      {(adjustment || clean.dropped > 0 || q.data?.meta.status === "stale") && (
         <div className="space-y-2 border-t border-line-subtle px-[var(--panel-pad)] py-2 text-xs text-fg-3">
           {q.data?.meta.status === "stale" && <InlineNotice tone="warn">{q.data.meta.message}</InlineNotice>}
           <p>
-            {q.data?.adjustment}
+            {adjustment}
             {clean.dropped > 0 && ` ${clean.dropped} invalid or duplicate bar(s) were excluded.`}
             {kind === "candle" && clean.candleGaps > 0 && ` ${clean.candleGaps} session(s) lack open/high/low and are not drawn as candles.`}
           </p>

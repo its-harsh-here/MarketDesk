@@ -37,6 +37,8 @@ from marketdesk.providers.base import (
     HistoryRange,
     Holders,
     InstrumentRef,
+    IntradayHistory,
+    IntradayRange,
     NewsItem,
     OptionChain,
     PriceHistory,
@@ -50,6 +52,7 @@ T = TypeVar("T")
 CIRCUIT_GROUPS = {
     "quote": "prices",
     "history": "prices",
+    "intraday": "prices",
     "actions": "prices",
     "fundamentals": "fundamentals",
     "statements": "fundamentals",
@@ -166,6 +169,7 @@ class MarketDataService:
         self.ttl = {
             "quote": settings.quote_ttl_seconds,
             "history": settings.history_ttl_seconds,
+            "intraday": settings.quote_ttl_seconds,
             "fundamentals": settings.fundamentals_ttl_seconds,
             "actions": settings.fundamentals_ttl_seconds,
             "statements": settings.fundamentals_ttl_seconds,
@@ -193,6 +197,9 @@ class MarketDataService:
 
     async def history(self, symbol: str, range_: HistoryRange) -> Result[PriceHistory]:
         return await self._get("history", f"{symbol}|{range_}", lambda: self.provider.history(symbol, range_))
+
+    async def intraday(self, symbol: str, range_: IntradayRange) -> Result[IntradayHistory]:
+        return await self._get("intraday", f"{symbol}|{range_}", lambda: self.provider.intraday(symbol, range_))
 
     async def fundamentals(self, symbol: str) -> Result[Fundamentals]:
         return await self._get("fundamentals", symbol, lambda: self.provider.fundamentals(symbol))

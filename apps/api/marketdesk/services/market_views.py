@@ -81,6 +81,31 @@ async def history_payload(market: MarketDataService, symbol: str, range_: str) -
     }
 
 
+async def intraday_payload(market: MarketDataService, symbol: str, range_: str) -> dict:
+    result = await market.intraday(symbol, range_)  # type: ignore[arg-type]
+    h = result.value
+    return {
+        "symbol": symbol,
+        "range": range_,
+        "interval": h.interval if h else None,
+        "previous_close": h.previous_close if h else None,
+        "bars": [
+            {
+                "time": b.time.isoformat(),
+                "open": b.open,
+                "high": b.high,
+                "low": b.low,
+                "close": b.close,
+                "volume": b.volume,
+            }
+            for b in (h.bars if h else [])
+        ],  # fmt: skip
+        "meta": result.meta.to_dict(),
+        "note": "Regular-session trades only, unadjusted; times are bar starts. Indian listings are delayed by the "
+        "provider; no exchange delay is assumed beyond what the provider states.",
+    }
+
+
 async def fundamentals_payload(market: MarketDataService, symbol: str) -> dict:
     result = await market.fundamentals(symbol)
     f = result.value

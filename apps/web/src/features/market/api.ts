@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useQuoteRefreshMs } from "@/features/workspace/api";
-import { api, type ActionsResponse, type CompareResponse, type Fundamentals, type HistoryResponse, type Instrument, type DataMeta, type MarketSession, type Snapshot } from "@/lib/api/client";
+import { api, type Schemas, type ActionsResponse, type CompareResponse, type Fundamentals, type HistoryResponse, type Instrument, type DataMeta, type MarketSession, type Snapshot } from "@/lib/api/client";
 
 export type Range = "1M" | "3M" | "6M" | "1Y" | "5Y";
 export const RANGES: Range[] = ["1M", "3M", "6M", "1Y", "5Y"];
@@ -36,6 +36,21 @@ export function useHistory(symbol: string | null | undefined, range: Range) {
     enabled: Boolean(symbol),
     placeholderData: keepPreviousData,
     staleTime: 5 * 60_000,
+  });
+}
+
+export type IntradayRange = "1D" | "5D";
+export type IntradayResponse = Schemas["IntradayOut"];
+
+export function useIntraday(symbol: string | null | undefined, range: IntradayRange) {
+  return useQuery({
+    queryKey: ["intraday", symbol, range],
+    queryFn: ({ signal }) => api.get<IntradayResponse>("/api/market/intraday", { symbol: symbol!, range }, signal),
+    enabled: Boolean(symbol),
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+    refetchInterval: 5 * 60_000,
+    refetchIntervalInBackground: false,
   });
 }
 

@@ -335,6 +335,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/market/intraday": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Intraday
+         * @description Regular-session intraday bars: 1D in 5-minute bars, 5D in 15-minute bars (unadjusted).
+         */
+        get: operations["intraday_api_market_intraday_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/market/sessions": {
         parameters: {
             query?: never;
@@ -2794,6 +2814,43 @@ export interface components {
              */
             identity_verified: boolean;
         };
+        /** IntradayBarOut */
+        IntradayBarOut: {
+            /**
+             * Time
+             * Format: date-time
+             */
+            time: string;
+            /** Open */
+            open?: string | null;
+            /** High */
+            high?: string | null;
+            /** Low */
+            low?: string | null;
+            /** Close */
+            close: string;
+            /** Volume */
+            volume?: number | null;
+        };
+        /** IntradayOut */
+        IntradayOut: {
+            /** Symbol */
+            symbol: string;
+            /** Range */
+            range: string;
+            /** Interval */
+            interval?: string | null;
+            /** Previous Close */
+            previous_close?: string | null;
+            /**
+             * Bars
+             * @default []
+             */
+            bars: components["schemas"]["IntradayBarOut"][];
+            meta: components["schemas"]["DataMetaOut"];
+            /** Note */
+            note: string;
+        };
         /** JournalCompareOut */
         JournalCompareOut: {
             /** Version */
@@ -4438,6 +4495,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HistoryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    intraday_api_market_intraday_get: {
+        parameters: {
+            query: {
+                symbol: string;
+                range?: "1D" | "5D";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntradayOut"];
                 };
             };
             /** @description Validation Error */

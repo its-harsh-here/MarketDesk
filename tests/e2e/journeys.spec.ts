@@ -1121,3 +1121,18 @@ test("context and official statistics: co-movement strip on the description; FRE
   const off = page.getByRole("region", { name: "US official statistics" });
   await expect(off.getByText(/FRED_API_KEY/).first()).toBeVisible({ timeout: 30_000 });
 });
+
+test("intraday: 1D shows 5-minute bars with clock times; W/M are disabled; 5D switches to 15-minute bars", async ({ page }) => {
+  await page.goto("/instrument/SX:HALCYON?tab=chart");
+  const ranges = page.getByRole("radiogroup", { name: "Chart range" }).first();
+  await ranges.getByRole("radio", { name: "1D" }).click();
+  await expect(ranges.getByRole("radio", { name: "1D" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByText(/· 5-minute/).first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("radiogroup", { name: "Interval" }).first().getByRole("radio", { name: "W" })).toBeDisabled();
+  await expect(page.getByText(/Regular-session trades only/).first()).toBeVisible();
+  await page.getByRole("button", { name: "Show data table" }).first().click();
+  await expect(page.getByRole("columnheader", { name: "Time" }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Show chart" }).first().click();
+  await ranges.getByRole("radio", { name: "5D" }).click();
+  await expect(page.getByText(/· 15-minute/).first()).toBeVisible({ timeout: 30_000 });
+});
