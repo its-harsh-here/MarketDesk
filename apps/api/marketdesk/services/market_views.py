@@ -101,8 +101,8 @@ async def intraday_payload(market: MarketDataService, symbol: str, range_: str) 
             for b in (h.bars if h else [])
         ],  # fmt: skip
         "meta": result.meta.to_dict(),
-        "note": "Regular-session trades only, unadjusted; times are bar starts. Indian listings are delayed by the "
-        "provider; no exchange delay is assumed beyond what the provider states.",
+        "note": "Regular-session trades only, unadjusted; times are bar starts. Bars arrive as the provider publishes "
+        "them; no exchange delay is stated by the feed.",
     }
 
 

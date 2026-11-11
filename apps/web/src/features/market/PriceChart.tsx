@@ -4,6 +4,7 @@ import {
   CrosshairMode,
   HistogramSeries,
   LineSeries,
+  TickMarkType,
   createChart,
   type IChartApi,
   type ISeriesApi,
@@ -169,7 +170,13 @@ export function PriceChart({
       typeof t === "number" ? new Date(t * 1000).toLocaleString("en-GB", { timeZone: timeZone ?? "Asia/Kolkata", hour12: false, ...opts }) : String(t);
     if (timeZone) {
       chart.applyOptions({
-        timeScale: { timeVisible: true, secondsVisible: false, tickMarkFormatter: fmt({ hour: "2-digit", minute: "2-digit" }) },
+        timeScale: {
+          timeVisible: true,
+          secondsVisible: false,
+          // Day-level ticks (a new session) show the date; the others show the clock time.
+          tickMarkFormatter: (t: Time, type: TickMarkType) =>
+            type <= TickMarkType.DayOfMonth ? fmt({ day: "numeric", month: "short" })(t) : fmt({ hour: "2-digit", minute: "2-digit" })(t),
+        },
         localization: { timeFormatter: fmt({ day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) },
       });
     } else {
