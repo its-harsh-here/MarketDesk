@@ -78,7 +78,8 @@ def storage_status(settings: Settings, db: Session | None = None) -> dict:
     path = settings.data_dir.resolve()
     if not settings.uses_sqlite:
         url = make_url(settings.effective_database_url)
-        where = f"{url.get_backend_name()}://{url.host or 'localhost'}/{url.database or ''}"
+        # The host and database name are infrastructure details; the page only says where the data lives.
+        where = "External PostgreSQL database" if url.get_backend_name().startswith("postgres") else "External database"
         created = None
         round_trip_ms = None
         message = f"Data is stored in an external PostgreSQL database ({where}); it survives restarts."

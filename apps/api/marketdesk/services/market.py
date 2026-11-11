@@ -271,7 +271,8 @@ class MarketDataService:
     # ------------------------------------------------------------------ internals
     def _key(self, kind: str, ident: str) -> str:
         ns = self.provider.cache_namespace() if hasattr(self.provider, "cache_namespace") else ""
-        return f"{kind}:{self.provider.name}:{ns}:{ident}"
+        # "v2": payloads cached before the vendor-neutral wording (DECISIONS #69) are not served again.
+        return f"{kind}:{self.provider.name}:{ns}:v2:{ident}"
 
     def _meta_for(self, kind: str, value: Any, status: Status, fetched_at: datetime | None, message=None) -> DataMeta:
         if self.provider.is_sample and status in ("available", "cached"):

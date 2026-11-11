@@ -65,4 +65,4 @@ def test_external_postgres_counts_as_persistent_without_leaking_credentials(tmp_
     s = make_settings(tmp_path, marketdesk_env="production", database_url="postgres://user:secret@db.example.com/app")
     st = storage_status(s)
     assert st["persistent"] is True and st["warning"] is False
-    assert "secret" not in st["path"] and "secret" not in st["message"] and "db.example.com" in st["path"]
+    assert "secret" not in st["path"] and "secret" not in st["message"] and "db.example.com" not in st["path"]
