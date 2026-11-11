@@ -1188,3 +1188,9 @@ The roadmap (M00–M14) is complete, including M04 (Alpaca IEX streaming). Termi
 - Movers: "US market — all listings" (gainers, losers, most active) from Alpaca's screener, ≥ $5 common tickers.
 - Instrument header: pre-market / after-hours IEX trade on its own line (unit-tested; appears outside 09:30–16:00 ET).
 - Local: pytest 373 passed / 3 skipped; vitest 55; affected Playwright journeys pass.
+
+### Live check — intraday 1D / 5D charts (11 Nov 2026)
+- `/api/market/intraday`: AAPL 1D 60 five-minute bars (14:30–19:25 UTC, previous close 348.51), 5D 124 fifteen-minute
+  bars; RELIANCE.NS 1D 74 bars (09:15–15:25 IST), 5D 125; ^NSEI 1D 75, 5D 125. All from Yahoo, status available.
+- Chart: 1D/5D buttons, clock times in the display zone (IST) on axis, crosshair and legend; W/M disabled; 5D
+  session ticks show the date. Local: pytest green, vitest 55, Playwright journeys 42/42.
