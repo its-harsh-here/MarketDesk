@@ -433,6 +433,12 @@ test("research tabs: keyboard navigation, URL state, and an explicit reason when
   await page.getByRole("tab", { name: "Description" }).click();
   await expect(page.getByRole("heading", { name: "Price history" })).toBeVisible();
   await expect(page).not.toHaveURL(/tab=/);
+  await page.locator("body").click({ position: { x: 5, y: 300 } }); // focus out of the tab strip
+  await page.keyboard.press("]");
+  await expect(page).toHaveURL(/tab=chart/);
+  await page.keyboard.press("[");
+  await page.keyboard.press("[");
+  await expect(page).toHaveURL(/tab=valuation/); // wraps from the first tab to the last
 });
 
 test("screener: named list → load data → filter (missing never passes) → save → watchlist; heatmap; peers", async ({ page }) => {
@@ -976,6 +982,20 @@ test("quote page extras: performance overview vs benchmark, chart indicators in 
   const text = await (await import("node:fs/promises")).readFile(await file.path(), "utf8");
   expect(text.split("\n")[0]).toBe("session,open,high,low,close,volume");
   expect(text.split("\n").length).toBeGreaterThan(200);
+
+  // weekly interval: one row per week, a change column, and a weekly CSV
+  const panel = page.getByRole("region", { name: "Price history" });
+  await panel.getByRole("radiogroup", { name: "Interval" }).getByRole("radio", { name: "W" }).click();
+  await expect(panel.getByRole("columnheader", { name: "Week to" })).toBeVisible();
+  await expect(panel.getByRole("columnheader", { name: "Change" })).toBeVisible();
+  const weekly = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download these prices as CSV" }).click();
+  const wf = await weekly;
+  expect(wf.suggestedFilename()).toBe("SX_AURORA_1Y_weekly.csv");
+  const wt = await (await import("node:fs/promises")).readFile(await wf.path(), "utf8");
+  const n = wt.trim().split("\n").length - 1;
+  expect(n).toBeGreaterThan(48);
+  expect(n).toBeLessThan(56);
 });
 
 test("currency converter on Macro: converts at the sample rate, swaps, rejects bad input", async ({ page }) => {

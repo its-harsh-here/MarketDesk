@@ -299,6 +299,37 @@ function yoyCell(f: HistoryFigure | null | undefined) {
   return <span className={cn("num", v > 0 ? "text-pos" : v < 0 ? "text-neg" : "")}>{formatPercent(v)}</span>;
 }
 
+/** Revenue and net income per period as paired bars (oldest left). Decorative twin of the table below it. */
+function HistoryBars({ rows, currency }: { rows: NonNullable<EarningsHistory["rows"]>; currency: string | null | undefined }) {
+  const data = [...rows].reverse().map((r) => ({ end: r.period_end, rev: r.revenue ? Number(r.revenue.value) : null, ni: r.net_income ? Number(r.net_income.value) : null }));
+  const max = Math.max(1, ...data.flatMap((d) => [Math.abs(d.rev ?? 0), Math.abs(d.ni ?? 0)]));
+  const hasNeg = data.some((d) => (d.ni ?? 0) < 0 || (d.rev ?? 0) < 0);
+  const H = 120;
+  const base = hasNeg ? H * 0.7 : H;
+  const scale = (v: number) => (Math.abs(v) / max) * (hasNeg ? H * 0.7 : H);
+  return (
+    <figure className="m-0" aria-hidden>
+      <div className="flex items-end gap-2 overflow-x-auto pb-1" style={{ height: H + 22 }}>
+        {data.map((d, i) => (
+          <div key={d.end} className="flex min-w-9 flex-1 flex-col items-center" title={`${formatSessionDate(d.end)} · revenue ${formatLargeMoney(d.rev, currency)} · net income ${formatLargeMoney(d.ni, currency)}`}>
+            <div className="relative flex w-full items-end justify-center gap-0.5" style={{ height: H }}>
+              {[d.rev, d.ni].map((v, j) => (
+                <span key={j} className={cn("w-1/3 rounded-t-sm transition-all duration-700", j === 0 ? "bg-info/70" : v !== null && v < 0 ? "bg-neg/80" : "bg-pos/80")}
+                  style={v === null ? { height: 0 } : v >= 0 ? { height: scale(v), marginBottom: H - base, animationDelay: `${i * 40}ms` } : { height: scale(v), marginBottom: H - base - scale(v), borderRadius: "0 0 2px 2px" }} />
+              ))}
+            </div>
+            <span className="num mt-1 text-[10px] text-fg-3">{d.end.slice(2, 7)}</span>
+          </div>
+        ))}
+      </div>
+      <figcaption className="mt-1 flex gap-4 text-xs text-fg-3">
+        <span><span className="mr-1 inline-block size-2 rounded-sm bg-info/70" />Revenue</span>
+        <span><span className="mr-1 inline-block size-2 rounded-sm bg-pos/80" />Net income (red when a loss)</span>
+      </figcaption>
+    </figure>
+  );
+}
+
 /** Reported revenue, net income and diluted EPS by period with the change on a year earlier. No estimates. */
 export function EarningsHistoryPanel({ symbol, className }: { symbol: string; className?: string }) {
   const q = useEarningsHistory(symbol);
@@ -316,6 +347,7 @@ export function EarningsHistoryPanel({ symbol, className }: { symbol: string; cl
         <InlineNotice>{d.reason ?? "No reported figures for this listing."}</InlineNotice>
       ) : (
         <div className="space-y-2">
+          {rows.length >= 2 && <HistoryBars rows={rows} currency={d.currency} />}
           <div tabIndex={0} className="scroll-x scrollbar-thin relative overflow-x-auto">
             <table className="w-full min-w-[34rem] text-[13px]" aria-label={`Reported figures for ${symbol} by period`}>
               <thead>

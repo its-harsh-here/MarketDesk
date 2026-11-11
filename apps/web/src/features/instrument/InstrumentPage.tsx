@@ -40,6 +40,7 @@ import { usePrefs, useSession } from "@/features/settings/api";
 import { StarToggle } from "@/features/watchlists/StarToggle";
 import { useAlerts } from "@/features/alerts/api";
 import { useJournal } from "@/features/journal/api";
+import { isTypingTarget, useGlobalKeys } from "@/lib/hooks";
 
 function FundRow({ label, value, kind, note }: { label: string; value: string; kind: string; note?: string }) {
   const missing = value === DASH;
@@ -107,6 +108,13 @@ export function InstrumentPage() {
     else next.set("tab", t);
     return next;
   }, { replace: true });
+  // [ and ] step through the instrument tabs from anywhere on the page (not while typing or with a dialog open).
+  useGlobalKeys((e) => {
+    if ((e.key !== "[" && e.key !== "]") || e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target) || document.querySelector('[role="dialog"]')) return;
+    e.preventDefault();
+    const i = TABS.findIndex((t) => t.value === tab);
+    setTab(TABS[(i + (e.key === "]" ? 1 : -1) + TABS.length) % TABS.length].value);
+  });
   const tz = prefs?.display_timezone ?? "Asia/Kolkata";
   const inst = s?.instrument;
   // The palette's "recently viewed" list (this device only): recorded on arrival, named once the quote is known,

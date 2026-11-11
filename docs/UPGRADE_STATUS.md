@@ -1086,6 +1086,14 @@ reliable per-company relevance signal in Yahoo's search news.
 Macro watchboard: world indices, more FX, silver, natural gas, crypto. Currency converter panel on Macro
 (`GET /api/terminal/convert`). Yahoo headlines fall back to the search API. No schema change.
 
+## Weekly/monthly bars, earnings bars, tab keys (11 Nov 2026)
+- Chart and price table get a D/W/M interval: weekly and monthly bars aggregate the validated daily bars (first open,
+  high, low, last close, summed volume; a period with any session missing OHLC or volume shows it as missing), the
+  table gains a change column, and the CSV follows the interval (`lib/resample.ts`, 3 unit tests).
+- Earnings history shows revenue and net income as paired bars above the table (losses in red).
+- `[` / `]` step through the instrument tabs (listed in shortcut help).
+- Checks: vitest 48; Playwright 35 journeys pass; no backend change.
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.

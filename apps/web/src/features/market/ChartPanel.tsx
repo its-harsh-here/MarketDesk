@@ -10,16 +10,18 @@ import { errorMessage } from "@/lib/api/client";
 import { formatMoney, formatNumber, formatSessionDate, formatVolume } from "@/lib/format";
 import { useMediaQuery } from "@/lib/hooks";
 import { INDICATORS, type IndicatorKey } from "@/lib/indicators";
+import { resample, type Frequency } from "@/lib/resample";
+import { ChangeText } from "@/components/ui/Change";
 import { RANGES, useHistory, type Range } from "./api";
 import { PriceChart, cleanBars, summarizeBars, type ChartKind } from "./PriceChart";
 
 /** Daily bars as CSV (session, OHLC, volume). Cells are numbers or ISO dates only, so no formula can be injected. */
-function downloadBars(symbol: string, range: string, bars: { time: string; open: number | null; high: number | null; low: number | null; close: number; volume: number | null }[]) {
+function downloadBars(symbol: string, range: string, bars: { time: string; open: number | null; high: number | null; low: number | null; close: number; volume: number | null }[], freq = "daily") {
   const rows = [["session", "open", "high", "low", "close", "volume"], ...bars.map((b) => [b.time, b.open ?? "", b.high ?? "", b.low ?? "", b.close, b.volume ?? ""])];
   const blob = new Blob([rows.map((r) => r.join(",")).join("\n") + "\n"], { type: "text/csv" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `${symbol.replace(/[^A-Za-z0-9.^-]/g, "_")}_${range}_daily.csv`;
+  a.download = `${symbol.replace(/[^A-Za-z0-9.^-]/g, "_")}_${range}_${freq}.csv`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
@@ -45,6 +47,7 @@ export function ChartPanel({
   const [kind, setKind] = useState<ChartKind>("line");
   const [volume, setVolume] = useState(true);
   const [table, setTable] = useState(false);
+  const [freq, setFreq] = useState<Frequency>("daily");
   const [reset, setReset] = useState(0);
   const [indicators, setIndicators] = useState<IndicatorKey[]>(() => {
     try {
@@ -71,6 +74,9 @@ export function ChartPanel({
   const clean = useMemo(() => cleanBars(q.data?.bars ?? []), [q.data]);
   const summary = useMemo(() => summarizeBars(clean.bars, currency), [clean.bars, currency]);
   const hasVolume = clean.bars.some((b) => b.volume !== null);
+  // Weekly/monthly views aggregate the validated daily bars (first open, high, low, last close, summed volume).
+  const shownBars = useMemo(() => resample(clean.bars, freq), [clean.bars, freq]);
+  const freqWord = freq === "daily" ? "daily" : freq === "weekly" ? "weekly" : "monthly";
 
   return (
     <Panel
@@ -85,7 +91,7 @@ export function ChartPanel({
             <FreshnessBadge meta={q.data.meta} />
             {clean.bars.length > 0 && (
               <span className="max-sm:hidden">
-                {formatSessionDate(clean.bars[0].time)} – {formatSessionDate(clean.bars[clean.bars.length - 1].time)} · daily
+                {formatSessionDate(clean.bars[0].time)} – {formatSessionDate(clean.bars[clean.bars.length - 1].time)} · {freqWord}
               </span>
             )}
           </span>
@@ -114,6 +120,12 @@ export function ChartPanel({
               title: clean.candleGaps === clean.bars.length && clean.bars.length > 0 ? "Open/high/low not available" : undefined,
             },
           ]}
+        />
+        <Segmented
+          label="Interval"
+          value={freq}
+          onChange={setFreq}
+          options={[{ value: "daily", label: "D", title: "Daily bars" }, { value: "weekly", label: "W", title: "Weekly bars (last session of each week)" }, { value: "monthly", label: "M", title: "Monthly bars (last session of each month)" }]}
         />
         <div className="ml-auto flex items-center gap-1">
           <DM.Root>
@@ -147,7 +159,7 @@ export function ChartPanel({
             </DM.Portal>
           </DM.Root>
           {table && (
-            <IconButton size="sm" label="Download these prices as CSV" disabled={!clean.bars.length} onClick={() => downloadBars(symbol, range, clean.bars)}>
+            <IconButton size="sm" label="Download these prices as CSV" disabled={!clean.bars.length} onClick={() => downloadBars(symbol, range, shownBars, freqWord)}>
               <Download className="size-4" aria-hidden />
             </IconButton>
           )}
@@ -187,10 +199,10 @@ export function ChartPanel({
         ) : table ? (
           <div className="scrollbar-thin relative overflow-auto" style={{ height: chartHeight }}>
             <table className="w-full text-[13px]">
-              <caption className="sr-only">Daily prices for {symbol}</caption>
+              <caption className="sr-only">{freqWord[0].toUpperCase() + freqWord.slice(1)} prices for {symbol}</caption>
               <thead className="sticky top-0 bg-panel">
                 <tr className="border-b border-line-subtle text-xs text-fg-3">
-                  {["Session", "Open", "High", "Low", "Close", "Volume"].map((h, i) => (
+                  {[freq === "daily" ? "Session" : freq === "weekly" ? "Week to" : "Month to", "Open", "High", "Low", "Close", "Change", "Volume"].map((h, i) => (
                     <th key={h} scope="col" className={i === 0 ? "px-4 py-2 text-left font-medium" : "px-3 py-2 text-right font-medium"}>
                       {h}
                     </th>
@@ -198,13 +210,14 @@ export function ChartPanel({
                 </tr>
               </thead>
               <tbody>
-                {[...clean.bars].reverse().map((b) => (
+                {shownBars.map((b, i) => ({ b, prev: shownBars[i - 1] })).reverse().map(({ b, prev }) => (
                   <tr key={b.time} className="border-b border-line-subtle">
-                    <td className="num px-4 py-1.5 text-fg-2">{formatSessionDate(b.time)}</td>
+                    <td className="num px-4 py-1.5 text-fg-2" title={b.sessions > 1 ? `${b.sessions} sessions` : undefined}>{formatSessionDate(b.time)}</td>
                     <td className="num px-3 text-right">{formatNumber(b.open)}</td>
                     <td className="num px-3 text-right">{formatNumber(b.high)}</td>
                     <td className="num px-3 text-right">{formatNumber(b.low)}</td>
                     <td className="num px-3 text-right text-fg">{formatMoney(b.close, currency)}</td>
+                    <td className="px-3 text-right">{prev ? <ChangeText percent={String(((b.close - prev.close) / prev.close) * 100)} className="text-xs" /> : <span className="text-fg-3">—</span>}</td>
                     <td className="num px-3 pr-4 text-right text-fg-2">{formatVolume(b.volume)}</td>
                   </tr>
                 ))}
@@ -212,7 +225,7 @@ export function ChartPanel({
             </table>
           </div>
         ) : (
-          <PriceChart bars={clean.bars} kind={kind} showVolume={volume && hasVolume} currency={currency} height={chartHeight + indicators.filter((k) => k === "rsi" || k === "macd").length * Math.round(chartHeight * 0.25)} resetSignal={reset} indicators={indicators} className="mx-1 my-2 flex-1" />
+          <PriceChart bars={shownBars} kind={kind} showVolume={volume && hasVolume} currency={currency} height={chartHeight + indicators.filter((k) => k === "rsi" || k === "macd").length * Math.round(chartHeight * 0.25)} resetSignal={reset} indicators={indicators} className="mx-1 my-2 flex-1" />
         )}
       </figure>
       {(q.data?.adjustment || clean.dropped > 0 || q.data?.meta.status === "stale") && (

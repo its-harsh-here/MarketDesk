@@ -12,6 +12,8 @@ const ROWS: [string[], string][] = [
   [["?"], "Show keyboard shortcuts"],
   [["G", "O"], "Go to Overview"],
   [["G", "W"], "Go to Watchlists"],
+  [["["], "Instrument: previous tab"],
+  [["]"], "Instrument: next tab"],
   [["G", "F"], "Go to Screener"],
   [["G", "V"], "Go to Movers"],
   [["G", "M"], "Go to Macro"],
