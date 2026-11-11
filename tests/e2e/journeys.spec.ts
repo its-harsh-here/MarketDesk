@@ -1150,4 +1150,18 @@ test("sidebar: an icon rail that expands while the pointer is on it and for keyb
   await expect.poll(width).toBeLessThan(70);
   await rail.getByRole("link", { name: "Watchlists" }).focus();
   await expect.poll(width).toBeGreaterThan(150);
+  // choosing a destination closes it: by keyboard (focus moves to the page) …
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/watchlists$/);
+  await expect.poll(width).toBeLessThan(70);
+  // … and by mouse, staying closed while the pointer rests on the rail
+  await page.mouse.move(700, 400);
+  await page.mouse.move(28, 300, { steps: 4 });
+  await expect.poll(width).toBeGreaterThan(150);
+  await rail.getByRole("link", { name: "Movers" }).click();
+  await expect(page).toHaveURL(/\/movers$/);
+  await expect.poll(width).toBeLessThan(70);
+  await page.mouse.move(30, 320, { steps: 3 }); // small moves inside the rail do not reopen it
+  await page.waitForTimeout(300);
+  expect(await width()).toBeLessThan(70);
 });

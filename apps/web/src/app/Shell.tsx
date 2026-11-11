@@ -1,7 +1,7 @@
 import * as DM from "@radix-ui/react-dropdown-menu";
 import * as RD from "@radix-ui/react-dialog";
 import { Bell, BookOpen, Flame, LayoutGrid, Briefcase, Ellipsis, FlaskConical, Funnel, Globe, Keyboard, LayoutDashboard, ListChecks, LogOut, Moon, Search, Settings, Sun, UserRound } from "lucide-react";
-import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDialogs } from "./dialogs";
@@ -65,22 +65,31 @@ function Sidebar() {
   // resting cursor; keyboard focus opens it through CSS (:focus-within).
   const [open, setOpen] = useState(false);
   const timer = useRef<number | undefined>(undefined);
+  const chosen = useRef(false); // an item was just selected: stay closed until the pointer leaves the rail
   useEffect(() => () => window.clearTimeout(timer.current), []);
   const enter = (e: ReactPointerEvent) => {
-    if (e.pointerType !== "mouse") return; // touch: a tap navigates, no hover state
+    if (e.pointerType !== "mouse" || chosen.current) return; // touch: a tap navigates, no hover state
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setOpen(true), 90);
   };
   const leave = () => {
     window.clearTimeout(timer.current);
+    chosen.current = false;
     setOpen(false);
+  };
+  // Selecting a destination closes the rail and moves focus to the page, so :focus-within does not hold it open.
+  const select = (e: ReactMouseEvent) => {
+    window.clearTimeout(timer.current);
+    chosen.current = e.detail > 0; // a pointer click (Enter on a focused link has detail 0)
+    setOpen(false);
+    requestAnimationFrame(() => document.getElementById("main")?.focus({ preventScroll: true }));
   };
   const item = "md-nav group flex h-10 items-center gap-3 rounded-[var(--radius-control)] px-4 text-[13px] font-medium";
   return (
     <div className="relative hidden w-16 shrink-0 md:block">
       <nav aria-label="Primary" data-open={open || undefined} onPointerEnter={enter} onPointerLeave={leave}
         className="md-sidebar md-rail fixed top-0 left-0 z-40 flex h-dvh flex-col overflow-hidden border-r border-line-subtle">
-        <div className="flex h-16 items-center px-[18px]">
+        <div className="flex h-16 items-center px-[18px]" onClick={select}>
           <Logo />
         </div>
         <ul className="flex flex-col gap-0.5 px-2 pt-2">
@@ -90,6 +99,7 @@ function Sidebar() {
                 to={to}
                 end={end}
                 title={label}
+                onClick={select}
                 className={({ isActive }) => cn(item, isActive ? "text-fg" : "text-fg-2 hover:bg-hover/60 hover:text-fg")}
               >
                 {({ isActive }) => (
@@ -106,6 +116,7 @@ function Sidebar() {
           <NavLink
             to="/settings"
             title="Settings"
+            onClick={select}
             className={({ isActive }) => cn(item, isActive ? "text-fg" : "text-fg-2 hover:bg-hover/60 hover:text-fg")}
           >
             <Settings aria-hidden className="size-4 shrink-0 text-fg-3" />
@@ -521,7 +532,7 @@ export function Shell() {
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
         <OfflineBanner />
-        <main id="main" ref={mainRef} className="min-w-0 flex-1 pb-24 md:pb-8">
+        <main id="main" ref={mainRef} tabIndex={-1} className="min-w-0 flex-1 pb-24 outline-none md:pb-8">
           <Outlet />
         </main>
       </div>
