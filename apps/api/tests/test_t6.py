@@ -187,3 +187,33 @@ def test_finra_non_json_and_unexpected_errors_never_break_the_risk_view(monkeypa
         db.commit()
         out = sr._short_interest(db, Boom(), inst)
     assert out["status"] == "unavailable" and "KeyError" in out["reason"]
+
+
+def test_short_interest_is_cached_on_every_database(tmp_path):
+    """Regression: the cache kind was 20 characters for a VARCHAR(16) column; SQLite accepted it, PostgreSQL did not."""
+    from marketdesk.api.app import create_app
+    from marketdesk.db import db_session
+    from marketdesk.models import Instrument, MarketCacheEntry
+
+    from .conftest import make_settings, migrated
+
+    class Fake:
+        enabled, problem, calls = True, None, 0
+
+        def short_interest(self, symbol):
+            Fake.calls += 1
+            return [{"settlementDate": "2026-10-31", "symbolCode": symbol, "currentShortPositionQuantity": 1000,
+                     "previousShortPositionQuantity": 900, "changePercent": 11.1, "averageDailyVolumeQuantity": 500,
+                     "daysToCoverQuantity": 2.0, "stockSplitFlag": None, "revisionFlag": None}]  # fmt: skip
+
+    s = migrated(make_settings(tmp_path, marketdesk_env="development", dev_auth_bypass=True))
+    create_app(s)
+    with db_session() as db:
+        inst = Instrument(provider="fixture", symbol="EXIC", country="US", currency="USD")
+        db.add(inst)
+        db.commit()
+        a = sr._short_interest(db, Fake(), inst)
+        b = sr._short_interest(db, Fake(), inst)
+        row = db.get(MarketCacheEntry, "finra:si:EXIC")
+    assert a["status"] == "available" and b["status"] == "cached" and Fake.calls == 1
+    assert row is not None and len(row.kind) <= 16

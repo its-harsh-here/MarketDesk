@@ -1147,6 +1147,12 @@ funds 3.88%, 10-year 4.88%, 10y–2y +0.25 pp, real GDP Q3 +2.07% y/y, Michigan 
 listed "FOMC Press Release" every day (FRED schedules it daily); releases with more than six dates in the 45-day
 window are now dropped, leaving PPI, retail sales, CPI and similar.
 
+**Incident: Risk tab HTTP 500 for US listings (11 Nov 2026).** Once FINRA credentials were set in production, the
+short-interest cache write used the kind "finra_short_interest" (20 characters) in `market_cache.kind`
+VARCHAR(16): SQLite accepted it, PostgreSQL raised DataError and the whole risk view failed. Fixed: kind "finra_si",
+rollback on a failed cache write, each risk section now reports its own failure instead of failing the view, and a
+regression test writes the cache (CI runs it on PostgreSQL). Indian listings were unaffected (no FINRA call).
+
 ## Known limitations carried forward
 - Market status comes from published calendars (exchange_calendars); India data ends 2026-12-31 (later dates show "unknown") and special sessions are not modelled.
 - Render Free sleeps after 15 minutes idle; alerts are only evaluated while it is awake.

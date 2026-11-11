@@ -248,10 +248,14 @@ def _short_interest(db: Session, finra, inst: Instrument) -> dict:
                 return {**base, "status": "unavailable", "reason": f"FINRA request failed ({type(exc).__name__})."}
             raw, status = row.payload, "stale"
         else:
-            entry = row or MarketCacheEntry(key=key, kind="finra_short_interest", provider="finra")
+            entry = row or MarketCacheEntry(key=key, kind="finra_si", provider="finra")
             entry.payload, entry.fetched_at, entry.last_access_at = raw, now, now
-            db.merge(entry)
-            db.commit()
+            try:
+                db.merge(entry)
+                db.commit()
+            except Exception:  # noqa: BLE001 - a cache write failure must not lose the data just fetched
+                db.rollback()
+                log.exception("finra cache write failed")
             fetched, status = now, "available"
     else:
         raw, status = row.payload, "cached"
