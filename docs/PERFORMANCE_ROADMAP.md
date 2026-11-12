@@ -182,5 +182,7 @@ Next: 2.C (lazy heavy imports), 1.7 (streaming large SEC documents), and phases 
 ### Results — phases 1.7, 3.2, 3.4, 4.3, 4.5 (12 Nov 2026)
 - Live before (Render Free, warm, Server-Timing): Risk 4.6 s (MSFT; database 1 s, the rest computation on the shared
   CPU), Earnings 1.5 s, Financial analysis 0.74 s, on every visit.
-- After: the first visit builds the view as before; revisits within the cache window are served from memory (see the
-  live check in UPGRADE_STATUS.md for measured numbers).
+- After (live, 12 Nov 2026): first visit builds the view as before; a revisit within the window is answered in
+  ~8 ms of server time (≈ 0.25 s end to end, mostly the network): Risk MSFT 4.6 s → 0.70 s incl. network, TCS.NS
+  1.06 s → 0.25 s, Earnings 1.5 s → 0.26 s, Financial analysis 0.29 s → 0.27 s, News 0.99 s → 0.28 s. AAPL quarterly
+  statements (slimmed SEC facts) 0.56 s first, 0.17 s server time after.

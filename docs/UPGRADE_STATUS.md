@@ -1218,3 +1218,11 @@ The roadmap (M00–M14) is complete, including M04 (Alpaca IEX streaming). Termi
 - Indian listings: full income statement, balance sheet and cash flow (annual and quarterly) and the full analysis,
   plus a new efficiency table (ROCE, interest coverage, working-capital days). Verified locally against live data
   for RELIANCE.NS (4 fiscal years, 5 quarters, skipped Sep 2025 quarter named). Plan: docs/INDIA_FINANCIALS_PLAN.md.
+
+### Performance roadmap — remaining phases (12 Nov 2026)
+- Done: 1.7 (slim SEC company facts), 3.2 merged news cache, 3.4 assembled-view cache, 4.3 client cache times, 4.5
+  bundle trim (app chunk 399 → 127 KB; start-up JS 753 → 568 KB). Measured and skipped: 2.C (≈ 8 MB). Declined: 4.4
+  (no /api data in browser caches). Open, owner decisions: 2.B (replace the provider library), Phase 5 (cold starts).
+- Live revisits: Risk 4.6 s → 0.25–0.7 s, Earnings 1.5 s → 0.26 s, News 1.0 s → 0.28 s (DECISIONS #80).
+- Screener: removed the second list picker (watchlist selector and row checkboxes) from Results at the owner's request.
+- Local: pytest 398 passed / 3 skipped; vitest 60; Playwright journeys 45/45.
