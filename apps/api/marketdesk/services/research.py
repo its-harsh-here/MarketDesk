@@ -301,6 +301,46 @@ class ResearchService:
 
         return self.envelope(db, inst, build)
 
+    def segments(self, db: Session, inst: Instrument) -> dict:
+        """Revenue (and operating income where tagged) by business segment, product and geography from the latest
+        annual report's XBRL instance (services.segments). Cached per filing: a filed report never changes."""
+        from marketdesk.services import segments as seg
+
+        def build(cik):
+            sub, _, _, _ = self._submissions(db, inst, cik)
+            annual = next((r for r in _filing_rows(sub, cik) if r["form"] in ("10-K", "20-F", "40-F")), None)
+            if annual is None:
+                raise ProviderError("missing", "No annual report (10-K, 20-F or 40-F) in SEC's recent filings.")
+
+            def fetch():
+                files = self.client.filing_files(cik, annual["accession"])
+                name = seg.instance_name(files)
+                if name is None:
+                    raise ProviderError("missing", "This annual report has no XBRL instance to read.")
+                try:
+                    out = seg.parse_instance(self.client.filing_bytes(cik, annual["accession"], name))
+                    wanted = {m["member"] for a in out["axes"] for m in a["members"]}
+                    lab = seg.label_name(files)
+                    if lab and wanted:
+                        seg.apply_labels(
+                            out, seg.parse_labels(self.client.filing_bytes(cik, annual["accession"], lab), wanted)
+                        )
+                except ValueError as exc:
+                    raise ProviderError("malformed", str(exc)) from exc
+                finally:
+                    memory.trim(min_interval=0)
+                return seg.to_json(out)
+
+            data, fetched, status, note = self._cached(
+                db, f"sec:segments:v1:{cik}:{annual['accession']}", "sec_segments", timedelta(days=400), fetch
+            )
+            data = {**data, "form": annual["form"], "filing_date": annual["filing_date"],
+                    "report_date": annual["report_date"], "accession": annual["accession"],
+                    "url": filing_index_url(cik, annual["accession"])}  # fmt: skip
+            return data, {"status": status, "fetched_at": fetched, "reason": note}
+
+        return self.envelope(db, inst, build)
+
     # ------------------------------------------------------------------ scheduled refresh (worker)
     def refresh_tracked(self, db: Session, limit: int = 20) -> dict:
         """Daily check of watchlisted US listings: submissions, and company facts only after a new periodic filing."""

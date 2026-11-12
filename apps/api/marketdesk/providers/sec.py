@@ -153,6 +153,15 @@ class SecClient:
         raw = self._fetch(filing_document_url(int(cik), _accession(accession), name), "text/html", max_bytes)
         return html_to_text(raw.decode("utf-8", errors="replace"))[:max_chars]
 
+    def filing_bytes(self, cik: int, accession: str, name: str, max_bytes: int = 40_000_000) -> bytes:
+        """Raw bytes of one .xml filing document (an XBRL instance or label linkbase), for stream parsing."""
+        if not _XML_RE.match(name or ""):
+            raise ProviderError("unsupported", "Only plain .xml filing documents can be read.")
+        raw = self._fetch(filing_document_url(int(cik), _accession(accession), name), "application/xml", max_bytes)
+        if len(raw) >= max_bytes:
+            raise ProviderError("too_large", "The filing's XBRL data is larger than MarketDesk reads.")
+        return raw
+
     def filing_xml(self, cik: int, accession: str, name: str, max_bytes: int = 1_000_000) -> str:
         """Raw XML of one filing document (e.g. a Form 4 ownership document). Documents with a DOCTYPE are refused,
         so no entity declaration from a filing is ever processed."""

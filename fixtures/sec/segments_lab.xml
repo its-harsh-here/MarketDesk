@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<link:linkbase xmlns:link="http://www.xbrl.org/2003/linkbase" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <link:labelLink xlink:type="extended" xlink:role="http://www.xbrl.org/2003/role/link">
+    <link:label xlink:type="resource" xlink:label="lab_exic_PumpsSegmentMember" xlink:role="http://www.xbrl.org/2003/role/terseLabel">Pumps &amp; Flow</link:label>
+    <link:label xlink:type="resource" xlink:label="lab_exic_PumpsSegmentMember" xlink:role="http://www.xbrl.org/2003/role/label">Pumps Segment [Member]</link:label>
+    <link:loc xlink:type="locator" xlink:label="loc_exic_PumpsSegmentMember" xlink:href="exic-20250930.xsd#exic_PumpsSegmentMember"/>
+    <link:labelArc xlink:type="arc" xlink:from="loc_exic_PumpsSegmentMember" xlink:to="lab_exic_PumpsSegmentMember"/>
+    <link:label xlink:type="resource" xlink:label="lab_exic_ValvesSegmentMember" xlink:role="http://www.xbrl.org/2003/role/label">Valves [Member]</link:label>
+    <link:loc xlink:type="locator" xlink:label="loc_exic_ValvesSegmentMember" xlink:href="exic-20250930.xsd#exic_ValvesSegmentMember"/>
+    <link:labelArc xlink:type="arc" xlink:from="loc_exic_ValvesSegmentMember" xlink:to="lab_exic_ValvesSegmentMember"/>
+  </link:labelLink>
+</link:linkbase>

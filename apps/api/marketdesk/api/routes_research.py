@@ -70,6 +70,19 @@ async def events(
     return research.events(db, await _inst(db, market, symbol))
 
 
+@router.get("/segments", response_model=ResearchOut)
+@off_event_loop
+async def segments(
+    symbol: str = Query(min_length=1, max_length=32),
+    db: Session = Depends(get_db),
+    market: MarketDataService = Depends(market_dep),
+    research: ResearchService = Depends(research_dep),
+):
+    """Revenue (and operating income where tagged) by segment, product and geography from the latest annual
+    report's XBRL data (US filers)."""
+    return research.segments(db, await _inst(db, market, symbol))
+
+
 @router.get("/financials", response_model=ResearchOut)
 @off_event_loop
 async def financials(

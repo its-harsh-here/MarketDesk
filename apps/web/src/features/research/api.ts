@@ -92,3 +92,21 @@ function useResearch<T>(kind: string, symbol: string, params: Record<string, str
 export const useFinancials = (symbol: string, period: "annual" | "quarterly", enabled = true, periods?: number) =>
   useResearch<Statements>("financials", symbol, periods ? { period, periods: String(periods) } : { period }, enabled);
 export const useFilings = (symbol: string, enabled = true) => useResearch<Filing[]>("filings", symbol, {}, enabled);
+
+export interface SegmentMember {
+  member: string;
+  label: string;
+  revenue: Record<string, string>;
+  operating_income: Record<string, string>;
+}
+export interface Segments {
+  currency: string | null;
+  fiscal_year_ends: string[];
+  axes: { axis: string; label: string; concept: string; members: SegmentMember[] }[];
+  form: string;
+  filing_date: string;
+  report_date: string | null;
+  accession: string;
+  url: string;
+}
+export const useSegments = (symbol: string, enabled = true) => useResearch<Segments>("segments", symbol, {}, enabled);

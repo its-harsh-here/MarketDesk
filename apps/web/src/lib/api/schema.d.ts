@@ -480,6 +480,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/research/segments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Segments
+         * @description Revenue (and operating income where tagged) by segment, product and geography from the latest annual
+         *     report's XBRL data (US filers).
+         */
+        get: operations["segments_api_research_segments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/research/financials": {
         parameters: {
             query?: never;
@@ -2432,14 +2453,19 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "ask" | "results" | "catalysts" | "compare" | "brief";
+            kind: "ask" | "results" | "catalysts" | "compare" | "brief" | "challenge" | "briefing";
             /** Symbols */
-            symbols: string[];
+            symbols?: string[];
             /**
              * Question
              * @default
              */
             question: string;
+            /**
+             * Journal Id
+             * @description challenge: the journal entry whose thesis is examined
+             */
+            journal_id?: number | null;
         };
         /** BarOut */
         BarOut: {
@@ -4789,6 +4815,37 @@ export interface operations {
         };
     };
     events_api_research_events_get: {
+        parameters: {
+            query: {
+                symbol: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    segments_api_research_segments_get: {
         parameters: {
             query: {
                 symbol: string;

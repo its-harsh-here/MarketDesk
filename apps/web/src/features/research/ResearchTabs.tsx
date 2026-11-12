@@ -1,6 +1,7 @@
 import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { FinancialAnalysis } from "@/features/terminal/FinancialAnalysis";
+import { SegmentsPanel } from "./SegmentsPanel";
 import { Panel } from "@/components/ui/Panel";
 import { Segmented } from "@/components/ui/Segmented";
 import { EmptyState, ErrorState, InlineNotice, SkeletonRows } from "@/components/ui/States";
@@ -185,6 +186,7 @@ export function FinancialsTab({ symbol }: { symbol: string }) {
         </div>
       ) : null}
     </Panel>
+    <SegmentsPanel symbol={symbol} />
     <FinancialAnalysis symbol={symbol} period={period} />
     </>
   );
