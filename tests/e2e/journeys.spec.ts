@@ -464,6 +464,17 @@ test("screener: named list → load data → filter (missing never passes) → s
   await results.getByRole("button", { name: /^(Load|Refresh) data$/ }).click();
   const table = results.getByRole("table", { name: /Screen results for List · E2E screen/ });
   await expect(table.getByRole("row", { name: /SX:NIMBUS/ })).toBeVisible({ timeout: 30_000 });
+  await expect(table.getByRole("row", { name: /SX:HALCYON/ })).toBeVisible();
+
+  // editing the list's members updates the results at once (they used to stay cached until a reload)
+  await page.getByRole("button", { name: "Manage lists" }).click();
+  await lists.getByRole("button", { name: "Edit" }).first().click();
+  await lists.getByLabel("Symbols").fill("AURORA, SX:BANYAN GLASSWING NIMBUS");
+  await lists.getByRole("button", { name: "Save list" }).click();
+  await expect(page.getByText(/List “E2E screen” saved/)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(table.getByRole("row", { name: /SX:HALCYON/ })).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Universe" })).toContainText(/E2E screen \(4\)/);
 
   // P/E ≤ 20: NIMBUS has negative earnings, so no P/E — excluded and counted, never a pass
   await page.getByRole("combobox", { name: "Add a filter" }).selectOption("pe_ratio");

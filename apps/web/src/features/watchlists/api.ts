@@ -21,6 +21,7 @@ function useInvalidate() {
     qc.invalidateQueries({ queryKey: ["membership"] });
     qc.invalidateQueries({ queryKey: ["briefing"] });
     qc.invalidateQueries({ queryKey: ["prefs"] });
+    qc.invalidateQueries({ queryKey: ["screener"] }); // watchlists are screener universes
   };
 }
 

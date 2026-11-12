@@ -158,12 +158,15 @@ export interface Peers {
   note: string;
 }
 
-export const specKey = (u: UniverseSpec) => (u.id === undefined ? u.kind : `${u.kind}:${u.id}`);
+// The API sends `id: null` for the built-in universes (all watchlists, holdings): treat null like a missing id, or
+// the key becomes "holdings:null", parses back to NaN and never matches an option (the list switch did nothing).
+export const specKey = (u: UniverseSpec) => (u.id == null ? u.kind : `${u.kind}:${u.id}`);
 export const parseSpec = (s: string | null): UniverseSpec | null => {
   if (!s) return null;
   const [kind, id] = s.split(":");
   if (!["watchlists", "watchlist", "holdings", "list"].includes(kind)) return null;
-  return id ? { kind: kind as UniverseKind, id: Number(id) } : { kind: kind as UniverseKind };
+  const n = Number(id);
+  return id && Number.isInteger(n) ? { kind: kind as UniverseKind, id: n } : { kind: kind as UniverseKind };
 };
 
 export function useCatalog() {
@@ -198,6 +201,13 @@ export function useHeatmap(universe: UniverseSpec | null, metric: string, weight
   });
 }
 
+/** A refresh finished: screens, heatmaps and peers now read the new snapshots. */
+function refreshed(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ["screener", "run"] });
+  qc.invalidateQueries({ queryKey: ["screener", "heatmap"] });
+  qc.invalidateQueries({ queryKey: ["screener", "peers"] });
+}
+
 export function useRefreshState() {
   const qc = useQueryClient();
   return useQuery({
@@ -205,12 +215,7 @@ export function useRefreshState() {
     queryFn: async () => {
       const prev = qc.getQueryData<RefreshState>(["screener", "refresh"]);
       const st = await api.get<RefreshState>("/api/screener/refresh");
-      if (prev?.running && !st.running) {
-        // A refresh just finished: screens, heatmaps and peers now read the new snapshot.
-        qc.invalidateQueries({ queryKey: ["screener", "run"] });
-        qc.invalidateQueries({ queryKey: ["screener", "heatmap"] });
-        qc.invalidateQueries({ queryKey: ["screener", "peers"] });
-      }
+      if (prev && !st.running && st.finished_at && st.finished_at !== prev.finished_at) refreshed(qc);
       return st;
     },
     refetchInterval: (q) => (q.state.data?.running ? 1500 : false),
@@ -221,7 +226,12 @@ export function useStartRefresh() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (universe: UniverseSpec) => api.post<RefreshState>("/api/screener/refresh", { universe }),
-    onSuccess: (st) => qc.setQueryData(["screener", "refresh"], st),
+    onSuccess: (st) => {
+      qc.setQueryData(["screener", "refresh"], st);
+      // Nothing was due (for example the worker had already loaded the members): the job finished before this
+      // response, so no poll will see it finish. Re-read the results now rather than keep showing the old ones.
+      if (!st.running) refreshed(qc);
+    },
   });
 }
 
@@ -248,7 +258,9 @@ export interface ListOut {
 
 export function useListMutations() {
   const qc = useQueryClient();
-  const onSuccess = () => qc.invalidateQueries({ queryKey: ["screener", "universes"] });
+  // A list's members changed: its count, results, heatmap and data status are all out of date. Returning the promise
+  // makes the mutation wait for the refetch, so the page switches to the saved list with its new members.
+  const onSuccess = () => qc.invalidateQueries({ queryKey: ["screener"] });
   return {
     create: useMutation({ mutationFn: (v: { name: string; symbols: string }) => api.post<ListOut>("/api/screener/universes", v), onSuccess }),
     update: useMutation({ mutationFn: ({ id, ...v }: { id: number; name?: string; symbols?: string }) => api.patch<ListOut>(`/api/screener/universes/${id}`, v), onSuccess }),

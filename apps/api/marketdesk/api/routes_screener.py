@@ -250,7 +250,7 @@ async def heatmap(
 
 @router.get("/refresh", dependencies=[Depends(require_reader)])
 def refresh_status():
-    return svc.REFRESH_JOB.state
+    return dict(svc.REFRESH_JOB.state)
 
 
 @router.post("/refresh", status_code=202, dependencies=[Depends(require_reader)])
@@ -279,7 +279,7 @@ async def refresh(
 
     if not svc.REFRESH_JOB.start(uni["label"], job):
         raise AppError(429, "busy", "A refresh is already running; wait for it to finish.")
-    return svc.REFRESH_JOB.state
+    return dict(svc.REFRESH_JOB.state)  # a copy: the job thread may finish (and update it) while this is sent
 
 
 # --------------------------------------------------------------------- saved screens
