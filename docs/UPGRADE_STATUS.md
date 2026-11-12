@@ -1194,3 +1194,16 @@ The roadmap (M00–M14) is complete, including M04 (Alpaca IEX streaming). Termi
   bars; RELIANCE.NS 1D 74 bars (09:15–15:25 IST), 5D 125; ^NSEI 1D 75, 5D 125. All from Yahoo, status available.
 - Chart: 1D/5D buttons, clock times in the display zone (IST) on axis, crosshair and legend; W/M disabled; 5D
   session ticks show the date. Local: pytest green, vitest 55, Playwright journeys 42/42.
+
+### Gap closure and QA (12 Nov 2026)
+- Implemented: broker CSV presets + saved column mappings (DECISIONS #72), Telegram channel when configured and
+  desktop notifications (#73), first-run checklist (#74).
+- Local QA sweep (every page, instrument tab and dialog at 1440/1024/768/390, axe WCAG 2.1 AA, console, failed API
+  calls, overflow): fixed nested interactive controls in phone table rows; final run has only the deliberate 422
+  of the unknown-symbol error page.
+- Live QA (logged in, real data, 30 routes at 1440 and 390): no console errors, failed API calls or error
+  boundaries; fixed phone overflow on the Events tab (filter chips) and Macro (statistics grid); a one-off Desk
+  overflow during loading did not recur in repeated sampling.
+- Local: pytest 384 passed / 3 skipped; vitest 55; Playwright journeys 45/45.
+- Not verified: the Zerodha preset against a real tradebook file from the owner; Telegram delivery against a real
+  bot (no token configured).
