@@ -265,7 +265,7 @@ function Reviews({ d, readOnly }: { d: JournalDetail; readOnly: boolean }) {
 }
 
 export function JournalDetailDialog() {
-  const { state, close } = useDialogs();
+  const { state, close, open } = useDialogs();
   const isOpen = state.kind === "journal-detail";
   const id = isOpen && state.kind === "journal-detail" ? state.id : null;
   const q = useJournalDetail(id);
@@ -284,7 +284,20 @@ export function JournalDetailDialog() {
       title={title}
       description="Versions, evidence snapshots and reviews. What you wrote and what the data showed are kept as recorded."
       size="xl"
-      footer={<Button variant="ghost" onClick={close}>Close</Button>}
+      footer={
+        <>
+          {d && (
+            <Button
+              disabled={!d.thesis.trim() || session?.read_only}
+              title={!d.thesis.trim() ? "Write a thesis first" : session?.read_only ? "Read-only demo" : "AI counterargument from retrieved evidence; your note is examined, not followed"}
+              onClick={() => open({ kind: "ai", symbol: d.symbol, task: "challenge", journalId: d.id })}
+            >
+              Challenge my thesis
+            </Button>
+          )}
+          <Button variant="ghost" onClick={close}>Close</Button>
+        </>
+      }
     >
       {q.isLoading ? (
         <SkeletonRows rows={6} />

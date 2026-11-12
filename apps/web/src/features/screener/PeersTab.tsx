@@ -16,7 +16,8 @@ import { MetricValue } from "./cells";
 
 const PEER_METRICS = [
   "last_price", "change_1d_pct", "return_1y_pct", "market_cap", "pe_ratio", "price_to_book", "dividend_yield_pct",
-  "revenue_growth_pct", "net_margin_pct", "roe_pct", "debt_to_equity", "volatility_1y_pct",
+  "revenue_growth_pct", "sales_cagr_3y_pct", "profit_cagr_3y_pct", "operating_margin_pct", "net_margin_pct", "roe_pct",
+  "roce_pct", "debt_to_equity", "interest_coverage", "volatility_1y_pct",
 ];
 
 /** Side-by-side comparison of an instrument with up to five peers the owner chooses (or suggestions to start). */

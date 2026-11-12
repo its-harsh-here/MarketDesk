@@ -17,6 +17,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from marketdesk import memory
 from marketdesk.config import Settings
 from marketdesk.models import Instrument, InstrumentIdentifier, MarketCacheEntry, ResearchCheck, WatchlistItem
 from marketdesk.providers.base import ProviderError
@@ -336,6 +337,8 @@ class ResearchService:
                     refreshed += 1
             except ProviderError:
                 errors += 1
+            finally:
+                memory.trim(min_interval=0)  # one company at a time; give its parsed filings back (roadmap 1.6)
         return {"checked": checked, "facts_refreshed": refreshed, "errors": errors}
 
 

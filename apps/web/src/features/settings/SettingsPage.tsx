@@ -55,7 +55,14 @@ function SettingsBody({ prefs }: { prefs: Prefs }) {
     patch.mutate(p, { onSuccess: () => toast("success", msg), onError: (e) => toast("error", errorMessage(e)) });
 
   const health = (status?.provider_health ?? {}) as { circuit?: string; consecutive_failures?: number; last_success_at?: string | null; last_failure_at?: string | null; last_error?: { kind?: string; message?: string } | null; endpoints?: Record<string, { circuit: string; consecutive_failures: number }> };
-  const mem = status?.memory as { web?: { rss_mb: number }; worker?: { rss_mb: number } | null; embedded_worker?: boolean; limit_mb?: number } | null | undefined;
+  const mem = status?.memory as {
+    web?: { rss_mb: number; peak_mb?: number };
+    worker?: { rss_mb: number } | null;
+    embedded_worker?: boolean;
+    limit_mb?: number;
+    routes?: { route: string; count: number; grew_mb: number; max_grew_mb: number; avg_ms: number; max_ms: number }[];
+    views?: { entries: number; hits: number; misses: number };
+  } | null | undefined;
 
   return (
     <div className="grid grid-cols-1 gap-4 p-4 md:p-6 lg:grid-cols-2 lg:gap-5">
@@ -154,8 +161,41 @@ function SettingsBody({ prefs }: { prefs: Prefs }) {
               {mem?.web && (
                 <Row label="Server memory">
                   <span className="num text-right" title="Render Free stops the service above 512 MB; each process restarts itself before its soft limit.">
-                    {Math.round(mem.web.rss_mb)} MB of {mem.limit_mb} MB{mem.embedded_worker ? " · alerts run inside the web process" : mem.worker ? ` · worker ${Math.round(mem.worker.rss_mb)} MB` : ""}
+                    {Math.round(mem.web.rss_mb)} MB of {mem.limit_mb} MB{mem.web.peak_mb ? ` (peak ${Math.round(mem.web.peak_mb)} MB)` : ""}{mem.embedded_worker ? " · alerts run inside the web process" : mem.worker ? ` · worker ${Math.round(mem.worker.rss_mb)} MB` : ""}
                   </span>
+                </Row>
+              )}
+              {mem?.routes && mem.routes.length > 0 && (
+                <Row label="By request type">
+                <details className="min-w-0 text-xs text-fg-3">
+                  <summary className="cursor-pointer py-1 hover:text-fg-2">Memory and time since this server started</summary>
+                  <div tabIndex={0} className="scroll-x scrollbar-thin mt-1 overflow-x-auto">
+                    <table className="w-full min-w-[480px] text-xs">
+                      <caption className="sr-only">Resident-memory growth and response time per request type</caption>
+                      <thead>
+                        <tr className="border-b border-line-subtle text-fg-3">
+                          <th scope="col" className="py-1 pr-2 text-left font-medium">Request</th>
+                          <th scope="col" className="px-2 py-1 text-right font-medium">Calls</th>
+                          <th scope="col" className="px-2 py-1 text-right font-medium">Memory added</th>
+                          <th scope="col" className="px-2 py-1 text-right font-medium">Largest</th>
+                          <th scope="col" className="px-2 py-1 text-right font-medium">Avg time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mem.routes.map((r) => (
+                          <tr key={r.route} className="border-b border-line-subtle/60">
+                            <td className="num py-1 pr-2 text-fg-2">{r.route}</td>
+                            <td className="num px-2 py-1 text-right">{r.count}</td>
+                            <td className="num px-2 py-1 text-right">{r.grew_mb.toFixed(1)} MB</td>
+                            <td className="num px-2 py-1 text-right">{r.max_grew_mb.toFixed(1)} MB</td>
+                            <td className="num px-2 py-1 text-right">{r.avg_ms} ms</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {mem.views && <p className="mt-1">Cached research views: {mem.views.entries} kept · {mem.views.hits} served from memory · {mem.views.misses} built.</p>}
+                </details>
                 </Row>
               )}
               <Row label="Storage">

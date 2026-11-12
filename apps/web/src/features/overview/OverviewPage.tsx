@@ -26,6 +26,8 @@ import { BriefingItems } from "@/features/briefing/BriefingItems";
 import { usePortfolioSummary } from "@/features/portfolio/api";
 import { useJournal } from "@/features/journal/api";
 import type { SortState } from "@/components/ui/DataTable";
+import { AnswerView } from "@/features/ai/AnswerView";
+import { useAiAnswer, useAiMutations, useAiStatus } from "@/features/ai/api";
 
 function useBriefing() {
   return useQuery({ queryKey: ["briefing"], queryFn: () => api.get<Briefing>("/api/briefing"), refetchInterval: 120_000 });
@@ -51,9 +53,49 @@ function BriefingPanel({ className }: { className?: string }) {
           <BriefingItems items={q.data!.items} />
           {q.data!.data_status === "stale" && <InlineNotice tone="warn" className="mt-3">Some figures above are from stale data.</InlineNotice>}
           <p className="mt-4 text-xs leading-4 text-fg-3">{q.data!.method}</p>
+          <BriefingNarrative />
         </>
       )}
     </Panel>
+  );
+}
+
+/**
+ * Optional AI narrative of the briefing above (roadmap item 29): written only from the rule-based briefing, labelled as
+ * model output with its source, never a cause for a move or a recommendation. The briefing itself never waits for it.
+ */
+function BriefingNarrative() {
+  const status = useAiStatus(true);
+  const { data: session } = useSession();
+  const m = useAiMutations();
+  const [id, setId] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const answer = useAiAnswer(id);
+  const st = status.data;
+  if (!st?.enabled) return null;
+  const write = async () => {
+    setError(null);
+    try {
+      setId((await m.ask.mutateAsync({ kind: "briefing", symbols: [], question: "" })).id);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  };
+  return (
+    <section aria-label="AI narrative of the briefing" className="mt-4 border-t border-line-subtle pt-3">
+      {id === null ? (
+        <Button size="sm" icon={<Sparkles className="size-4" aria-hidden />} onClick={write} loading={m.ask.isPending}
+          disabled={session?.read_only} title={session?.read_only ? "Read-only demo" : "A short written summary of the briefing above, by the AI analyst"}>
+          Write a narrative
+        </Button>
+      ) : (
+        <div className="space-y-2">
+          <Pill tone="accent">Model output · from the briefing above only</Pill>
+          {answer.data ? <AnswerView a={answer.data} providerLabel={st.provider_label} /> : <SkeletonRows rows={2} />}
+        </div>
+      )}
+      {error && <InlineNotice tone="neg" className="mt-2">{error}</InlineNotice>}
+    </section>
   );
 }
 

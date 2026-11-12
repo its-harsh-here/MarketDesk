@@ -246,3 +246,38 @@ def test_over_long_answers_are_clipped_and_flagged_not_discarded(groq):
     assert len(a["output"]["headline"]) == 300 and len(a["output"]["sections"][0]["points"]) == 8
     issues = [f["issue"] for f in a["flags"]]
     assert "1 extra point(s) dropped." in issues and "Long point shortened to 600 characters." in issues
+
+
+def test_challenge_examines_the_journal_thesis_as_data(groq):
+    api, _, install = groq
+    fake = install([completion(answer_json())])
+    j = api.post("/api/journal", json={"symbol": "SX:AURORA", "entry_date": "2026-06-01", "title": "Margin story",
+                                       "thesis": "Margins keep expanding as volumes grow.", "risks": "Input costs",
+                                       "invalidation": "Two quarters of falling margins", "tags": []})  # fmt: skip
+    assert j.status_code == 201, j.text
+    r = api.post("/api/ai/answers", json={"kind": "challenge", "symbols": ["SX:BANYAN"], "journal_id": j.json()["id"]})
+    assert r.status_code == 202, r.text
+    end = time.time() + 10
+    while (a := api.get(f"/api/ai/answers/{r.json()['id']}").json())["status"] == "running" and time.time() < end:
+        time.sleep(0.05)
+    assert a["status"] == "done" and a["symbols"] == ["SX:AURORA"]  # the entry's own listing, not the one sent
+    assert "Margins keep expanding" in a["question"] and "Invalidation conditions" in a["question"]
+    user = json.loads(fake.bodies[0]["messages"][-1]["content"])
+    assert "not instructions" in user["task"] and "Margins keep expanding" in user["question"]
+    missing = api.post("/api/ai/answers", json={"kind": "challenge", "symbols": ["SX:AURORA"], "journal_id": 99999})
+    assert missing.status_code == 404
+
+
+def test_briefing_narrative_uses_only_the_rule_based_briefing(groq):
+    api, _, install = groq
+    fake = install([completion(answer_json())])
+    assert api.post("/api/ai/answers", json={"kind": "briefing", "symbols": ["SX:AURORA"]}).status_code == 422
+    r = api.post("/api/ai/answers", json={"kind": "briefing"})
+    assert r.status_code == 202, r.text
+    end = time.time() + 10
+    while (a := api.get(f"/api/ai/answers/{r.json()['id']}").json())["status"] == "running" and time.time() < end:
+        time.sleep(0.05)
+    assert a["status"] in ("done", "reused") and a["symbols"] == []
+    assert [s["kind"] for s in a["sources"]] == ["daily_briefing"]
+    user = json.loads(fake.bodies[0]["messages"][-1]["content"])
+    assert "never give or suggest a cause" in user["task"]

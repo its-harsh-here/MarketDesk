@@ -365,6 +365,9 @@ export interface paths {
         /**
          * Sessions
          * @description Exchange session states for the supported markets (published calendars, not a live exchange feed).
+         *
+         *     Answered on the event loop from a 30-second memo, so this call on every page never waits behind slow requests
+         *     for a worker thread (docs/PERFORMANCE_ROADMAP.md 3.5).
          */
         get: operations["sessions_api_market_sessions_get"];
         put?: never;

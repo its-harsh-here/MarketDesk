@@ -106,3 +106,28 @@ def test_ratios_use_each_statements_latest_period():
     ]}  # fmt: skip
     r = {x["key"]: x["value"] for x in compute_ratios(st)}
     assert r["net_margin"] == D("0.25") and r["debt_to_equity"] == D("0.25")
+
+
+def test_screener_metrics_from_full_annual_statements():
+    from types import SimpleNamespace
+
+    from marketdesk.services.screener import _full_statement_metrics
+
+    ends = [date(2026, 3, 31), date(2025, 3, 31), date(2024, 3, 31), date(2023, 3, 31)]
+    rows = {
+        "TotalRevenue": dict(zip(ends, [D(1331), D(1210), D(1100), D(1000)], strict=True)),
+        "NetIncome": dict(zip(ends, [D(216), D(180), D(150), D(125)], strict=True)),
+        "OperatingIncome": {ends[0]: D(200)},
+        "TotalAssets": {ends[0]: D(1500)},
+        "CurrentLiabilities": {ends[0]: D(500)},
+        "InterestExpense": {ends[0]: D(40)},
+    }
+    st = reported.normalize(rows, "annual", "INR", "x", 12, 60)
+    res = SimpleNamespace(value=st, meta=SimpleNamespace(status="available", message=None, fetched_at=None))
+    m = _full_statement_metrics(res, financial=False, not_applicable=False)
+    assert D(m["operating_margin_pct"]["v"]) == D("15.03")  # 200 ÷ 1331
+    assert D(m["roce_pct"]["v"]) == 20 and D(m["interest_coverage"]["v"]) == 5
+    assert D(m["sales_cagr_3y_pct"]["v"]) == D("10.00")  # 1000 → 1331 over three years
+    assert D(m["profit_cagr_3y_pct"]["v"]) == D("20.00")  # 125 → 216
+    bank = _full_statement_metrics(res, financial=True, not_applicable=False)
+    assert bank["roce_pct"]["v"] is None and "banks" in bank["roce_pct"]["why"]

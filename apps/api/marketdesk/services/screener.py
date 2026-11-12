@@ -35,7 +35,7 @@ from marketdesk.services.market import MarketDataService, Result
 USABLE = {"sample", "available", "cached", "stale"}
 EXCLUDED_KINDS = {"INDEX", "CURRENCY"}
 FINANCIAL_SECTORS = {"financial services", "financial", "financials"}
-SNAPSHOT_VERSION = 1
+SNAPSHOT_VERSION = 2  # 2: operating margin, ROCE, 3-year CAGRs, interest coverage (full annual statements)
 
 
 @dataclass(frozen=True)
@@ -131,6 +131,47 @@ METRICS: tuple[Metric, ...] = (
         "percent",
         "statements",
         "Net income ÷ shareholders' equity at the fiscal year end (ending, not average, equity).",
+    ),
+    Metric(
+        "operating_margin_pct",
+        "Operating margin (FY)",
+        "Growth & profitability",
+        "percent",
+        "statements",
+        "Operating income ÷ revenue for the latest fiscal year.",
+    ),
+    Metric(
+        "roce_pct",
+        "ROCE (FY)",
+        "Growth & profitability",
+        "percent",
+        "statements",
+        "Operating income ÷ (total assets − current liabilities) at the latest fiscal year end (ending balances).",
+    ),
+    Metric(
+        "sales_cagr_3y_pct",
+        "Sales CAGR (3Y)",
+        "Growth & profitability",
+        "percent",
+        "statements",
+        "(Revenue of the latest fiscal year ÷ revenue three fiscal years earlier)^(1/3) − 1; both must be positive.",
+    ),
+    Metric(
+        "profit_cagr_3y_pct",
+        "Profit CAGR (3Y)",
+        "Growth & profitability",
+        "percent",
+        "statements",
+        "(Net income of the latest fiscal year ÷ net income three fiscal years earlier)^(1/3) − 1; both must be "
+        "positive (a loss in either year has no growth rate).",
+    ),
+    Metric(
+        "interest_coverage",
+        "Interest coverage (FY)",
+        "Leverage",
+        "multiple",
+        "statements",
+        "Operating income ÷ interest expense for the latest fiscal year. None when no interest expense is reported.",
     ),
     Metric(
         "debt_to_equity",
@@ -239,12 +280,64 @@ def _change_since(bars, months: int) -> dict:
     )
 
 
+FULL_KEYS = ("operating_margin_pct", "roce_pct", "sales_cagr_3y_pct", "profit_cagr_3y_pct", "interest_coverage")
+
+
+def _full_statement_metrics(reported: Result | None, financial: bool, not_applicable: bool) -> dict:
+    """Ratios that need the full annual statements (services.reported shape): operating income, current
+    liabilities, interest and three-year history."""
+    if not_applicable:
+        return {k: _none("Not applicable to an index or currency.") for k in FULL_KEYS}
+    if not _usable(reported) or not reported.value.get("period_ends"):  # type: ignore[union-attr]
+        why = _why(reported, "Full annual statements") if reported is not None else "Full statements not loaded."
+        return {k: _none(why) for k in FULL_KEYS}
+    st = reported.value  # type: ignore[union-attr]
+
+    def ser(key: str) -> dict[date, Decimal]:
+        line = next((x for x in st["lines"] if x["key"] == key), None)
+        return {v["end"]: Decimal(str(v["value"])) for v in (line or {}).get("values", [])}
+
+    rev, op, ni = ser("revenue"), ser("operating_income"), ser("net_income")
+    ta, cl, intr = ser("total_assets"), ser("current_liabilities"), ser("interest_expense")
+    e0 = st["period_ends"][0]
+    out: dict[str, Any] = {}
+    r0, o0 = rev.get(e0), op.get(e0)
+    out["operating_margin_pct"] = (
+        _val(o0 / r0 * 100, e0, 2)
+        if r0 and r0 > 0 and o0 is not None
+        else _none("Revenue or operating income not reported.", e0)
+    )
+    if financial:
+        out["roce_pct"] = _none("Not meaningful for banks and lenders (deposits are their working capital).", e0)
+    else:
+        ce = ta[e0] - cl[e0] if e0 in ta and e0 in cl else None
+        out["roce_pct"] = (
+            _val(o0 / ce * 100, e0, 2) if o0 is not None and ce and ce > 0
+            else _none("Operating income, total assets or current liabilities not reported.", e0)
+        )  # fmt: skip
+    e3 = next((e for e in st["period_ends"][1:] if 1000 <= (e0 - e).days <= 1200), None)
+    for key, s_ in (("sales_cagr_3y_pct", rev), ("profit_cagr_3y_pct", ni)):
+        a, b = s_.get(e0), s_.get(e3) if e3 else None
+        if e3 is None:
+            out[key] = _none("The source has fewer than four fiscal years.", e0)
+        elif a is None or b is None or a <= 0 or b <= 0:
+            out[key] = _none("Missing or not positive in the first or last year.", e0)
+        else:
+            out[key] = _val((Decimal(math.pow(float(a / b), 1 / 3)) - 1) * 100, e0, 2, **{"from": e3.isoformat()})
+    i0 = intr.get(e0)
+    out["interest_coverage"] = (
+        _val(o0 / i0, e0, 2) if o0 is not None and i0 and i0 > 0 else _none("No interest expense reported.", e0)
+    )
+    return out
+
+
 def compute_snapshot(
     kind: str | None,
     quote: Result | None,
     history: Result | None,
     fundamentals: Result | None,
     statements: Result | None,
+    reported: Result | None = None,
 ) -> dict:
     """Pure: every metric's value (string decimal) or null with a reason, plus text fields and input provenance."""
     out: dict[str, Any] = {}
@@ -379,12 +472,14 @@ def compute_snapshot(
         for k in ("revenue_growth_pct", "net_margin_pct", "roe_pct", "debt_to_equity"):
             out[k] = _none(why)
 
+    out.update(_full_statement_metrics(reported, financial, not_applicable))
     out["sector"] = sector
     out["industry"] = industry
     out["_inputs"] = {
         "quote": _input_meta(quote),
         "history": {**_input_meta(history), "adjustment": history.value.adjustment if _usable(history) else None},  # type: ignore[union-attr]
         "fundamentals": _input_meta(fundamentals),
+        "reported": _input_meta(reported),
         "statements": {
             **_input_meta(statements),
             "source_label": statements.value.source if _usable(statements) else None,  # type: ignore[union-attr]
@@ -401,8 +496,12 @@ async def build_snapshot(db: Session, market: MarketDataService, inst: Instrumen
     quote, history = await asyncio.gather(market.quote(sym), market.history(sym, "1Y"))
     fundamentals = statements = None
     if not excluded:
-        fundamentals, statements = await asyncio.gather(market.fundamentals(sym), market.statements(sym))
-    values = compute_snapshot(inst.kind, quote, history, fundamentals, statements)
+        fundamentals, statements, reported = await asyncio.gather(
+            market.fundamentals(sym), market.statements(sym), market.reported(sym, "annual")
+        )
+    else:
+        reported = None
+    values = compute_snapshot(inst.kind, quote, history, fundamentals, statements, reported)
     errors = {k: v.get("message") for k, v in values["_inputs"].items() if v.get("message")} or None
     for attempt in range(2):
         row = db.get(ScreenMetric, inst.id)

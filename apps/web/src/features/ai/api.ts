@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 
-export type AiKind = "ask" | "results" | "catalysts" | "compare" | "brief";
+export type AiKind = "ask" | "results" | "catalysts" | "compare" | "brief" | "challenge" | "briefing";
 export type AiStatus = {
   enabled: boolean;
   reason: string | null;
@@ -96,7 +96,7 @@ export function useAiMutations() {
   const refresh = () => qc.invalidateQueries({ queryKey: ["ai"] });
   return {
     ask: useMutation({
-      mutationFn: (body: { kind: AiKind; symbols: string[]; question: string }) => api.post<AiAnswerSummary>("/api/ai/answers", body),
+      mutationFn: (body: { kind: AiKind; symbols: string[]; question: string; journal_id?: number }) => api.post<AiAnswerSummary>("/api/ai/answers", body),
       onSuccess: refresh,
     }),
     remove: useMutation({ mutationFn: (id: number) => api.del<null>(`/api/ai/answers/${id}`), onSuccess: refresh }),

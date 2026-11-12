@@ -27,9 +27,22 @@ MAX_RUNNING = 2
 
 
 class AskIn(Model):
-    kind: Literal["ask", "results", "catalysts", "compare", "brief"]
-    symbols: list[str] = Field(min_length=1, max_length=3)
+    kind: Literal["ask", "results", "catalysts", "compare", "brief", "challenge", "briefing"]
+    symbols: list[str] = Field(default_factory=list, max_length=3)
     question: str = Field(default="", max_length=500)
+    journal_id: int | None = Field(default=None, description="challenge: the journal entry whose thesis is examined")
+
+
+def challenge_text(entry) -> str:
+    """The owner's thesis as sent to the model and kept with the answer (so the saved answer shows what it examined)."""
+    parts = [f"Title: {entry.title}", f"Thesis: {entry.thesis}"]
+    if entry.risks.strip():
+        parts.append(f"Stated risks: {entry.risks}")
+    if entry.invalidation.strip():
+        parts.append(f"Invalidation conditions: {entry.invalidation}")
+    if entry.decision:
+        parts.append(f"Decision recorded: {entry.decision}")
+    return "\n".join(parts)[: svc.CHALLENGE_MAX]
 
 
 def _analyst(request: Request) -> svc.AnalystService:
@@ -62,7 +75,18 @@ async def ask(
     analyst = _analyst(request)
     if not analyst.enabled:
         raise AppError(503, "ai_disabled", f"The AI analyst is unavailable. {analyst.problem}")
-    analyst.validate_request(body.kind, body.symbols, body.question)
+    question = body.question
+    if body.kind == "challenge":
+        from marketdesk.models import JournalEntry
+
+        entry = db.get(JournalEntry, body.journal_id) if body.journal_id else None
+        if entry is None:
+            raise AppError(404, "not_found", "That journal entry no longer exists.")
+        if not entry.thesis.strip():
+            raise AppError(422, "validation_error", "Write a thesis in this entry before asking for a challenge.")
+        body = body.model_copy(update={"symbols": [entry.instrument.symbol]})
+        question = challenge_text(entry)
+    analyst.validate_request(body.kind, body.symbols, question)
     analyst.recover_stale(db)
     running = db.scalar(select(func.count()).select_from(AiAnswer).where(AiAnswer.status == "running")) or 0
     if running >= MAX_RUNNING:
@@ -72,12 +96,12 @@ async def ask(
         inst = await resolve_instrument(db, market, s)
         if inst.symbol not in symbols:
             symbols.append(inst.symbol)
-    analyst.validate_request(body.kind, symbols, body.question)
+    analyst.validate_request(body.kind, symbols, question)
     a = AiAnswer(
         day=datetime.now(UTC).date(),
         kind=body.kind,
         symbols=symbols,
-        question=body.question.strip(),
+        question=question.strip(),
         status="running",
         steps=[{"at": datetime.now(UTC).isoformat(), "text": "Queued."}],
     )
