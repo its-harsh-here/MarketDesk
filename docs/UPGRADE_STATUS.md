@@ -1226,3 +1226,11 @@ The roadmap (M00–M14) is complete, including M04 (Alpaca IEX streaming). Termi
 - Live revisits: Risk 4.6 s → 0.25–0.7 s, Earnings 1.5 s → 0.26 s, News 1.0 s → 0.28 s (DECISIONS #80).
 - Screener: removed the second list picker (watchlist selector and row checkboxes) from Results at the owner's request.
 - Local: pytest 398 passed / 3 skipped; vitest 60; Playwright journeys 45/45.
+
+### Roadmap sweep (12 Nov 2026)
+- Every roadmap in docs/ reviewed. Implemented: Indian screener metrics + peer columns (INDIA plan 3 and 7), journal
+  "Challenge my thesis" (item 54), AI briefing narrative (item 29), memory by request type in Settings (perf 0.2),
+  per-company memory release in the SEC refresh (1.6), and segment / product / geography revenue from the 10-K
+  XBRL data (T2 stretch). Stale checklists updated (PLAN optional items, UPGRADE_PLAN status column).
+- Blocked on the owner (unchanged): licensed Indian exchange data, FINRA credentials, email/push channels, 2.B, phase 5.
+- Local: pytest 404 passed / 3 skipped; vitest 60; Playwright journeys 45/45.

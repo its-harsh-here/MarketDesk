@@ -68,7 +68,7 @@ in §1 hold for a week of normal use.
 ### Phase 0 — Measure in production (½ session, no behaviour change)
 - [x] **0.1 Report memory in the app.** Add each process's resident memory (and peak) to `/api/system/status` and
       Settings → Data status; the worker reports its own in its heartbeat. *Check:* numbers visible on the live site.
-- [x] **0.2 Log memory per request type** (in `/api/status` → `memory.routes`; not yet shown in Settings) (web): record resident memory before/after the 20 heaviest routes in a
+- [x] **0.2 Log memory per request type** (in `/api/status` → `memory.routes`, and in Settings → data status) (web): record resident memory before/after the 20 heaviest routes in a
       bounded in-memory table, so growth is attributable. *Check:* top routes by memory growth listed in Settings.
 - [x] **0.3 Soak-test script in the repo** (`scripts/memory_soak.py`, standard library; passes at ≤ 300 MB web, ≤ 40 MB growth after warm-up) (`scripts/memory_soak.py` / Playwright): browse N companies × all tabs
       against a local production-mode server and fail if the total exceeds 400 MB. This is the test used for this
@@ -86,8 +86,8 @@ in §1 hold for a week of normal use.
       threads; provider concurrency is already 4. Two users never need 32 threads. *Fewer arenas, less memory.*
 - [x] **1.5 Smaller database pool**: web 6 + 4 (a page's parallel requests can use two sessions each), worker
       2 + 1 (was 10 + 10 each). *Less client memory and fewer Neon connections.*
-- [~] **1.6 Worker batch sizes**: screener refresh batch 60 → 15 per cycle (done); SEC research and relationship scans one
-      company at a time with `malloc_trim` between. *Lower worker peaks.*
+- [x] **1.6 Worker batch sizes**: screener refresh batch 60 → 15 per cycle; the SEC refresh handles one company at a
+      time and gives memory back after each (relationship scans run per request, one company each). *Lower worker peaks.*
 - [x] **1.7 Stream large documents** (done for SEC company facts: only the mapped tags, entity name and reporting currency are cached — AAPL 3.9 MB → 0.66 MB, parse 10× faster, ~15 MB less per request; superseded copies are deleted; annual-report text was already read in bounded chunks): read SEC company facts and annual reports in bounded chunks, keep only the
       fields used, and drop raw text immediately. *Removes the largest single spikes.*
 - [x] **1.8 Safety valve**: if a process passes a soft limit (web 300 MB, worker 180 MB), it finishes the current

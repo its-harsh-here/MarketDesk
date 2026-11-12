@@ -523,3 +523,12 @@ Consequential choices, newest last. Routine choices live in code comments.
     to the mapped tags (identical statements, tested). Global dialogs and form libraries load on first use; React is a
     separate vendor chunk. The service worker still never caches /api (4.4 declined to keep private data out of
     browser caches).
+81. **Roadmap sweep (12 Nov 2026).** Screener and Peers gain operating margin, ROCE, 3-year sales and profit CAGR and
+    interest coverage from the full annual statements (snapshot version 2). The AI analyst gains two tasks: a journal
+    "challenge" (the owner's thesis, risks and invalidation conditions are sent as material to examine and stored
+    with the answer; the entry's own listing is used) and a briefing narrative (its only evidence is the rule-based
+    briefing; no causes, no recommendations; the briefing never waits for it). Segment revenue comes from the latest
+    10-K XBRL instance, stream-parsed with DOCTYPEs refused, cached per filing; only single-dimension, about-annual
+    revenue and operating-income facts are used, with the filer's labels. Still blocked on the owner: licensed Indian
+    exchange data (history, shareholding, documents), FINRA credentials (short interest), email/background push
+    channels, replacing the market-data library (2.B), and Render cold starts (phase 5).

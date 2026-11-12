@@ -32,7 +32,7 @@ Legend: ✅ have · 🟡 partial · ⬜ missing · 🔒 needs licensed data or a
 | --- | --- | --- | --- | --- |
 | Description (DES) | Identity, business, key stats, listings, next events | 🟡 header, fundamentals panel, identity | SEC submissions (SIC, addresses, fiscal year end); 10-K Item 1 text | Yahoo profile (unofficial); annual report is a PDF → 🔒/manual |
 | Price graph & history (GP/HP) | Charts, intraday, comparisons, events on chart | ✅ daily chart, compare ≤3; ⬜ intraday, event markers | Yahoo (unofficial); Alpaca (owner key, M04) | Yahoo (delayed, unofficial) |
-| Financial analysis (FA) | Statements, ratios, segments, per-share, history | 🟡 SEC annual/quarterly (US), ratios; Yahoo 4 FY (screener) | SEC companyfacts/frames; segments need filing XBRL instances | Yahoo statements (unofficial); exchange XBRL results 🔒 |
+| Financial analysis (FA) | Statements, ratios, segments, per-share, history | ✅ SEC annual/quarterly + segments (US); provider statements annual/quarterly (other listings) | SEC companyfacts/frames; segments need filing XBRL instances | Yahoo statements (unofficial); exchange XBRL results 🔒 |
 | Earnings (EE, ERN) | Dates, history, surprises, guidance | 🟡 results release via 8-K (AI) | 8-K Item 2.02 history (dates, releases); estimates 🔒 | Board-meeting/results announcements 🔒 |
 | Analyst views (ANR) | Consensus, targets, ratings | ⬜ | 🔒 paid provider; Yahoo analyst data is unofficial | 🔒 |
 | Dividends & actions (DVD) | Dividend/split history, ex-dates, buybacks | 🟡 Yahoo actions, Events tab | Yahoo; 8-K/10-Q text for buybacks | Yahoo; exchange corporate actions 🔒 |
@@ -78,7 +78,7 @@ known events, latest three filings, peers strip, ownership summary (when T3 exis
 **Function keys:** typing `RELIANCE.NS FA`, `AAPL HDS`, `TCS.NS RV` in the command palette jumps to that view; `?`
 lists codes. Done when every tile shows source and date, and the codes are keyboard- and screen-reader-usable.
 
-### T2 — Financial analysis depth — ✅ done 5 Nov 2026 (segments remain a stretch goal)
+### T2 — Financial analysis depth — ✅ done 5 Nov 2026; segments added 12 Nov 2026 (10-K XBRL instance, US filers)
 Ten-year annual and twelve-quarter statements where the source has them; per-share series; common-size statements;
 CAGR and margin trend tables; cash-conversion and ROIC with stated formulas; restatement history (already captured
 for SEC facts); historical valuation bands (P/E and EV/EBITDA ranges from daily prices and reported earnings).

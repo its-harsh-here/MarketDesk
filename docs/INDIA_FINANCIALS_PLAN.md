@@ -24,7 +24,7 @@ missing never shown as zero, and no scraping of sites whose terms forbid it.
    each fiscal year taken as public 60 days after its end (the SEBI LODR deadline for annual audited results).
 2. **Indian ratios (done, 12 Nov 2026).** ROCE, interest coverage, current ratio, debt to equity, dividend payout,
    debtor / inventory / payable days and the cash conversion cycle, each with its formula.
-3. **Screener metrics (next).** Add ROCE, operating margin, 3-year sales and profit CAGR, debt to equity and
+3. **Screener metrics (done, 12 Nov 2026).** Add ROCE, operating margin, 3-year sales and profit CAGR, debt to equity and
    interest coverage to the screener catalog, from the stored snapshot, so filters like "ROCE ≥ 15% and debt to
    equity ≤ 0.5" run across a list. Needs the snapshot to store these inputs (snapshot version bump).
 4. **Ten-year history and official figures (needs owner decision).** Only via an exchange-licensed source; once
@@ -34,7 +34,8 @@ missing never shown as zero, and no scraping of sites whose terms forbid it.
    pledges, and changes quarter on quarter, on the Holders tab.
 6. **Documents (needs the same source).** Annual reports, results PDFs, concall transcripts and credit-rating
    announcements as dated links on the Filings tab; no article bodies stored.
-7. **Peer table, Indian style.** Industry peers with market cap, P/E, ROCE, sales growth and OPM side by side
+7. **Peer table, Indian style (done, 12 Nov 2026: sales and profit CAGR, operating margin, ROCE and interest
+   coverage on the Peers tab).** Industry peers with market cap, P/E, ROCE, sales growth and OPM side by side
    (the Peers tab already compares; extend its columns once phase 3 stores the inputs).
 
 ## Rules that stay

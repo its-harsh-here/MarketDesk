@@ -37,6 +37,6 @@ Concise checklist. Status of each item lives in `docs/STATUS.md`; design decisio
 - [x] Dockerfile, compose (migrate/web/worker, volume, health checks), CI, README, `.env.example`, backup/restore
 
 ## Optional (only after core passes)
-- [ ] Normalized 2–3 stock comparison
-- [ ] Saved layout density presets (the core density setting is done)
-- [ ] CSV mapping presets
+- [x] Normalized 2–3 stock comparison (M01: Compare tab, rebased to 100)
+- [x] Saved layout density presets (M14: workspace presets carry start page, density, watchlist and chart symbol)
+- [x] CSV mapping presets (Zerodha preset and saved column mappings, DECISIONS #72)
