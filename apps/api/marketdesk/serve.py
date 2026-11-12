@@ -40,6 +40,18 @@ def _start_worker(cmd: list[str], niceness: int, env: dict | None = None) -> sub
     return subprocess.Popen(cmd, env=env, preexec_fn=lower_priority if niceness > 0 else None)  # noqa: S603, PLW1509
 
 
+def _rss_mb(pid: int) -> float:
+    """Resident memory of a child process in MB (Linux /proc; 0 elsewhere)."""
+    try:
+        with open(f"/proc/{pid}/status") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    return int(line.split()[1]) / 1024
+    except (OSError, ValueError):
+        pass
+    return 0.0
+
+
 def _child_env() -> dict:
     env = dict(os.environ)
     env.setdefault("MALLOC_ARENA_MAX", "2")  # fewer per-thread heaps: measured -10% resident memory on the web process
@@ -94,10 +106,27 @@ def main() -> int:
 
     # Restart only the process that exited (memory soft limit, crash); give up after repeated quick failures so the
     # platform restarts the container.
+    # Memory: Render Free stops the whole container above 512 MB, so the combined size of the processes is what
+    # matters. Above WORKER_AT the worker is restarted first (users do not notice); above WEB_AT the web process
+    # too (a few seconds of "restarting"). Checked every 5 seconds.
+    worker_at = float(os.environ.get("MEMORY_RESTART_WORKER_MB", "430"))
+    web_at = float(os.environ.get("MEMORY_RESTART_WEB_MB", "480"))
     web_restarts: list[float] = []
     worker_restarts: list[float] = []
+    next_check = 0.0
+    worker_started = time.monotonic()
+    worker_paused_until = 0.0
     while not stopping:
         now = time.monotonic()
+        if now >= next_check:
+            next_check = now + 5
+            total = _rss_mb(os.getpid()) + _rss_mb(web.pid) + (_rss_mb(worker.pid) if worker is not None else 0)
+            if total > web_at and web.poll() is None:
+                print(f"marketdesk.serve: {total:.0f} MB in use (limit {web_at:.0f}); restarting web", flush=True)
+                web.terminate()
+            elif total > worker_at and worker is not None and worker.poll() is None and now - worker_started > 120:
+                print(f"marketdesk.serve: {total:.0f} MB in use (limit {worker_at:.0f}); restarting worker", flush=True)
+                worker.terminate()
         if web.poll() is not None and not stopping:
             web_restarts = [t for t in web_restarts if now - t < 300] + [now]
             if len(web_restarts) > 5:
@@ -105,13 +134,15 @@ def main() -> int:
                 break
             print(f"marketdesk.serve: web exited ({web.returncode}); restarting", flush=True)
             web = subprocess.Popen(web_cmd, env=env)  # noqa: S603
-        if worker is not None and worker.poll() is not None and not stopping:
+        if worker is not None and worker.poll() is not None and not stopping and now >= worker_paused_until:
             worker_restarts = [t for t in worker_restarts if now - t < 300] + [now]
             if len(worker_restarts) > 5:
-                time.sleep(60)  # back off; alerts pause, pages keep working
+                worker_paused_until = now + 60  # back off; alerts pause, pages keep working
                 worker_restarts = []
+                continue
             print(f"marketdesk.serve: worker exited ({worker.returncode}); restarting", flush=True)
             worker = _start_worker(worker_cmd, worker_nice, env)
+            worker_started = now
         time.sleep(0.5)
 
     end = time.monotonic() + 15

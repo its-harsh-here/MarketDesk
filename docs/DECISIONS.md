@@ -481,4 +481,10 @@ Consequential choices, newest last. Routine choices live in code comments.
     (worker); screener batch 15; memory shown in Settings and `/api/status`; each process restarts itself above a
     soft limit (web 300 MB, worker 180 MB) and the supervisor restarts only that process. Soak test: web 342 MB and
     rising → 243 MB flat; three processes ~500 MB → 399 MB.
+76. **Memory valve watches the container, not one process (12 Nov 2026).** On Render the web process starts at
+    ~230 MB and the worker runs ~165 MB (SEC research on), so a fixed 300 MB web limit restarted the site after a
+    few companies (~25 s of 502s). The supervisor now sums supervisor + web + worker every 5 s: above 430 MB it
+    restarts the worker first (no visible effect; at most once per 2 minutes), above 480 MB the web process. The
+    web process's own limit is a 400 MB last resort; the worker's stays 180 MB. Thresholds:
+    `MEMORY_RESTART_WORKER_MB`, `MEMORY_RESTART_WEB_MB`.
 

@@ -70,7 +70,7 @@ class Settings(BaseSettings):
     db_pool_size: int = 6  # a page's parallel requests each use up to two sessions (request + market-data cache)
     db_max_overflow: int = 4
     blocking_threads: int = 6  # threads for blocking handlers and asyncio.to_thread (two users need few)
-    web_memory_soft_limit_mb: int = 300  # above this after a trim, the web process restarts itself gracefully
+    web_memory_soft_limit_mb: int = 400  # last resort; the supervisor watches the combined size first (serve.py)
     worker_memory_soft_limit_mb: int = 180
     persisted_cache_rows: int = 4000
 
