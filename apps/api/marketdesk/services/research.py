@@ -332,7 +332,7 @@ class ResearchService:
                 return seg.to_json(out)
 
             data, fetched, status, note = self._cached(
-                db, f"sec:segments:v1:{cik}:{annual['accession']}", "sec_segments", timedelta(days=400), fetch
+                db, f"sec:segments:v2:{cik}:{annual['accession']}", "sec_segments", timedelta(days=400), fetch
             )
             data = {**data, "form": annual["form"], "filing_date": annual["filing_date"],
                     "report_date": annual["report_date"], "accession": annual["accession"],

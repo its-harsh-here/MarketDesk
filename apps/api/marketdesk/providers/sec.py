@@ -29,6 +29,7 @@ _UA_RE = re.compile(r"^\S.{2,}\s\S+@\S+\.\S+$")
 _ACCESSION_RE = re.compile(r"^\d{10}-\d{2}-\d{6}$")
 _DOC_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.(htm|html|txt)$", re.IGNORECASE)
 _XML_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.xml$", re.IGNORECASE)
+_XBRL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.(xml|xsd)$", re.IGNORECASE)
 _TAG_RE = re.compile(r"<(script|style)[^>]*>.*?</\1>|<[^>]+>", re.IGNORECASE | re.DOTALL)
 
 
@@ -154,9 +155,9 @@ class SecClient:
         return html_to_text(raw.decode("utf-8", errors="replace"))[:max_chars]
 
     def filing_bytes(self, cik: int, accession: str, name: str, max_bytes: int = 40_000_000) -> bytes:
-        """Raw bytes of one .xml filing document (an XBRL instance or label linkbase), for stream parsing."""
-        if not _XML_RE.match(name or ""):
-            raise ProviderError("unsupported", "Only plain .xml filing documents can be read.")
+        """Raw bytes of one XBRL document (.xml instance or linkbase, or the .xsd schema), for stream parsing."""
+        if not _XBRL_RE.match(name or ""):
+            raise ProviderError("unsupported", "Only XBRL .xml or .xsd filing documents can be read.")
         raw = self._fetch(filing_document_url(int(cik), _accession(accession), name), "application/xml", max_bytes)
         if len(raw) >= max_bytes:
             raise ProviderError("too_large", "The filing's XBRL data is larger than MarketDesk reads.")

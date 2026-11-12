@@ -163,7 +163,11 @@ def apply_labels(result: dict, labels: dict[str, str]) -> dict:
 
 
 def label_name(files: list[dict]) -> str | None:
-    return next((f["name"] for f in files if str(f.get("name", "")).endswith("_lab.xml")), None)
+    """The label linkbase: a separate *_lab.xml, or (newer filings) the company schema .xsd that embeds it."""
+    names = [str(f.get("name", "")) for f in files]
+    return next((n for n in names if n.endswith("_lab.xml")), None) or next(
+        (n for n in names if n.endswith(".xsd")), None
+    )
 
 
 def to_json(result: dict) -> dict:
