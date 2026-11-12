@@ -448,11 +448,10 @@ test("research tabs: keyboard navigation, URL state, and labelled provider state
   await expect(page).toHaveURL(/tab=valuation/); // wraps from the first tab to the last
 });
 
-test("screener: named list → load data → filter (missing never passes) → save → watchlist; heatmap; peers", async ({ page }) => {
+test("screener: named list → load data → filter (missing never passes) → save → preview; heatmap; peers", async ({ page }) => {
   await page.goto("/screener");
   await ready(page);
   const csrf = (await (await page.request.get("/api/auth/session")).json()).csrf_token;
-  await page.request.post("/api/watchlists", { data: { name: "Screen picks" }, headers: { "x-csrf-token": csrf } });
   await page.getByRole("button", { name: "Manage lists" }).click();
   const lists = page.getByRole("dialog", { name: "Screening lists" });
   await lists.getByRole("button", { name: "New list" }).click();
@@ -497,15 +496,15 @@ test("screener: named list → load data → filter (missing never passes) → s
   await page.reload();
   await expect(page.getByLabel("P/E (trailing) value")).toHaveValue("20");
 
-  // preview, then add a result to a watchlist
+  // preview a result
   await table.getByRole("row", { name: /SX:AURORA/ }).click();
   const preview = page.getByRole("dialog", { name: /SX:AURORA/ });
   await expect(preview.getByText("Return on equity (FY)")).toBeVisible();
   await expect(preview.getByText(/fiscal year ending 31 Mar 2026/).first()).toBeVisible();
   await page.keyboard.press("Escape");
-  await table.getByRole("checkbox", { name: "Select SX:AURORA" }).check();
-  await results.getByRole("button", { name: /Add 1 to watchlist/ }).click();
-  await expect(page.getByText(/1 added to|already there/)).toBeVisible();
+  // the universe is chosen at the top of the page; results have no second list picker
+  await expect(results.getByRole("combobox")).toHaveCount(0);
+  await expect(table.getByRole("checkbox")).toHaveCount(0);
 
   // heatmap over the same declared universe
   await page.getByRole("radio", { name: "Sector heatmap" }).click();

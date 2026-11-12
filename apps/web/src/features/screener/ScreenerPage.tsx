@@ -15,7 +15,6 @@ import { DASH, formatInstant, formatRelative, formatSessionDate } from "@/lib/fo
 import { useDebounced } from "@/lib/hooks";
 import { cn } from "@/lib/cn";
 import { useSession } from "@/features/settings/api";
-import { useWatchlistMutations, useWatchlists } from "@/features/watchlists/api";
 import {
   downloadScreenCsv,
   parseSpec,
@@ -542,7 +541,6 @@ function Results({ catalog, universe, result, loading, error, refetch, filters, 
   fetching: boolean;
 }) {
   const defs = useMemo(() => new Map(catalog.metrics.map((m) => [m.key, m])), [catalog]);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [preview, setPreview] = useState<ScreenRow | null>(null);
   const [exporting, setExporting] = useState(false);
   const toast = useToast();
@@ -552,19 +550,8 @@ function Results({ catalog, universe, result, loading, error, refetch, filters, 
     return keys.map((k) => defs.get(k)!);
   }, [filters, catalog, defs]);
   const rows = result?.rows ?? [];
-  const allOn = rows.length > 0 && rows.every((r) => selected.has(r.symbol));
 
   const columns: Column<ScreenRow>[] = [
-    {
-      key: "select",
-      header: <input type="checkbox" aria-label="Select all results" checked={allOn} onChange={() => setSelected(allOn ? new Set() : new Set(rows.map((r) => r.symbol)))} className="size-4 accent-[var(--accent)]" />,
-      srHeader: "Select",
-      width: "36px",
-      render: (r) => (
-        <input type="checkbox" aria-label={`Select ${r.symbol}`} checked={selected.has(r.symbol)} onClick={(e) => e.stopPropagation()}
-          onChange={() => setSelected((s) => { const n = new Set(s); if (n.has(r.symbol)) n.delete(r.symbol); else n.add(r.symbol); return n; })} className="size-4 accent-[var(--accent)]" />
-      ),
-    },
     {
       key: "symbol",
       header: "Instrument",
@@ -592,7 +579,6 @@ function Results({ catalog, universe, result, loading, error, refetch, filters, 
     >
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <AddToWatchlist symbols={[...selected].filter((s) => rows.some((r) => r.symbol === s))} onDone={() => setSelected(new Set())} />
           <Button size="sm" icon={<Download className="size-4" aria-hidden />} loading={exporting} disabled={!result}
             onClick={async () => {
               setExporting(true);
@@ -659,8 +645,6 @@ function Results({ catalog, universe, result, loading, error, refetch, filters, 
               onSortChange={onSort}
               mobileSummary={(r) => (
                 <div className="flex items-center gap-3">
-                  <input type="checkbox" aria-label={`Select ${r.symbol}`} checked={selected.has(r.symbol)} onClick={(e) => e.stopPropagation()}
-                    onChange={() => setSelected((s) => { const n = new Set(s); if (n.has(r.symbol)) n.delete(r.symbol); else n.add(r.symbol); return n; })} className="size-5 accent-[var(--accent)]" />
                   <div className="min-w-0 flex-1">
                     <div className="num truncate font-medium">{r.symbol}</div>
                     <div className="truncate text-xs text-fg-3">{r.name ?? DASH}</div>
@@ -698,55 +682,6 @@ function Coverage({ result, defs, keys }: { result: ScreenResult; defs: Map<stri
       </ul>
       <p className="mt-2">Hover a value (or open a row) for its formula, period and source. Prices are the provider’s observations; ratios are computed in MarketDesk from the provider’s figures.</p>
     </details>
-  );
-}
-
-function AddToWatchlist({ symbols, onDone }: { symbols: string[]; onDone: () => void }) {
-  const { data: lists } = useWatchlists();
-  const { addSymbol } = useWatchlistMutations();
-  const { data: session } = useSession();
-  const toast = useToast();
-  const [target, setTarget] = useState<number | "">("");
-  const [busy, setBusy] = useState(false);
-  const id = target || lists?.[0]?.id;
-  if (!lists) return null;
-  if (!lists.length) {
-    return (
-      <Link to="/watchlists" className="text-xs text-fg-3 hover:text-fg-2 hover:underline">
-        Create a watchlist to add results to it
-      </Link>
-    );
-  }
-  const run = async () => {
-    if (!id) return;
-    setBusy(true);
-    let added = 0;
-    let already = 0;
-    const failed: string[] = [];
-    for (const symbol of symbols) {
-      try {
-        await addSymbol.mutateAsync({ id, symbol });
-        added += 1;
-      } catch (e) {
-        if (e instanceof ApiError && e.status === 409) already += 1;
-        else failed.push(symbol);
-      }
-    }
-    setBusy(false);
-    const name = lists.find((l) => l.id === id)?.name ?? "watchlist";
-    toast(failed.length ? "error" : "success", `${added} added to ${name}${already ? `, ${already} already there` : ""}${failed.length ? `; failed: ${failed.join(", ")}` : ""}.`);
-    onDone();
-  };
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <Select aria-label="Watchlist to add the selected results to" className="h-8 w-44" value={id ?? ""} onChange={(e) => setTarget(Number(e.target.value))}>
-        {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-      </Select>
-      <Button size="sm" onClick={run} loading={busy} disabled={!symbols.length || session?.read_only}
-        title={!symbols.length ? "Select results first" : undefined}>
-        Add {symbols.length || ""} to watchlist
-      </Button>
-    </div>
   );
 }
 
