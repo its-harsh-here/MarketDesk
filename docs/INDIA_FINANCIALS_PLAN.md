@@ -27,7 +27,7 @@ missing never shown as zero, and no scraping of sites whose terms forbid it.
 3. **Screener metrics (done, 12 Nov 2026).** Add ROCE, operating margin, 3-year sales and profit CAGR, debt to equity and
    interest coverage to the screener catalog, from the stored snapshot, so filters like "ROCE ≥ 15% and debt to
    equity ≤ 0.5" run across a list. Needs the snapshot to store these inputs (snapshot version bump).
-4. **Ten-year history and official figures (needs owner decision).** Only via an exchange-licensed source; once
+4. **Ten-year history and official figures (needs owner decision; options compared in docs/INDIA_DATA_SOURCES.md).** Only via an exchange-licensed source; once
    chosen, add it as a provider behind the same normalized-statement shape with filing dates and links, so SEC and
    Indian filings render identically (including restatement markers).
 5. **Shareholding pattern (needs the same source).** Promoter, FII, DII and public holdings by quarter, promoter

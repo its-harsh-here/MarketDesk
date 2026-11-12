@@ -537,3 +537,7 @@ Consequential choices, newest last. Routine choices live in code comments.
     to review and merge (owner's choice: "Open PR, I merge"). GitHub cannot request the owner as reviewer because
     Claude's access acts as the owner's account (the PR author); the owner's merge is the approval. Direct pushes to
     `main` stop (supersedes UPGRADE_RULES rule 3's "work directly on main").
+83. **Owner decisions on blocked roadmap items (12 Nov 2026).** Render Free cold starts: leave as is (no keep-alive
+    ping, no paid instance; alerts run only while the service is awake, as documented). Market-data library: keep
+    yfinance + pandas for now (roadmap 2.B deferred; revisit if memory gets tight). Indian data: research licensed
+    options first — comparison in docs/INDIA_DATA_SOURCES.md; nothing bought, no scraping.
