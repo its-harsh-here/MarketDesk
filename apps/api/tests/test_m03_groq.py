@@ -281,3 +281,15 @@ def test_briefing_narrative_uses_only_the_rule_based_briefing(groq):
     assert [s["kind"] for s in a["sources"]] == ["daily_briefing"]
     user = json.loads(fake.bodies[0]["messages"][-1]["content"])
     assert "never give or suggest a cause" in user["task"]
+
+
+def test_ask_cites_recent_headlines_as_reports_not_facts(groq):
+    api, _, install = groq
+    fake = install([completion(answer_json())])
+    a = ask(api, "What has been reported lately?")
+    assert a["status"] == "done", a
+    heads = [s for s in a["sources"] if s["kind"] == "headlines"]
+    assert len(heads) == 1 and 0 < len(heads[0]["data"]) <= 10
+    assert {"headline", "publisher", "published", "url"} <= set(heads[0]["data"][0])
+    system = fake.bodies[0]["messages"][0]["content"]
+    assert "MarketDesk did not read" in system and "never treat a headline as verified" in system

@@ -1234,3 +1234,11 @@ The roadmap (M00–M14) is complete, including M04 (Alpaca IEX streaming). Termi
   XBRL data (T2 stretch). Stale checklists updated (PLAN optional items, UPGRADE_PLAN status column).
 - Blocked on the owner (unchanged): licensed Indian exchange data, FINRA credentials, email/push channels, 2.B, phase 5.
 - Local: pytest 404 passed / 3 skipped; vitest 60; Playwright journeys 45/45.
+
+### AI analyst: recent headlines as evidence (12 Nov 2026, PR)
+- Ask, catalysts, bull/base/bear and thesis-challenge answers now include up to ten recent headlines from established
+  publishers and company releases about the company (the News tab's filtering): title, publisher, date and link only.
+  The model is told MarketDesk did not read the articles, to attribute such points to the publisher, and never to
+  treat a headline as verified or as the cause of a move. Headlines are the first evidence dropped when a free-tier
+  request must be trimmed. This closes the safe part of M03's "no web search" gap; open web search is not added.
+- Local: pytest 405 passed / 3 skipped.
