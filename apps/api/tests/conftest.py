@@ -168,3 +168,13 @@ def as_revision(data: dict, revision: str, scratch_dir: Path) -> dict:
     old["counts"] = {k: len(v["rows"]) for k, v in old["tables"].items()}
     old["checksum"] = checksum(old["tables"])
     return old
+
+
+@pytest.fixture(autouse=True)
+def _fresh_view_cache():
+    """The assembled-view cache is process-wide: each test starts without views cached by another."""
+    from marketdesk.services.viewcache import VIEWS
+
+    VIEWS.clear()
+    yield
+    VIEWS.clear()

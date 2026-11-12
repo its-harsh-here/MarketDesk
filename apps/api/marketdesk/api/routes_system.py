@@ -207,6 +207,12 @@ def readiness(db: Session = Depends(get_db)):
     return {"status": "ready"}
 
 
+def _views_stats() -> dict:
+    from marketdesk.services.viewcache import VIEWS
+
+    return VIEWS.stats()
+
+
 def _memory_status(db: Session, settings: Settings) -> dict:
     """Resident memory of this web process and the worker's last report, against Render Free's 512 MB."""
     from marketdesk.models import WorkerStatus
@@ -224,6 +230,7 @@ def _memory_status(db: Session, settings: Settings) -> dict:
         else ({**w, "soft_limit_mb": settings.worker_memory_soft_limit_mb} if w else None),
         "embedded_worker": bool((w or {}).get("embedded")),
         "routes": memory.ROUTES.top(10),
+        "views": _views_stats(),
         "limit_mb": 512,
     }
 

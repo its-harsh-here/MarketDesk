@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { Link, Outlet, RouterProvider, createBrowserRouter } from "react-router";
 import { ToastProvider } from "@/components/ui/Toast";
 import { TooltipProvider } from "@/components/ui/Tooltip";
@@ -8,13 +8,6 @@ import { ApiError, errorMessage, setCsrfToken, setUnauthorizedHandler } from "@/
 import { applyDensity, applyTheme, usePrefs, useSession } from "@/features/settings/api";
 import { FxBackground } from "@/lib/fx";
 import { AddSymbolDialog, NewWatchlistDialog, WatchlistsPage } from "@/features/watchlists/WatchlistsPage";
-import { TransactionDialog } from "@/features/portfolio/TransactionDialog";
-import { ImportDialog } from "@/features/portfolio/ImportDialog";
-import { AlertDialog } from "@/features/alerts/AlertDialog";
-import { JournalDialog } from "@/features/journal/JournalDialog";
-import { JournalDetailDialog } from "@/features/journal/JournalDetailDialog";
-import { AiDialog } from "@/features/ai/AiDialog";
-import { ExportDialog } from "@/features/workspace/ExportDialog";
 import { OfflineView } from "@/features/workspace/OfflineView";
 import { clearOffline, readSnapshot } from "@/lib/offline";
 import { clearRecents } from "@/lib/recent";
@@ -51,7 +44,37 @@ const journal = page(() => import("@/features/journal/JournalPage"), "JournalPag
 const settings = page(() => import("@/features/settings/SettingsPage"), "SettingsPage");
 import { CommandPalette } from "@/features/search/CommandPalette";
 import { ShortcutsDialog } from "@/features/search/ShortcutsDialog";
-import { DialogProvider } from "./dialogs";
+import { DialogProvider, useDialogs, type DialogState } from "./dialogs";
+
+/**
+ * A global dialog whose code loads the first time it is opened (PERFORMANCE_ROADMAP 4.5): the transaction, import,
+ * alert, journal, AI and export dialogs are not needed for the first paint. Once loaded it stays mounted, so closing
+ * animates and returns focus as before.
+ */
+function lazyDialog(load: () => Promise<Record<string, unknown>>, name: string, kinds: DialogState["kind"][]) {
+  const Component = lazy(() => load().then((m) => ({ default: m[name] as ComponentType })));
+  return function LazyDialog() {
+    const { state } = useDialogs();
+    const [seen, setSeen] = useState(false);
+    const active = kinds.includes(state.kind);
+    useEffect(() => {
+      if (active) setSeen(true);
+    }, [active]);
+    if (!seen && !active) return null;
+    return (
+      <Suspense fallback={null}>
+        <Component />
+      </Suspense>
+    );
+  };
+}
+const TransactionDialog = lazyDialog(() => import("@/features/portfolio/TransactionDialog"), "TransactionDialog", ["transaction"]);
+const ImportDialog = lazyDialog(() => import("@/features/portfolio/ImportDialog"), "ImportDialog", ["import"]);
+const AlertDialog = lazyDialog(() => import("@/features/alerts/AlertDialog"), "AlertDialog", ["alert"]);
+const JournalDialog = lazyDialog(() => import("@/features/journal/JournalDialog"), "JournalDialog", ["journal"]);
+const JournalDetailDialog = lazyDialog(() => import("@/features/journal/JournalDetailDialog"), "JournalDetailDialog", ["journal-detail"]);
+const AiDialog = lazyDialog(() => import("@/features/ai/AiDialog"), "AiDialog", ["ai"]);
+const ExportDialog = lazyDialog(() => import("@/features/workspace/ExportDialog"), "ExportDialog", ["export"]);
 import { Shell } from "./Shell";
 
 const queryClient = new QueryClient({

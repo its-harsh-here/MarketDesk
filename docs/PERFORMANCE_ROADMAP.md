@@ -88,7 +88,7 @@ in §1 hold for a week of normal use.
       2 + 1 (was 10 + 10 each). *Less client memory and fewer Neon connections.*
 - [~] **1.6 Worker batch sizes**: screener refresh batch 60 → 15 per cycle (done); SEC research and relationship scans one
       company at a time with `malloc_trim` between. *Lower worker peaks.*
-- [ ] **1.7 Stream large documents** (not done yet): read SEC company facts and annual reports in bounded chunks, keep only the
+- [x] **1.7 Stream large documents** (done for SEC company facts: only the mapped tags, entity name and reporting currency are cached — AAPL 3.9 MB → 0.66 MB, parse 10× faster, ~15 MB less per request; superseded copies are deleted; annual-report text was already read in bounded chunks): read SEC company facts and annual reports in bounded chunks, keep only the
       fields used, and drop raw text immediately. *Removes the largest single spikes.*
 - [x] **1.8 Safety valve**: if a process passes a soft limit (web 300 MB, worker 180 MB), it finishes the current
       request/cycle and exits; the supervisor restarts **only that process** (today one exit stops the whole
@@ -105,7 +105,7 @@ in §1 hold for a week of normal use.
       Saves **≈ −60 to −90 MB per process**; also faster imports and cold starts. Larger change: every provider
       path needs regression tests against recorded responses; same endpoints and limits as today (no change in how
       the provider is accessed).
-- [ ] **2.C Lazy heavy imports**: load exchange_calendars and other heavy modules only on first use, and only the
+- [x] **2.C Lazy heavy imports** (measured, not worth it: exchange_calendars costs ~8 MB and is used by every page; pandas and yfinance ~65 MB are needed by the live feed on the first request): load exchange_calendars and other heavy modules only on first use, and only the
       calendars for NSE/BSE/NYSE/Nasdaq. *≈ −20 to −40 MB in whichever process does not need them.*
 
 Recommendation: **2.A first** (largest saving, smallest change), then 2.C. Keep 2.B for later if headroom is still
@@ -115,11 +115,11 @@ thin.
 - [x] **3.1 Pre-warm what you look at** (6 symbols per cycle, round-robin; plus the Macro watchboard and official statistics): during quiet periods the worker refreshes, for watchlist and holdings
       symbols only, the description, fundamentals, news, peers, earnings and daily history into the persisted cache.
       Opening those pages then reads the database (tens of milliseconds) instead of calling providers (1–3 s).
-- [x] **3.2 News tab** (sources in parallel with per-source time limits; merged-list cache not yet): fetch the three headline sources in parallel with a short per-source timeout (1.5 s),
+- [x] **3.2 News tab** (sources in parallel with per-source time limits; merged list kept 10 min unless a source timed out): fetch the three headline sources in parallel with a short per-source timeout (1.5 s),
       show what has arrived, and cache the merged list for 10 minutes.
 - [x] **3.3 Macro page** (warmed by the worker instead of a separate snapshot): serve the watchboard from one persisted, worker-refreshed snapshot instead of fetching
       every series on page load (18 s → under 1 s).
-- [ ] **3.4 Cache assembled views**: persist the computed Description/Peers/Earnings payloads for a short time
+- [x] **3.4 Cache assembled views** (risk 10 min, financial analysis 15 min, earnings 15 min, news 10 min; in memory, ≤ 64 entries; any change by the user clears them): persist the computed Description/Peers/Earnings payloads for a short time
       (5–15 min), so switching tabs or revisiting is instant.
 - [x] **3.5 Keep small calls fast** (market sessions answered on the event loop from a 30 s memo; AI status cached 5 min in the browser): answer `/api/ai/status`, `/api/market/sessions` and other tiny shared calls
       from memory without touching the thread pool, so they never queue behind slow work.
@@ -129,11 +129,11 @@ thin.
       `/assets/*` (file names change on every build). *Repeat visits stop re-checking ~1.3 MB of JavaScript.*
 - [x] **4.2 Prefetch on intent** (instrument links and table rows: page code + quote + description after a 120 ms rest): when the pointer rests on, or a phone scrolls past, an instrument link, prefetch
       its page code and first data (description + quote). Clicks then open instantly.
-- [~] **4.3 Fetch once, reuse everywhere** (AI status; more to tune): longer client cache times for data that changes slowly (fundamentals,
+- [x] **4.3 Fetch once, reuse everywhere** (AI status 5 min, fundamentals 1 h, description 5 min, risk/news/peers 10 min, earnings 5–30 min, screener catalog for the session): longer client cache times for data that changes slowly (fundamentals,
       sessions, AI status, mappings), and share one request across tabs of the same company.
-- [ ] **4.4 Instant revisits**: let the service worker (already present for the offline view) serve the last
+- [ ] **4.4 Instant revisits** (not done, by design: the service worker never stores /api responses — the M14 privacy choice — so private data stays out of browser caches; within a visit pages already reuse the client cache): let the service worker (already present for the offline view) serve the last
       response for read-only API calls immediately and refresh in the background, clearly marked as refreshing.
-- [ ] **4.5 Trim the main bundle** (397 KB → under 250 KB): move rarely used parts (AI dialog, import mapping form,
+- [x] **4.5 Trim the main bundle** (app chunk 399 KB → 127 KB; start-up JavaScript 753 KB → 568 KB: React in its own vendor chunk that survives deploys, form libraries and the transaction/import/alert/journal/AI/export dialogs load on first use): move rarely used parts (AI dialog, import mapping form,
       research export, lab) and heavy libraries behind on-demand loading.
 - [x] **4.6 Lighter effects where they cost most** (phones and touch devices default to calm effects; animation pauses in hidden tabs): automatically use the calm effects mode on phones, on
       battery-saver, and when the browser reports reduced motion; keep the full look on desktop. Pause background
@@ -178,3 +178,9 @@ Next: 2.C (lazy heavy imports), 1.7 (streaming large SEC documents), and phases 
 - Production (0.1): a week with no memory restarts; peak total shown in Settings ≤ 420 MB.
 - Speed: watchlist companies' Description/News/Peers under 300 ms from cache; Macro under 1 s; repeat visits load
   JavaScript from the browser cache.
+
+### Results — phases 1.7, 3.2, 3.4, 4.3, 4.5 (12 Nov 2026)
+- Live before (Render Free, warm, Server-Timing): Risk 4.6 s (MSFT; database 1 s, the rest computation on the shared
+  CPU), Earnings 1.5 s, Financial analysis 0.74 s, on every visit.
+- After: the first visit builds the view as before; revisits within the cache window are served from memory (see the
+  live check in UPGRADE_STATUS.md for measured numbers).

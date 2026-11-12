@@ -31,6 +31,7 @@ from marketdesk.services import events as ev
 from marketdesk.services import movers as mv
 from marketdesk.services.instruments import resolve_instrument
 from marketdesk.services.market import MarketDataService
+from marketdesk.services.viewcache import VIEWS
 
 router = APIRouter(prefix="/api/terminal", tags=["terminal"], dependencies=[Depends(require_reader)])
 
@@ -64,7 +65,11 @@ async def financial_analysis(
 ):
     """Per-share, common-size, growth, CAGR, margins, returns and valuation bands with formulas (T2)."""
     inst = await resolve_instrument(db, market, symbol)
-    return await financial_view.build(db, market, request.app.state.research, inst, period)
+    return await VIEWS.view(
+        f"fa|{market.source}|{inst.symbol}|{period}",
+        900,
+        lambda: financial_view.build(db, market, request.app.state.research, inst, period),
+    )
 
 
 @router.get("/risk")
@@ -86,11 +91,15 @@ async def risk(
         bench = (await resolve_instrument(db, market, benchmark)).symbol
     kind, _, uid = universe.partition(":")
     spec = {"kind": kind, **({"id": int(uid)} if uid else {})}
-    return security_risk.jsonable(
-        await security_risk.build(
-            db, market, request.app.state.research, request.app.state.finra, settings, inst, bench, spec
+
+    async def build():
+        return security_risk.jsonable(
+            await security_risk.build(
+                db, market, request.app.state.research, request.app.state.finra, settings, inst, bench, spec
+            )
         )
-    )
+
+    return await VIEWS.view(f"risk|{market.source}|{inst.symbol}|{bench}|{universe}", 600, build)
 
 
 @router.get("/events")
@@ -132,7 +141,11 @@ async def earnings_history(
 ):
     """Reported revenue, net income and diluted EPS by period with year-on-year change; no estimates (T4)."""
     inst = await resolve_instrument(db, market, symbol)
-    return ev.jsonable(await ev.earnings_history(db, market, request.app.state.research, inst))
+
+    async def build():
+        return ev.jsonable(await ev.earnings_history(db, market, request.app.state.research, inst))
+
+    return await VIEWS.view(f"eh|{market.source}|{inst.symbol}", 900, build)
 
 
 @router.get("/news")
@@ -147,7 +160,12 @@ async def news(
     inst = await resolve_instrument(db, market, symbol)
     alpaca = request.app.state.alpaca if request.app.state.settings.data_provider == "yahoo" else None
     gnews = request.app.state.gnews if request.app.state.settings.data_provider == "yahoo" else None
-    return await news_stream.stream(db, market, request.app.state.research, inst, alpaca, gnews)
+    return await VIEWS.view(
+        f"news|{market.source}|{inst.symbol}",
+        600,
+        lambda: news_stream.stream(db, market, request.app.state.research, inst, alpaca, gnews),
+        keep=lambda v: v.get("complete", False),  # a source that timed out is retried on the next visit
+    )
 
 
 @router.get("/us-movers")

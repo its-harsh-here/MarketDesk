@@ -285,10 +285,13 @@ async def stream(db: Session, market: MarketDataService, research, inst: Instrum
 
     # All three sources at once, each with its own time limit, so one slow source cannot hold the tab
     # (docs/PERFORMANCE_ROADMAP.md 3.2). A source that times out is simply missing from this answer.
+    timed_out: list[bool] = []  # a source that timed out makes the answer partial (not kept by the view cache)
+
     async def limited(coro, default, seconds: float = 6.0):
         try:
             return await asyncio.wait_for(coro, timeout=seconds)
         except TimeoutError:
+            timed_out.append(True)
             return default
 
     tagged, web, news = await asyncio.gather(
@@ -353,6 +356,7 @@ async def stream(db: Session, market: MarketDataService, research, inst: Instrum
         "fetched_at": news.meta.fetched_at.isoformat() if news.meta.fetched_at else None,
         "sources": sources,
         "notes": notes,
+        "complete": not timed_out,  # every source answered in time (a partial answer is not cached)
         "policy": "Headlines link to the publisher; MarketDesk does not fetch, store or summarise article text. "
         "Filing headlines are SEC's own item captions, not a reading of the filing.",
     }

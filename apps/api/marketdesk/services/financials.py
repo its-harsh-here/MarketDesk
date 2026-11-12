@@ -294,6 +294,22 @@ def reporting_currency(facts: dict, taxonomy: str) -> str | None:
     return max(counts, key=lambda u: (counts[u], u)) if counts else None
 
 
+def slim_companyfacts(data: dict) -> dict:
+    """Only what the statements use: the mapped tags of each taxonomy, the entity name, and each taxonomy's reporting
+    currency (computed from every monetary fact before the rest is dropped). A large filer's company-facts file is
+    10–40 MB of JSON; keeping all of it in the cache meant parsing it again on every statements request."""
+    facts = data.get("facts") or {}
+    wanted = {t for line in LINES for t in (*line.gaap, *line.ifrs)}
+    out = {"entityName": data.get("entityName"), "cik": data.get("cik"), "facts": {}, "currencies": {}}
+    for taxonomy in ("us-gaap", "ifrs-full"):
+        concepts = facts.get(taxonomy)
+        if not isinstance(concepts, dict):
+            continue
+        out["currencies"][taxonomy] = reporting_currency(facts, taxonomy)
+        out["facts"][taxonomy] = {tag: concepts[tag] for tag in wanted if tag in concepts}
+    return out
+
+
 def _candidates(facts: dict, taxonomy: str, tag: str, line: Line, period: str, currency: str | None) -> list[FactValue]:
     concept = (facts.get(taxonomy) or {}).get(tag) or {}
     out = []
@@ -348,7 +364,8 @@ def normalize_statements(companyfacts: dict, sic: str | int | None, period: str,
     if not isinstance(facts, dict):
         raise ValueError("companyfacts payload has no facts")
     taxonomy = "us-gaap" if "us-gaap" in facts else ("ifrs-full" if "ifrs-full" in facts else None)
-    currency = reporting_currency(facts, taxonomy) if taxonomy else None
+    currencies = companyfacts.get("currencies") or {}  # present in slimmed payloads (slim_companyfacts)
+    currency = (currencies.get(taxonomy) or reporting_currency(facts, taxonomy)) if taxonomy else None
     financial = is_financial_company(sic)
     lines = []
     period_ends: set[date] = set()

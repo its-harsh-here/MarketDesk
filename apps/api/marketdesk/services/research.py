@@ -21,7 +21,7 @@ from marketdesk.config import Settings
 from marketdesk.models import Instrument, InstrumentIdentifier, MarketCacheEntry, ResearchCheck, WatchlistItem
 from marketdesk.providers.base import ProviderError
 from marketdesk.providers.sec import SecClient, filing_document_url, filing_index_url
-from marketdesk.services.financials import compute_ratios, normalize_statements
+from marketdesk.services.financials import compute_ratios, normalize_statements, slim_companyfacts
 
 SOURCE = "SEC EDGAR"
 TICKERS_TTL = timedelta(hours=24)
@@ -63,6 +63,20 @@ class ResearchService:
         row.payload, row.fetched_at, row.last_access_at = payload, _now(), _now()
         db.merge(row)
         db.commit()
+
+    def _drop_old_facts(self, db: Session, cik: int, keep: str) -> None:
+        old = db.scalars(
+            select(MarketCacheEntry).where(
+                MarketCacheEntry.kind == "sec_companyfacts",
+                MarketCacheEntry.key.like(f"sec:facts:%{cik}:%"),
+                MarketCacheEntry.key != keep,
+            )
+        ).all()
+        for row in old:
+            if row.key.split(":")[-2] == str(cik):  # exactly this company, not a CIK that merely contains it
+                db.delete(row)
+        if old:
+            db.commit()
 
     def _check(self, db: Session, inst: Instrument, dataset: str, cik: int | None, error: str | None, latest=None):
         row = db.scalar(
@@ -254,15 +268,18 @@ class ResearchService:
         def build(cik):
             sub, _, _, _ = self._submissions(db, inst, cik)
             latest = _latest_periodic(sub)
-            key = f"sec:facts:{cik}:{latest[1] if latest else 'none'}"  # a new periodic filing invalidates the cache
+            # A new periodic filing invalidates the cache; "v2": slimmed payloads (financials.slim_companyfacts).
+            key = f"sec:facts:v2:{cik}:{latest[1] if latest else 'none'}"
             try:
                 facts, fetched, status, note = self._cached(
-                    db, key, "sec_companyfacts", FACTS_TTL, lambda: self.client.companyfacts(cik)
+                    db, key, "sec_companyfacts", FACTS_TTL, lambda: slim_companyfacts(self.client.companyfacts(cik))
                 )
             except ProviderError as err:
                 self._check(db, inst, "sec_companyfacts", cik, err.message)
                 raise
             self._check(db, inst, "sec_companyfacts", cik, note, latest)
+            if status == "available":  # a fresh copy: earlier ones (older filings, unslimmed format) are dead weight
+                self._drop_old_facts(db, cik, key)
             try:
                 n = max_periods or (5 if period == "annual" else 8)
                 st = normalize_statements(facts, sub.get("sic"), period, n)

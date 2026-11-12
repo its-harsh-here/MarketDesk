@@ -18,9 +18,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          react: ["react", "react-dom", "react-router"],
+          react: ["react", "react-dom", "react-dom/client", "react-router", "scheduler"],
           charts: ["lightweight-charts"],
-          data: ["@tanstack/react-query", "react-hook-form", "zod", "@hookform/resolvers"],
+          data: ["@tanstack/react-query"],
+          // forms load with the first dialog or page that has a form, not at start-up (PERFORMANCE_ROADMAP 4.5)
+          forms: ["react-hook-form", "zod", "@hookform/resolvers"],
           radix: ["@radix-ui/react-dialog", "@radix-ui/react-dropdown-menu", "@radix-ui/react-tooltip", "@radix-ui/react-popover"],
         },
       },

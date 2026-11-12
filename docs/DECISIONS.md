@@ -516,3 +516,10 @@ Consequential choices, newest last. Routine choices live in code comments.
     public 60 days after its end in India (SEBI LODR deadline for annual audited results), 90 days elsewhere.
     Screener lists and screener refresh: results are re-read whenever a refresh finishes, including one that finished
     before its own response (nothing due).
+80. **Assembled-view cache and lighter start-up (12 Nov 2026, PERFORMANCE_ROADMAP 1.7/3.2/3.4/4.5).** Risk,
+    financial analysis, earnings and the news stream keep their finished payload in process memory for 10–15 min
+    (≤ 64 entries); every successful POST/PATCH/PUT/DELETE clears all of them, and a news answer with a timed-out
+    source is not kept. Payloads keep their own as-of and fetched timestamps. SEC company facts are cached slimmed
+    to the mapped tags (identical statements, tested). Global dialogs and form libraries load on first use; React is a
+    separate vendor chunk. The service worker still never caches /api (4.4 declined to keep private data out of
+    browser caches).

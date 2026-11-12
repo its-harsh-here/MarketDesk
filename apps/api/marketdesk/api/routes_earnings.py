@@ -13,6 +13,7 @@ from marketdesk.db import get_db
 from marketdesk.services import earnings as svc
 from marketdesk.services.instruments import resolve_instrument
 from marketdesk.services.market import MarketDataService
+from marketdesk.services.viewcache import VIEWS
 
 router = APIRouter(prefix="/api/earnings", tags=["earnings"], dependencies=[Depends(require_reader)])
 
@@ -30,11 +31,15 @@ async def summary(
 ):
     inst = await resolve_instrument(db, market, symbol)
     research = request.app.state.research
-    return {
-        "symbol": inst.symbol,
-        "calendar": await svc.calendar_for(db, market, research, inst),
-        "changes": await svc.period_changes(db, market, research, inst),
-    }
+
+    async def build():
+        return {
+            "symbol": inst.symbol,
+            "calendar": await svc.calendar_for(db, market, research, inst),
+            "changes": await svc.period_changes(db, market, research, inst),
+        }
+
+    return await VIEWS.view(f"earn|{market.source}|{inst.symbol}", 900, build)
 
 
 @router.get("/{symbol}/filing-changes")

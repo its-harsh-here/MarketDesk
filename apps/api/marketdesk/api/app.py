@@ -200,6 +200,8 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
     app.state.embedded_worker = None
     app.state.api_requests = 0
 
+    from marketdesk.services.viewcache import VIEWS
+
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
         started = time.perf_counter()
@@ -218,6 +220,8 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
             if is_api:
                 app.state.api_inflight -= 1
         response.headers["X-Request-ID"] = request.state.request_id
+        if is_api and request.method in ("POST", "PUT", "PATCH", "DELETE") and response.status_code < 400:
+            VIEWS.clear()  # a change by the user: no assembled view from before it may be served (roadmap 3.4)
         if before and not request.url.path.startswith("/api/stream"):
             _account_memory(request, before, (time.perf_counter() - started) * 1000)
         if request.url.path.startswith("/api/"):

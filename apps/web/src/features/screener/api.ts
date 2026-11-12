@@ -269,7 +269,7 @@ export function useListMutations() {
 }
 
 export function usePeers(symbol: string) {
-  return useQuery({ queryKey: ["screener", "peers", symbol], queryFn: () => api.get<Peers>(`/api/screener/peers/${encodeURIComponent(symbol)}`), retry: false });
+  return useQuery({ queryKey: ["screener", "peers", symbol], queryFn: () => api.get<Peers>(`/api/screener/peers/${encodeURIComponent(symbol)}`), retry: false, staleTime: 10 * 60_000 });
 }
 
 export function usePeerMutations(symbol: string) {

@@ -114,3 +114,16 @@ def test_ratios_document_inputs_and_require_matching_currency():
         for r in compute_ratios(st, price=Decimal("2000"), price_date=date(2025, 11, 3), price_currency="INR")
     }
     assert other_ccy["price_to_earnings"]["value"] is None  # price and EPS in different currencies: not computed
+
+
+def test_slimmed_company_facts_give_identical_statements():
+    from marketdesk.services.financials import slim_companyfacts
+
+    for name, sic in (("companyfacts_industrial.json", "3560"), ("companyfacts_bank.json", "6021"),
+                      ("companyfacts_ifrs.json", "7371")):  # fmt: skip
+        full = load(name)
+        slim = json.loads(json.dumps(slim_companyfacts(full)))  # as stored in and read back from the cache
+        for period in ("annual", "quarterly"):
+            a = normalize_statements(full, sic=sic, period=period, max_periods=8)
+            b = normalize_statements(slim, sic=sic, period=period, max_periods=8)
+            assert a == b
