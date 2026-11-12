@@ -70,12 +70,15 @@ class Settings(BaseSettings):
     db_pool_size: int = 6  # a page's parallel requests each use up to two sessions (request + market-data cache)
     db_max_overflow: int = 4
     blocking_threads: int = 6  # threads for blocking handlers and asyncio.to_thread (two users need few)
-    web_memory_soft_limit_mb: int = 400  # last resort; the supervisor watches the combined size first (serve.py)
+    web_memory_soft_limit_mb: int = 440  # last resort; the supervisor watches the combined size first (serve.py)
     worker_memory_soft_limit_mb: int = 180
     persisted_cache_rows: int = 4000
 
     # Worker
     alert_poll_seconds: int = 300
+    # Run the alert worker inside the web process (one Python process instead of two; DECISIONS #77). Set by
+    # `python -m marketdesk.serve`; a separately started `python -m marketdesk.worker` still works (compose).
+    embedded_worker: bool = False
     # SEC EDGAR (US filings). No key exists; SEC requires an application name and a contact email in the User-Agent.
     sec_user_agent: str | None = None
     sec_max_requests_per_second: float = 5.0  # SEC fair-access limit is 10/s

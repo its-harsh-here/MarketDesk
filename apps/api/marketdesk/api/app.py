@@ -109,10 +109,23 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
 
         configure_threads(settings.blocking_threads)
         asyncio.get_running_loop().set_default_executor(SHARED_EXECUTOR)
+        import marketdesk.asyncbridge as bridge
+
+        bridge._home_loop = asyncio.get_running_loop()  # noqa: SLF001 - the worker thread forwards market calls here
+        embedded = None
+        if settings.embedded_worker:
+            from marketdesk.worker.embedded import EmbeddedWorker
+
+            delay = float(os.environ.get("WORKER_START_DELAY_SECONDS", "45"))
+            embedded = EmbeddedWorker(app.state, settings, start_delay=delay)
+            embedded.start()
+            app.state.embedded_worker = embedded
         warm = getattr(app.state.market.provider, "warm", None)
         if warm is not None:  # load the market-data library without delaying the first page
             threading.Thread(target=warm, name="provider-warm", daemon=True).start()
         yield
+        if embedded is not None:
+            await asyncio.to_thread(embedded.stop)
 
     app = FastAPI(
         title="MarketDesk API",
@@ -183,6 +196,8 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
             signal.raise_signal(signal.SIGTERM)
 
     app.state.restart_requested = False
+    app.state.api_inflight = 0
+    app.state.embedded_worker = None
     app.state.api_requests = 0
 
     @app.middleware("http")
@@ -193,8 +208,15 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
         # X-Request-ID header and in error bodies, and written on server-side failure log lines.
         inbound = request.headers.get("x-request-id", "")
         request.state.request_id = inbound if _REQUEST_ID_RE.fullmatch(inbound) else secrets.token_hex(8)
-        before = memory.rss_mb() if request.url.path.startswith("/api/") else 0.0
-        response = await call_next(request)
+        is_api = request.url.path.startswith("/api/")
+        before = memory.rss_mb() if is_api else 0.0
+        if is_api:
+            app.state.api_inflight += 1
+        try:
+            response = await call_next(request)
+        finally:
+            if is_api:
+                app.state.api_inflight -= 1
         response.headers["X-Request-ID"] = request.state.request_id
         if before and not request.url.path.startswith("/api/stream"):
             _account_memory(request, before, (time.perf_counter() - started) * 1000)

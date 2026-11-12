@@ -219,7 +219,10 @@ def _memory_status(db: Session, settings: Settings) -> dict:
             "peak_mb": memory.peak_mb(),
             "soft_limit_mb": settings.web_memory_soft_limit_mb,
         },
-        "worker": {**(w or {}), "soft_limit_mb": settings.worker_memory_soft_limit_mb} if w else None,
+        "worker": None
+        if (w or {}).get("embedded")
+        else ({**w, "soft_limit_mb": settings.worker_memory_soft_limit_mb} if w else None),
+        "embedded_worker": bool((w or {}).get("embedded")),
         "routes": memory.ROUTES.top(10),
         "limit_mb": 512,
     }

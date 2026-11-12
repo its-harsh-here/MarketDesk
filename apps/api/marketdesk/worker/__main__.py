@@ -75,7 +75,14 @@ async def _screener_snapshots(market) -> dict:
         return {"error": type(exc).__name__}
 
 
-async def run_cycle(market, research=None) -> dict:
+def mark_started(provider: str) -> None:
+    with db_session() as db:
+        row = _status(db, provider)
+        row.started_at = datetime.now(UTC)
+        db.commit()
+
+
+async def run_cycle(market, research=None, embedded: bool = False) -> dict:
     from marketdesk.services.research import ResearchService
 
     research = research or ResearchService(market.settings)
@@ -93,7 +100,7 @@ async def run_cycle(market, research=None) -> dict:
         summary["briefings"] = await _briefings(market)
         summary["screener"] = await _screener_snapshots(market)
         memory.trim(min_interval=0)  # give back what the cycle used before reporting
-        summary["memory"] = {"rss_mb": memory.rss_mb(), "peak_mb": memory.peak_mb()}
+        summary["memory"] = {"rss_mb": memory.rss_mb(), "peak_mb": memory.peak_mb(), "embedded": embedded}
         skipped = summary.get("skipped") or []
         if skipped and not row.last_error:
             row.last_error = f"{len(skipped)} symbol(s) skipped: provider data was stale or unavailable."
@@ -135,7 +142,20 @@ async def main_async(once: bool) -> None:
             loop.add_signal_handler(sig, stop.set)
         except NotImplementedError:  # pragma: no cover
             pass
+    from marketdesk.worker.embedded import acquire_lease, holder_id
+
+    holder = holder_id()
     while True:
+        # The same single-runner lease as the embedded worker: never two evaluators at once.
+        if not await asyncio.to_thread(acquire_lease, holder, max(30, settings.alert_poll_seconds) * 3):
+            log.info("another process holds the worker lease; waiting")
+            if once:
+                return
+            try:
+                await asyncio.wait_for(stop.wait(), timeout=settings.alert_poll_seconds)
+                return
+            except TimeoutError:
+                continue
         summary = await run_cycle(market, research)
         log.info("cycle: %s", {k: v for k, v in summary.items() if k != "skipped"})
         if once:

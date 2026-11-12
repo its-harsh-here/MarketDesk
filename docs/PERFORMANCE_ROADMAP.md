@@ -95,7 +95,7 @@ in §1 hold for a week of normal use.
       container). *Turns a hard Render kill into a 2–5 s self-restart of one process.*
 
 ### Phase 2 — Structural memory savings (1–2 sessions) · choose one option
-- [ ] **2.A Run the alert worker inside the web process** (one background task, guarded by a database lease so it
+- [x] **2.A Run the alert worker inside the web process** (done, approved — DECISIONS #77) (one background task, guarded by a database lease so it
       can never run twice). Saves the worker's whole interpreter and imports: **≈ −110 to −130 MB**. Trade-off:
       a slow worker cycle shares CPU with page requests (mitigated by running it at low priority in its own thread
       and pausing while requests are in flight). **Needs your approval:** CLAUDE.md §4 asks for a separate worker
@@ -156,7 +156,7 @@ Same soak test (18 companies × 17 endpoints, live data, production entrypoint),
 | --- | --- | --- |
 | Web process after 18 companies | 342 MB and still rising (~7–8 MB per company) | **243 MB, flat** (+7 MB over the last 12 companies) |
 | Worker | 131 MB | 132 MB (reports its memory each cycle; restarts itself above 180 MB) |
-| Supervisor + web + worker | ~500 MB | **399 MB** |
+| Supervisor + web + worker | ~500 MB | **399 MB** (phase 1) → **270 MB** with 2.A (worker inside web) |
 
 Next: confirm on Render (Settings → Data status → Server memory), then phase 2 (merging the worker saves another
 ~110–130 MB, pending your approval) and phase 3–4 speed work.

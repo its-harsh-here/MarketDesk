@@ -487,4 +487,13 @@ Consequential choices, newest last. Routine choices live in code comments.
     restarts the worker first (no visible effect; at most once per 2 minutes), above 480 MB the web process. The
     web process's own limit is a 400 MB last resort; the worker's stays 180 MB. Thresholds:
     `MEMORY_RESTART_WORKER_MB`, `MEMORY_RESTART_WEB_MB`.
+77. **Alert worker inside the web process (owner decision, 12 Nov 2026; supersedes CLAUDE.md §4's separate worker
+    process for the Render deployment).** Measured on Render: web ~230 MB idle and ~350 MB on heavy US pages, worker
+    ~140–170 MB, together above 512 MB, which restarted the site. `python -m marketdesk.serve` now runs the same
+    worker cycle on a low-priority background thread inside the web process (sharing its market-data cache and SEC
+    client) and starts no second process. The intent of §4 — never two schedulers — is kept by a lease in
+    app_settings that every runner (embedded or a separately started `python -m marketdesk.worker`, still used by
+    compose) must hold, renewed each cycle; alert events also keep their unique keys. Each cycle first waits up to
+    30 s for no page request in flight. `WORKER_MODE=separate` restores the two-process layout. Local soak test
+    (18 companies × 17 endpoints with cycles running): supervisor + web 270 MB, against ~500 MB originally.
 

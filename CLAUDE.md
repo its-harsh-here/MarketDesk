@@ -44,7 +44,7 @@ Prefer a small monorepo with React + TypeScript + Vite for the frontend and Pyth
 
 Use SQLAlchemy, Alembic migrations, Pydantic models, and SQLite with WAL mode for the personal installation. Persist SQLite in a mounted data directory and use short transactions and a busy timeout. Do not require Redis, Kubernetes, external auth services, or a paid database. PostgreSQL via DATABASE_URL is also supported and tested; the production deployment uses a free Neon database (docs/DECISIONS.md #33).
 
-Keep frontend and backend on the same origin in production: build the SPA, serve its static assets from FastAPI, reserve /api for API routes, and support direct navigation to client routes. In development, Vite proxies /api to FastAPI. In production, missing /api routes return JSON 404s and never the SPA shell. A backend worker process handles alert evaluation; do not start duplicate schedulers in each web worker.
+Keep frontend and backend on the same origin in production: build the SPA, serve its static assets from FastAPI, reserve /api for API routes, and support direct navigation to client routes. In development, Vite proxies /api to FastAPI. In production, missing /api routes return JSON 404s and never the SPA shell. A single scheduler handles alert evaluation; do not start duplicate schedulers in each web worker. Owner decision (12 Nov 2026, docs/DECISIONS.md #77): on Render Free the worker runs inside the web process, guarded by a database lease; a separate worker process remains supported.
 
 Suggested structure:
 - apps/web/src/{app,components,features,lib,styles}
