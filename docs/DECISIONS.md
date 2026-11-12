@@ -532,3 +532,6 @@ Consequential choices, newest last. Routine choices live in code comments.
     revenue and operating-income facts are used, with the filer's labels. Still blocked on the owner: licensed Indian
     exchange data (history, shareholding, documents), FINRA credentials (short interest), email/background push
     channels, replacing the market-data library (2.B), and Render cold starts (phase 5).
+82. **Every change through a pull request (owner directive, 12 Nov 2026).** Work is committed on the session branch,
+    opened as a PR into `main` with the owner requested as reviewer and credited as co-author on every commit, checked,
+    and then merged. Direct pushes to `main` stop (supersedes UPGRADE_RULES rule 3's "work directly on main").
