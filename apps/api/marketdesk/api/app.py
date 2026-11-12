@@ -156,6 +156,8 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
 
     app.state.gnews = GoogleNews()
     app.state.alpaca = AlpacaClient(settings.alpaca_api_key_id, settings.alpaca_api_secret_key)
+    if settings.data_provider == "yahoo":
+        app.state.analyst.news_sources = (app.state.alpaca, app.state.gnews)
     app.state.stream = QuoteStreamHub(app.state.alpaca, enabled=settings.alpaca_streaming
                                       and settings.data_provider == "yahoo")  # fmt: skip
     install_error_handlers(app)

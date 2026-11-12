@@ -532,3 +532,8 @@ Consequential choices, newest last. Routine choices live in code comments.
     revenue and operating-income facts are used, with the filer's labels. Still blocked on the owner: licensed Indian
     exchange data (history, shareholding, documents), FINRA credentials (short interest), email/background push
     channels, replacing the market-data library (2.B), and Render cold starts (phase 5).
+82. **Every change through a pull request (owner directive, 12 Nov 2026).** Work is committed on the session branch
+    with the owner credited as co-author on every commit, opened as a PR into `main`, checked, and left for the owner
+    to review and merge (owner's choice: "Open PR, I merge"). GitHub cannot request the owner as reviewer because
+    Claude's access acts as the owner's account (the PR author); the owner's merge is the approval. Direct pushes to
+    `main` stop (supersedes UPGRADE_RULES rule 3's "work directly on main").

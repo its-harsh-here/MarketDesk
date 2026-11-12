@@ -9,11 +9,16 @@ progress: `docs/UPGRADE_STATUS.md`). Where these rules differ from older instruc
    verified.
 
 ## Git workflow
-3. Work directly on `main`, including commits and authorized pushes. No feature branches, alternate worktrees, or
-   pull requests.
+3. Owner directive (12 Nov 2026, DECISIONS #82): every change, however small, goes through a pull request. Commit on
+   the session's working branch (`claude/…`), open a PR into `main`, run every check and report the results on the
+   PR, and leave it open: **the owner reviews and merges** (Claude does not merge). The owner is credited as
+   co-author on every commit (rule 6). Claude's GitHub access acts as the owner's account, so GitHub shows the owner
+   as the PR's author and cannot list them as a requested reviewer; their review and merge is the approval. Never push
+   directly to `main`. While a PR is open, further work is added to it as new commits; after the owner merges, the
+   working branch restarts from the updated `main`.
 4. Fetch remote changes and synchronize safely before editing; preserve unrelated or uncommitted work.
-5. Never force-push, rewrite published history, bypass branch protection, or disable checks to push. If pushing to
-   `main` is blocked, report the exact restriction and keep the work safe locally.
+5. Never force-push `main`, rewrite published history, bypass branch protection, or disable checks to push or merge.
+   If a push or merge is blocked, report the exact restriction and keep the work safe on its branch.
 6. Credit the owner with a `Co-authored-by` trailer on every new commit, using the confirmed name and
    GitHub-associated email. If either is unknown, ask before the first commit and keep implementing while waiting.
    Never invent an email or use a generic cloud identity as the owner's. Verify the attribution before pushing.

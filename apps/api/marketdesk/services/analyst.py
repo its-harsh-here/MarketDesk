@@ -76,6 +76,9 @@ Rules:
   not do new arithmetic); "interpretation" for your reading of the evidence, worded with appropriate uncertainty.
 - Quote figures exactly as they appear in the sources, with their units, currency and period dates.
 - Never give buy/sell/hold advice, price targets, position sizes or predictions presented as certain.
+- A "headlines" source lists what named publishers reported (title, publisher, date, link); MarketDesk did not read
+  the articles. Attribute such points to the publisher ("X reported that …"), mark them "fact" only for the fact
+  that it was reported, and never treat a headline as verified or as the cause of a price move.
 - If the evidence does not answer something, say so in "gaps" instead of guessing. Never invent filings, dates,
   people, events or numbers. Prices come only from the quote source.
 - Keep it concise: at most 5 sections, at most 6 points each, plain sentences."""
@@ -237,8 +240,56 @@ class Evidence:
         return {s["id"]: s for s in self.sources}
 
 
-async def _listing(ev: Evidence, db, market, research, inst: Instrument, kind: str, with_release: bool) -> dict:
+HEADLINE_KINDS = ("ask", "catalysts", "brief", "challenge")
+MAX_HEADLINES = 10
+
+
+async def _headlines(ev: Evidence, db, market, inst: Instrument, news) -> None:
+    """Recent headlines from established publishers and company releases about this company (the News tab's
+    filtering), as data the model may cite as reports. Titles, publishers, dates and links only."""
+    from marketdesk.services import news_stream
+
+    alpaca, gnews = news or (None, None)
+    try:
+        out = await asyncio.wait_for(news_stream.stream(db, market, None, inst, alpaca, gnews), timeout=12)
+    except (TimeoutError, ProviderError) as err:
+        ev.notes.append(f"{inst.symbol}: headlines unavailable ({type(err).__name__}).")
+        return
+    rows = [
+        i for i in out.get("items") or [] if i.get("category") in ("news", "release") and i.get("source") != "SEC EDGAR"
+    ]
+    if not rows:
+        return
+    rows = rows[:MAX_HEADLINES]
+    ev.add(
+        "headlines",
+        f"{inst.symbol} recent headlines (titles only; articles not read)",
+        [
+            {
+                "headline": r["headline"],
+                "publisher": r.get("publisher"),
+                "published": r.get("at"),
+                "url": r.get("url"),
+                "kind": "company release" if r.get("category") == "release" else "news",
+            }
+            for r in rows
+        ],  # fmt: skip
+        as_of=rows[0].get("at"),
+        symbol=inst.symbol,
+    )
+
+
+async def _listing(
+    ev: Evidence, db, market, research, inst: Instrument, kind: str, with_release: bool, news=None
+) -> dict:
     """Collect one listing's evidence. Returns a compact summary used for comparisons."""
+    summary = await _listing_core(ev, db, market, research, inst, kind, with_release)
+    if kind in HEADLINE_KINDS:
+        await _headlines(ev, db, market, inst, news)
+    return summary
+
+
+async def _listing_core(ev: Evidence, db, market, research, inst: Instrument, kind: str, with_release: bool) -> dict:
     sym, ccy = inst.symbol, inst.currency
     summary: dict = {"symbol": sym, "currency": ccy, "country": inst.country}
     q = await market.quote(sym)
@@ -677,6 +728,7 @@ def compact_evidence(ev: Evidence, max_chars: int, other_chars: int) -> list[str
     steps = [
         ("filing excerpts shortened", lambda: excerpt(4000)),
         ("filing list shortened", lambda: filings(8)),
+        ("headlines omitted", lambda: omit("headlines")),
         ("quarterly statements cut to 2 periods", lambda: periods("quarterly", 2)),
         ("annual statements cut to 2 periods", lambda: periods("annual", 2)),
         ("filing excerpts shortened further", lambda: excerpt(2000)),
@@ -695,6 +747,8 @@ def compact_evidence(ev: Evidence, max_chars: int, other_chars: int) -> list[str
 
 
 class AnalystService:
+    news_sources: tuple | None = None  # (alpaca, gnews) clients set by the app in live mode
+
     def __init__(self, settings: Settings, client: XaiClient | GroqClient | None = None):
         self.settings = settings
         if client is None:
@@ -909,6 +963,7 @@ class AnalystService:
                         inst,
                         answer.kind,
                         answer.kind in ("results", "ask", "brief", "challenge"),
+                        news=self.news_sources,
                     )
                 )
             if answer.kind == "compare":

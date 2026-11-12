@@ -8,7 +8,7 @@ Priorities, in order: truthful data and correct calculations; complete everyday 
 
 Read existing repository instructions and code before making changes. If the repository already has an application, preserve useful code and adapt the structure rather than deleting it. Never overwrite unrelated work. Make routine decisions yourself and record consequential decisions in docs/DECISIONS.md. Ask only for genuinely missing credentials or a decision with irreversible consequences; keep building independent functionality while blocked.
 
-**Upgrade phase (from 3 Nov 2026).** The first release is complete, deployed, and holds real owner data. Further work follows docs/UPGRADE_RULES.md, one owner-selected milestone at a time from docs/MARKETDESK_ROADMAP.txt, with progress in docs/UPGRADE_STATUS.md. Where those rules differ from this file's working-style or completion-order sections (for example, working directly on main), the upgrade rules win.
+**Upgrade phase (from 3 Nov 2026).** The first release is complete, deployed, and holds real owner data. Further work follows docs/UPGRADE_RULES.md, one owner-selected milestone at a time from docs/MARKETDESK_ROADMAP.txt, with progress in docs/UPGRADE_STATUS.md. Where those rules differ from this file's working-style or completion-order sections, the upgrade rules win. Owner directive (12 Nov 2026): every change goes through a pull request into `main`, with the owner credited as co-author on every commit; Claude opens the PR and runs the checks, and the owner reviews and merges it (docs/UPGRADE_RULES.md rule 3). Never push directly to `main`.
 
 ## 2. Scope and completion order
 
