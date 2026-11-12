@@ -26,7 +26,7 @@ export interface FactValue {
   accession: string;
   restated: boolean;
   prior: { value: string; filed: string; accession: string; form: string }[];
-  source_url: string;
+  source_url: string | null;
 }
 
 export interface StatementLine {
@@ -58,7 +58,10 @@ export interface Statements {
   lines: StatementLine[];
   ratios: Ratio[];
   entity: string | null;
-  facts_url: string;
+  facts_url: string | null;
+  /** "provider": the market-data provider's statements (listings outside SEC coverage), not SEC filings. */
+  origin?: "provider";
+  source?: string;
   /** Set when the newest periodic report has no figures in SEC's company-facts data yet. */
   coverage_note?: string | null;
 }

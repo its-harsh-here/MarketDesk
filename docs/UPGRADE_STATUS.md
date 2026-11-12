@@ -1207,3 +1207,14 @@ The roadmap (M00–M14) is complete, including M04 (Alpaca IEX streaming). Termi
 - Local: pytest 384 passed / 3 skipped; vitest 55; Playwright journeys 45/45.
 - Not verified: the Zerodha preset against a real tradebook file from the owner; Telegram delivery against a real
   bot (no token configured).
+
+### Screener fix, financial periods, Indian statements (12 Nov 2026)
+- Screener: "Load/Refresh data" could finish before its response was sent, leaving old results on screen; editing
+  a list or a watchlist did not refresh the screener. Both fixed (journey extended: editing a list's members
+  updates the results).
+- Financials: fiscal-year / quarter-month column names everywhere in the Financials tab; no empty columns or rows
+  (DECISIONS #79); valuation bands moved above the analysis at full width (no blank area beside the tables);
+  negative ₹ amounts read −₹1,089 Cr.
+- Indian listings: full income statement, balance sheet and cash flow (annual and quarterly) and the full analysis,
+  plus a new efficiency table (ROCE, interest coverage, working-capital days). Verified locally against live data
+  for RELIANCE.NS (4 fiscal years, 5 quarters, skipped Sep 2025 quarter named). Plan: docs/INDIA_FINANCIALS_PLAN.md.

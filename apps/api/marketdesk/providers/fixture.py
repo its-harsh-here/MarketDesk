@@ -337,6 +337,24 @@ class FixtureProvider:
             raise ProviderError("missing", "The sample dataset has no annual statements for this instrument.")
         return AnnualStatements(self._ref(symbol), periods, "Sample annual statements (fictitious)", [])
 
+    def reported_statements(self, symbol: str, period: str) -> dict:
+        """The sample annual statements in the full-statement shape (the sample dataset has no quarters)."""
+        from marketdesk.services import reported
+
+        st = self.annual_statements(symbol)
+        if period != "annual":
+            raise ProviderError("missing", "The sample dataset has annual statements only.")
+        names = {"revenue": "TotalRevenue", "net_income": "NetIncome", "total_debt": "TotalDebt",
+                 "total_equity": "StockholdersEquity", "operating_cash_flow": "OperatingCashFlow",
+                 "capex": "CapitalExpenditure", "cash": "CashAndCashEquivalents"}  # fmt: skip
+        rows: dict = {}
+        for p in st.periods:
+            for attr, name in names.items():
+                v = getattr(p, attr)
+                if v is not None:
+                    rows.setdefault(name, {})[p.period_end] = v
+        return reported.normalize(rows, "annual", None, "Sample statements (fictitious)", 12, 60)
+
     def holders(self, symbol: str) -> Holders:
         """Fictitious holders for the fictitious sample companies, derived deterministically from the symbol."""
         self._check_fault()

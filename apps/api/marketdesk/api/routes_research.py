@@ -83,12 +83,13 @@ async def financials(
     inst = await _inst(db, market, symbol)
     quote = await market.quote(inst.symbol)
     q = quote.value
-    return research.financials(
-        db,
-        inst,
-        period,
-        price=q.last_price if q else None,
-        price_date=q.session_date if q else None,
-        price_ccy=q.instrument.currency if q else None,
-        max_periods=periods,
-    )
+    price = {
+        "price": q.last_price if q else None,
+        "price_date": q.session_date if q else None,
+        "price_ccy": q.instrument.currency if q else None,
+    }
+    if inst.country != "US":  # outside SEC coverage: the provider's full statements, labelled unofficial
+        from marketdesk.services.financial_view import provider_statements
+
+        return await provider_statements(market, inst, period, periods, **price)
+    return research.financials(db, inst, period, max_periods=periods, **price)

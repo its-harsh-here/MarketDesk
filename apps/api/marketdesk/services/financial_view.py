@@ -4,7 +4,7 @@ annual statements (other listings, labelled unofficial). The arithmetic is in ``
 from __future__ import annotations
 
 import asyncio
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -42,6 +42,52 @@ async def _bands(market: MarketDataService, inst: Instrument, annual: dict) -> d
     return out
 
 
+def _month_end(y: int, m: int) -> date:
+    y, m = y + (m - 1) // 12, (m - 1) % 12 + 1
+    return date(y + m // 12, m % 12 + 1, 1) - timedelta(days=1)
+
+
+def _quarter_gaps(st: dict) -> list[date]:
+    """Quarter ends missing between reported quarters (the provider sometimes skips one; it is never derived)."""
+    ends = sorted({v["end"] for line in st["lines"] if line["kind"] == "duration" for v in line["values"]})
+    gaps = []
+    for a, b in zip(ends, ends[1:], strict=False):
+        missing = round((b - a).days / 91.3) - 1
+        gaps += [_month_end(a.year, a.month + 3 * (k + 1)) for k in range(max(0, missing))]
+    return gaps
+
+
+async def provider_statements(market: MarketDataService, inst: Instrument, period: str, max_periods: int | None,
+                              price=None, price_date=None, price_ccy=None) -> dict:  # fmt: skip
+    """Research envelope (same shape as the SEC statements) from the provider's full statement tables."""
+    from marketdesk.services.financials import compute_ratios
+
+    r = await market.reported(inst.symbol, period)
+    base = {"symbol": inst.symbol, "source": market.label, "fetched_at": r.meta.fetched_at}
+    if r.value is None:
+        return {**base, "status": r.meta.status if r.meta.status != "available" else "missing",
+                "reason": r.meta.message or f"The provider has no {period} statements for this listing."}  # fmt: skip
+    st = dict(r.value)
+    n = max_periods or (5 if period == "annual" else 8)
+    st["period_ends"] = st["period_ends"][:n]
+    keep = set(st["period_ends"])
+    st["lines"] = [{**line, "values": [v for v in line["values"] if v["end"] in keep]} for line in st["lines"]]
+    st["ratios"] = compute_ratios(st, price, price_date, price_ccy)
+    notes = []
+    if period == "quarterly":
+        gaps = [g for g in _quarter_gaps(st) if g > min(keep)] if keep else []
+        if gaps:
+            when = ", ".join(g.strftime("%b %Y") for g in gaps)
+            notes.append(f"The source skips the quarter ending {when}; missing quarters are not derived.")
+        notes.append("Indian companies publish a balance sheet and cash flow half-yearly, so those tables have "
+                     "fewer quarters." if inst.country == "IN" else "Balance-sheet and cash-flow quarters are "
+                     "shown where the source reports them.")  # fmt: skip
+    st["coverage_note"] = " ".join(notes) or None
+    st["entity"] = inst.name
+    st["facts_url"] = None
+    return _out({**base, "status": r.meta.status, "reason": None, "data": st})
+
+
 async def build(db: Session, market: MarketDataService, research, inst: Instrument, period: str) -> dict:
     base = {"symbol": inst.symbol, "period": period}
     if inst.country == "US" and research is not None and research.client.enabled:
@@ -73,6 +119,39 @@ async def build(db: Session, market: MarketDataService, research, inst: Instrume
             )
         if env.get("status") not in ("not_applicable",):
             return {**base, "status": env.get("status"), "reason": env.get("reason") or "No SEC statements."}
+    full = await market.reported(inst.symbol, period)
+    if full.value is not None and full.value.get("period_ends"):
+        st = full.value
+        annual = st
+        if period != "annual":
+            a = await market.reported(inst.symbol, "annual")
+            annual = a.value or {}
+        bands = await _bands(market, inst, annual) if annual.get("period_ends") else {"reason": "No annual data."}
+        lag = annual.get("lines") and next((v["filed"] for ln in annual["lines"] for v in ln["values"]), None)
+        if lag and isinstance(bands, dict):
+            bands["note"] = (
+                (bands.get("note") or "")
+                + " Each fiscal year is used from "
+                + (
+                    "60 days after its end (the SEBI deadline for annual audited results)"
+                    if inst.country == "IN"
+                    else "90 days after its end"
+                )  # fmt: skip
+                + ", since the source gives no publication dates."
+            ).strip()
+        return _out(
+            {
+                **base,
+                "status": full.meta.status,
+                "source": "Reported statements (unofficial provider data)",
+                "official": False,
+                "currency": st.get("currency"),
+                "fetched_at": full.meta.fetched_at,
+                "notes": [],
+                **fa.analysis(st),
+                "bands": bands,
+            }
+        )
     r = await market.statements(inst.symbol)
     if r.value is None or not r.value.periods:
         return {

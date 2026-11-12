@@ -575,6 +575,33 @@ class YahooProvider:
 
         return self._call(run, "annual statements")
 
+    def reported_statements(self, symbol: str, period: str) -> dict:
+        """Income statement, balance sheet and cash flow (about five fiscal years, or the latest quarters) in the
+        normalized line shape. Unofficial provider figures; the caller labels them."""
+        from marketdesk.services import reported
+
+        symbol = self.validate_symbol(symbol)
+        freq = "yearly" if period == "annual" else "quarterly"
+
+        def run():
+            t = self._yf.Ticker(symbol)
+            rows: dict = {}
+            for getter in (t.get_income_stmt, t.get_balance_sheet, t.get_cash_flow):
+                try:
+                    for name, vals in reported.frame_rows(getter(freq=freq)).items():
+                        rows.setdefault(name, vals)
+                except Exception as exc:  # noqa: BLE001 - one missing table must not hide the others
+                    log.info("statement table unavailable for %s (%s)", symbol, type(exc).__name__)
+            if not rows:
+                raise ProviderError("missing", f"The provider returned no {period} statements for this symbol.")
+            country = "IN" if symbol.upper().endswith((".NS", ".BO")) else None
+            return reported.normalize(
+                rows, period, reported.statement_currency(symbol, country), "Provider statements",
+                12, reported.publish_lag(country) if period == "annual" else None,
+            )  # fmt: skip
+
+        return self._call(run, f"{period} statements")
+
     def corporate_actions(self, symbol: str) -> list[CorporateAction]:
         symbol = self.validate_symbol(symbol)
 

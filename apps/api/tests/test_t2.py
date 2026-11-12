@@ -114,7 +114,7 @@ def test_provider_statements_run_the_same_analysis(api):
     assert r["official"] is False and "unofficial" in r["source"] and r["period"] == "annual"
     g = {x["key"]: x for x in r["growth"]["rows"]}
     assert "g_revenue" in g and any(v is not None for v in g["g_revenue"]["values"])
-    assert r["bands"]["pe"] is None and "EPS" in r["bands"]["reason"]
+    assert r["bands"]["pe"]["n"] == 0 and "EPS" in r["bands"]["pe"]["why"]  # the sample statements carry no EPS
     assert all(isinstance(v, (str, type(None))) for v in g["g_revenue"]["values"])  # decimals as strings
     q = api.get("/api/terminal/financial-analysis", params={"symbol": "SX:AURORA", "period": "quarterly"}).json()
     assert q["period"] == "annual" and any("annual provider statements only" in n for n in q["notes"])

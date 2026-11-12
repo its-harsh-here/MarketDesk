@@ -430,8 +430,79 @@ def valuation_bands(
     return out
 
 
+DAYS = Decimal(365)
+
+
+def efficiency(st: dict) -> dict | None:
+    """Capital efficiency and working capital (annual statements; ending balances), the measures Indian research
+    sites lead with: ROCE, interest coverage, current ratio, debt to equity, dividend payout and the debtor,
+    inventory and payable days that make up the cash conversion cycle. None when the source has none of the inputs
+    (SEC data here does not map receivables, inventory or current liabilities)."""
+    ends = _ends(st)
+    if st.get("period") != "annual":
+        return None
+    g = {k: series(st, k) for k in ("operating_income", "total_assets", "current_liabilities", "interest_expense",
+                                     "current_assets", "total_debt", "equity", "dividends_paid", "net_income",
+                                     "receivables", "revenue", "inventory", "cost_of_revenue", "payables")}  # fmt: skip
+
+    def col(f) -> list:
+        out = []
+        for e in ends:
+            try:
+                out.append(f({k: _num(v, e) for k, v in g.items()}))
+            except (TypeError, ArithmeticError):
+                out.append(None)
+        return out
+
+    def pct(a, b):
+        q = _div(a, b)
+        return None if q is None else q * PCT
+
+    def days(a, b):
+        q = _div(a, b)
+        return None if q is None else q * DAYS
+
+    def ce(x):  # capital employed = total assets − current liabilities
+        return (
+            None
+            if x["total_assets"] is None or x["current_liabilities"] is None
+            else x["total_assets"] - x["current_liabilities"]
+        )
+
+    def ccc(x):
+        parts = [days(x["receivables"], x["revenue"]), days(x["inventory"], x["cost_of_revenue"]),
+                 days(x["payables"], x["cost_of_revenue"])]  # fmt: skip
+        return None if any(p is None for p in parts) else parts[0] + parts[1] - parts[2]
+
+    rows = [
+        _row("roce", "Return on capital employed", "percent",
+             "Operating income ÷ (total assets − current liabilities) × 100",
+             col(lambda x: pct(x["operating_income"], ce(x)) if (ce(x) or 0) > 0 else None)),
+        _row("interest_coverage", "Interest coverage", "times", "Operating income ÷ interest expense",
+             col(lambda x: _div(x["operating_income"], x["interest_expense"]) if (x["interest_expense"] or 0) > 0
+                 else None)),
+        _row("current_ratio", "Current ratio", "times", "Current assets ÷ current liabilities",
+             col(lambda x: _div(x["current_assets"], x["current_liabilities"]))),
+        _row("debt_equity", "Debt to equity", "times", "Total debt ÷ shareholders' equity",
+             col(lambda x: _div(x["total_debt"], x["equity"]) if (x["equity"] or 0) > 0 else None)),
+        _row("payout", "Dividend payout", "percent", "Dividends paid ÷ net income × 100",
+             col(lambda x: pct(x["dividends_paid"], x["net_income"]) if (x["net_income"] or 0) > 0 else None)),
+        _row("debtor_days", "Debtor days", "days", "Receivables ÷ revenue × 365",
+             col(lambda x: days(x["receivables"], x["revenue"]))),
+        _row("inventory_days", "Inventory days", "days", "Inventory ÷ cost of revenue × 365",
+             col(lambda x: days(x["inventory"], x["cost_of_revenue"]))),
+        _row("payable_days", "Payable days", "days", "Payables ÷ cost of revenue × 365",
+             col(lambda x: days(x["payables"], x["cost_of_revenue"]))),
+        _row("cash_conversion_cycle", "Cash conversion cycle", "days", "Debtor days + inventory days − payable days",
+             col(ccc)),
+    ]  # fmt: skip
+    if not any(v is not None for r in rows for v in r["values"]):
+        return None
+    return {"columns": ends, "rows": rows}
+
+
 def analysis(st: dict) -> dict:
-    return {
+    out = {
         "per_share": per_share(st),
         "common_size": common_size(st),
         "margins": margins(st),
@@ -439,6 +510,10 @@ def analysis(st: dict) -> dict:
         "cagr": cagr(st),
         "returns": returns(st),
     }
+    eff = efficiency(st)
+    if eff is not None:
+        out["efficiency"] = eff
+    return out
 
 
 # --------------------------------------------------------------------- provider statements (India and others)

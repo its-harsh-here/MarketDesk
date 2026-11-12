@@ -419,7 +419,7 @@ test("compare: two instruments rebased to 100 with method, table alternative and
   await expect(cmp.getByText(/Add one or two instruments/)).toBeVisible();
 });
 
-test("research tabs: keyboard navigation, URL state, and an explicit reason when SEC data does not apply", async ({ page }) => {
+test("research tabs: keyboard navigation, URL state, and labelled provider statements where SEC data does not apply", async ({ page }) => {
   await page.goto("/instrument/SX%3AAURORA");
   const tabs = page.getByRole("tablist", { name: "Instrument sections" });
   await tabs.getByRole("tab", { name: "Chart" }).click();
@@ -428,7 +428,11 @@ test("research tabs: keyboard navigation, URL state, and an explicit reason when
   await page.keyboard.press("ArrowRight");
   await expect(tabs.getByRole("tab", { name: "Financials" })).toHaveAttribute("aria-selected", "true");
   await expect(page).toHaveURL(/tab=financials/);
-  await expect(page.getByText(/SEC filings cover US-registered issuers/)).toBeVisible();
+  // not a US listing: the provider's statements, labelled unofficial, with fiscal-year column names (no dates)
+  const statements = page.getByRole("region", { name: "Financial statements" });
+  await expect(statements.getByText(/Reported statements · unofficial/)).toBeVisible();
+  await expect(statements.getByRole("table", { name: /Income statement/ }).getByRole("columnheader", { name: "FY2026" })).toBeVisible();
+  await expect(statements.getByRole("columnheader", { name: /\d{1,2} [A-Z][a-z]{2} \d{4}/ })).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole("tab", { name: "Financials" })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tab", { name: "Events" }).click();
@@ -842,7 +846,8 @@ test("financial analysis: margins, growth, returns with formulas; unofficial pro
   await expect(fa.getByText(/Compound annual growth: Fewer than 3 years reported/)).toBeVisible(); // sample has 3 years
   await expect(fa.getByText(/Not available from this source \(per share\)/)).toBeVisible();
   await expect(fa.getByRole("rowheader", { name: /Net margin \(Net income ÷ revenue × 100\)/ })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Valuation bands" }).getByText(/need reported EPS/)).toBeVisible();
+  await expect(page.getByRole("region", { name: "Valuation bands" }).getByText(/No positive annual EPS/).first()).toBeVisible();
+  await expect(fa.getByRole("table", { name: /Growth/ }).getByRole("columnheader", { name: /^FY\d{4}$/ }).first()).toBeVisible();
   await page.getByRole("radio", { name: "Quarterly" }).click();
   await expect(fa.getByText(/annual provider statements only/)).toBeVisible();
 });

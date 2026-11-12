@@ -248,7 +248,20 @@ def search_from(v: list) -> list[InstrumentRef]:
     return [ref_from(r) for r in v]
 
 
+def _reported_to(st: dict) -> dict:
+    from marketdesk.services.reported import to_json
+
+    return to_json(st)
+
+
+def _reported_from(d: dict) -> dict:
+    from marketdesk.services.reported import from_json
+
+    return from_json(d)
+
+
 CODECS = {
+    "reported": (_reported_to, _reported_from),
     "quote": (quote_to, quote_from),
     "history": (history_to, history_from),
     "intraday": (intraday_to, intraday_from),

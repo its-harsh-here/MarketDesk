@@ -505,3 +505,14 @@ Consequential choices, newest last. Routine choices live in code comments.
     background animation pauses in hidden tabs. Measured: Description for a watchlist symbol 3.3 s → 0.13 s;
     Macro official statistics 17.6 s → 0.01 s once warmed.
 
+79. **Financials outside SEC coverage, and how periods are shown (12 Nov 2026).** Listings outside the US now get
+    full statements from the market-data provider's statement tables (labelled unofficial, no filing links), in the
+    same normalized shape as SEC data so tables, ratios and analysis are shared; plan in docs/INDIA_FINANCIALS_PLAN.md.
+    Columns are named by fiscal year (FY2026) or quarter month (Sep 2026), with the exact end date in the tooltip; a
+    52/53-week period ending in a month's first week belongs to the month before. To avoid empty spots, a period most
+    lines cannot fill is not shown, lines with no figures are named under the table with the reason, and the
+    analysis drops all-empty columns (e.g. the oldest year for growth); single unreported cells still show a dash
+    with the reason, never a derived or zero value. Valuation bands for these listings take each fiscal year as
+    public 60 days after its end in India (SEBI LODR deadline for annual audited results), 90 days elsewhere.
+    Screener lists and screener refresh: results are re-read whenever a refresh finishes, including one that finished
+    before its own response (nothing due).

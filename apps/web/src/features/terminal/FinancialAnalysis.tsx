@@ -3,10 +3,10 @@ import { Panel } from "@/components/ui/Panel";
 import { Pill } from "@/components/ui/Badges";
 import { ErrorState, InlineNotice, SkeletonRows } from "@/components/ui/States";
 import { api, errorMessage } from "@/lib/api/client";
-import { DASH, formatMoney, formatPercent, formatRelative, formatSessionDate } from "@/lib/format";
+import { DASH, formatMoney, formatPercent, formatRelative, formatSessionDate, periodLabel, periodTitle } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
-type Row = { key: string; label: string; unit: "percent" | "per_share"; formula: string; values: (string | null)[]; why: (string | null)[] | null; statement?: string };
+type Row = { key: string; label: string; unit: "percent" | "per_share" | "times" | "days"; formula: string; values: (string | null)[]; why: (string | null)[] | null; statement?: string };
 type Table = { columns: string[]; rows: Row[]; note?: string };
 type Band = { n: number; min?: number; p25?: number; median?: number; p75?: number; max?: number; current?: number | null; percentile?: number | null; formula: string; why: string | null } | null;
 export interface FinAnalysis {
@@ -25,6 +25,7 @@ export interface FinAnalysis {
   growth?: Table;
   cagr?: { spans: number[]; rows: (Row & { end: string })[]; note?: string };
   returns?: Table;
+  efficiency?: Table;
   bands?: { window?: { from: string; to: string; sessions: number } | null; pe?: Band; ev_ebitda?: Band; note?: string; reason?: string; price_source?: string };
 }
 
@@ -38,34 +39,46 @@ export function useFinancialAnalysis(symbol: string, period: "annual" | "quarter
 
 function fmt(row: Row, v: string | null, currency: string | null | undefined, signed: boolean) {
   if (v === null) return DASH;
+  if (row.unit === "times") return `${Number(v).toFixed(2)}×`;
+  if (row.unit === "days") return `${Math.round(Number(v))} d`;
   return row.unit === "per_share" ? formatMoney(v, currency ?? "USD") : formatPercent(v, { signed });
 }
 
-function MetricTable({ title, note, table, currency, signed = false, statement }: { title: string; note?: string; table?: Table; currency?: string | null; signed?: boolean; statement?: string }) {
+function MetricTable({ title, note, table, currency, signed = false, statement, period }: { title: string; note?: string; table?: Table; currency?: string | null; signed?: boolean; statement?: string; period: "annual" | "quarterly" }) {
   if (!table) return null;
   const all = statement ? table.rows.filter((r) => r.statement === statement) : table.rows;
   if (table.note && !all.length) return <p className="text-[13px] text-fg-3"><span className="font-medium text-fg-2">{title}:</span> {table.note}</p>;
-  // Measures with no value in any period are listed by name instead of filling the table with dashes.
-  const rows = all.filter((r) => r.values.some((v) => v !== null));
-  const absent = all.filter((r) => !r.values.some((v) => v !== null));
+  // Periods most measures cannot fill (e.g. the oldest year for growth, which has nothing to compare with, or a
+  // quarter only the half-yearly balance sheet covers) are left out rather than shown as a column of dashes; then
+  // measures with no value in any kept period are listed by name instead of filling the table with dashes.
+  const withData = all.filter((r) => r.values.some((v) => v !== null));
+  const cols = table.columns.map((c, i) => ({ c, i })).filter(({ i }) => withData.filter((r) => r.values[i] !== null).length * 2 >= withData.length && withData.length > 0);
+  const rows = withData.filter((r) => cols.some(({ i }) => r.values[i] !== null));
+  const absent = all.filter((r) => !withData.includes(r));
+  const sparse = withData.filter((r) => !rows.includes(r));
   if (!all.length) return null;
-  const absentNote = absent.length > 0 && (
+  const absentNote = (absent.length > 0 || sparse.length > 0) && (
     <p className="mt-1 text-xs text-fg-3">
-      Not available from this source{rows.length ? "" : ` (${title.toLowerCase()})`}: {absent.map((r) => r.label).join(", ")}
-      {absent[0].why?.find(Boolean) ? ` — ${(absent[0].why.find(Boolean) ?? "").replace(/\.$/, "")}` : ""}.
+      {absent.length > 0 && (
+        <>
+          Not available from this source{rows.length ? "" : ` (${title.toLowerCase()})`}: {absent.map((r) => r.label).join(", ")}
+          {absent[0].why?.find(Boolean) ? ` — ${(absent[0].why.find(Boolean) ?? "").replace(/\.$/, "")}` : ""}.{" "}
+        </>
+      )}
+      {sparse.length > 0 && <>Only for periods not shown here: {sparse.map((r) => r.label).join(", ")}.</>}
     </p>
   );
   if (!rows.length) return <div>{absentNote}</div>;
   return (
     <div tabIndex={0} className="scroll-x scrollbar-thin overflow-x-auto">
-      <table className="w-full text-[13px]" style={{ minWidth: 200 + 84 * table.columns.length }}>
+      <table className="w-full text-[13px]" style={{ minWidth: 200 + 84 * cols.length }}>
         <caption className="py-1 text-left text-xs font-medium text-fg-2">
           {title} {note && <span className="font-normal text-fg-3">· {note}</span>}
         </caption>
         <thead>
           <tr className="border-b border-line-subtle text-xs text-fg-3">
             <th scope="col" className="py-1.5 pr-3 text-left font-medium">Measure</th>
-            {table.columns.map((c) => <th key={c} scope="col" className="num px-2 py-1.5 text-right font-medium">{formatSessionDate(c)}</th>)}
+            {cols.map(({ c }) => <th key={c} scope="col" className="num px-2 py-1.5 text-right font-medium" title={periodTitle(c, period)}>{periodLabel(c, period)}</th>)}
           </tr>
         </thead>
         <tbody>
@@ -75,7 +88,8 @@ function MetricTable({ title, note, table, currency, signed = false, statement }
                 {r.label}
                 <span className="sr-only"> ({r.formula})</span>
               </th>
-              {r.values.map((v, i) => {
+              {cols.map(({ i }) => {
+                const v = r.values[i];
                 const n = v === null ? null : Number(v);
                 return (
                   <td key={i} className={cn("num px-2 py-1.5 text-right", v === null && "text-fg-3", signed && n !== null && (n >= 0 ? "text-pos" : "text-neg"))} title={v === null ? (r.why?.[i] ?? "Not reported") : undefined}>
@@ -139,12 +153,35 @@ export function FinancialAnalysis({ symbol, period }: { symbol: string; period: 
   const d = q.data;
   const ccy = d?.currency;
   const b = d?.bands;
+  const cagrCols = (d?.cagr?.spans ?? []).map((n, i) => ({ n, i })).filter(({ i }) => d?.cagr?.rows.some((r) => r.values[i] !== null));
+  const cagrMissing = (d?.cagr?.spans ?? []).filter((_, i) => !cagrCols.some((c) => c.i === i));
+  const p = d?.period ?? period;
   return (
     <>
+      <Panel title="Valuation bands" titleId="vb-title" className="lg:col-span-12">
+        {q.isLoading ? (
+          <SkeletonRows rows={5} />
+        ) : !b ? (
+          <p className="text-[13px] text-fg-3">{d?.reason ?? "Not available."}</p>
+        ) : b.reason && !b.pe ? (
+          <p className="text-[13px] text-fg-3">{b.reason}</p>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid gap-6 md:grid-cols-2">
+              <BandBar label="P/E" band={b.pe} unit="×" />
+              <BandBar label="EV / EBITDA" band={b.ev_ebitda} unit="×" />
+            </div>
+            <p className="text-xs leading-4 text-fg-3">
+              {b.window && <>Daily, {formatSessionDate(b.window.from)} – {formatSessionDate(b.window.to)}. </>}
+              {b.note} {b.price_source && `Prices: ${b.price_source}.`} The box spans the middle half of days; the line is the median; the amber mark is the latest day.
+            </p>
+          </div>
+        )}
+      </Panel>
       <Panel
         title="Financial analysis"
         titleId="fa-title"
-        className="lg:col-span-8"
+        className="lg:col-span-12"
         wrapHeader
         refreshing={q.isFetching && !q.isLoading}
       >
@@ -161,8 +198,8 @@ export function FinancialAnalysis({ symbol, period }: { symbol: string; period: 
               <span>Source: {d.source}{d.currency ? ` · reported in ${d.currency}` : ""}</span>
             </p>
             {d.notes?.map((n) => <InlineNotice key={n}>{n}</InlineNotice>)}
-            <MetricTable title="Margins" note="share of revenue" table={d.margins} />
-            <MetricTable title="Growth" note={d.period === "annual" ? "against the previous year" : "against the same quarter a year earlier"} table={d.growth} signed />
+            <MetricTable period={p} title="Margins" note="share of revenue" table={d.margins} />
+            <MetricTable period={p} title="Growth" note={d.period === "annual" ? "against the previous year" : "against the same quarter a year earlier"} table={d.growth} signed />
             {d.cagr && d.cagr.rows.length > 0 && !d.cagr.rows.some((r) => r.values.some((v) => v !== null)) && (
               <p className="text-xs text-fg-3">Compound annual growth: {d.cagr.rows[0].why?.find(Boolean) ?? "not available"}</p>
             )}
@@ -173,49 +210,36 @@ export function FinancialAnalysis({ symbol, period }: { symbol: string; period: 
                   <thead>
                     <tr className="border-b border-line-subtle text-xs text-fg-3">
                       <th scope="col" className="py-1.5 pr-3 text-left font-medium">Measure</th>
-                      {d.cagr.spans.map((n) => <th key={n} scope="col" className="px-2 py-1.5 text-right font-medium">{n} years</th>)}
+                      {cagrCols.map(({ n }) => <th key={n} scope="col" className="px-2 py-1.5 text-right font-medium">{n} years</th>)}
                     </tr>
                   </thead>
                   <tbody>
                     {d.cagr.rows.map((r) => (
                       <tr key={r.key} className="border-b border-line-subtle/60">
                         <th scope="row" className="py-1.5 pr-3 text-left font-normal text-fg" title={r.formula}>{r.label}</th>
-                        {r.values.map((v, i) => (
-                          <td key={i} className={cn("num px-2 py-1.5 text-right", v === null ? "text-fg-3" : Number(v) >= 0 ? "text-pos" : "text-neg")} title={v === null ? (r.why?.[i] ?? "") : undefined}>
-                            {v === null ? DASH : formatPercent(v)}
-                          </td>
-                        ))}
+                        {cagrCols.map(({ i }) => {
+                          const v = r.values[i];
+                          return (
+                            <td key={i} className={cn("num px-2 py-1.5 text-right", v === null ? "text-fg-3" : Number(v) >= 0 ? "text-pos" : "text-neg")} title={v === null ? (r.why?.[i] ?? "") : undefined}>
+                              {v === null ? DASH : formatPercent(v)}
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                {cagrMissing.length > 0 && <p className="mt-1 text-xs text-fg-3">Not enough fiscal years in the data for {cagrMissing.join("- or ")}-year growth.</p>}
               </div>
             )}
-            <MetricTable title="Returns and cash conversion" note="ending balances" table={d.returns} />
-            <MetricTable title="Per share" note={`in ${ccy ?? "the reporting currency"}, diluted weighted-average shares`} table={d.per_share} currency={ccy} />
-            <MetricTable title="Common size — income statement" note="% of revenue" table={d.common_size} statement="income" />
-            <MetricTable title="Common size — balance sheet" note="% of total assets" table={d.common_size} statement="balance" />
-            <MetricTable title="Common size — cash flow" note="% of revenue" table={d.common_size} statement="cashflow" />
+            <MetricTable period={p} title="Returns and cash conversion" note="ending balances" table={d.returns} />
+            <MetricTable period={p} title="Efficiency and working capital" note="ending balances; days on a 365-day year" table={d.efficiency} />
+            <MetricTable period={p} title="Per share" note={`in ${ccy ?? "the reporting currency"}, diluted weighted-average shares`} table={d.per_share} currency={ccy} />
+            <MetricTable period={p} title="Common size — income statement" note="% of revenue" table={d.common_size} statement="income" />
+            <MetricTable period={p} title="Common size — balance sheet" note="% of total assets" table={d.common_size} statement="balance" />
+            <MetricTable period={p} title="Common size — cash flow" note="% of revenue" table={d.common_size} statement="cashflow" />
             <p className="text-xs leading-4 text-fg-3">
               Hover a measure for its formula and a dash for the reason it is missing. {d.fetched_at ? `Statements retrieved ${formatRelative(d.fetched_at)}.` : ""}
-            </p>
-          </div>
-        )}
-      </Panel>
-      <Panel title="Valuation bands" titleId="vb-title" className="lg:col-span-4 lg:self-start">
-        {q.isLoading ? (
-          <SkeletonRows rows={5} />
-        ) : !b ? (
-          <p className="text-[13px] text-fg-3">{d?.reason ?? "Not available."}</p>
-        ) : b.reason && !b.pe ? (
-          <p className="text-[13px] text-fg-3">{b.reason}</p>
-        ) : (
-          <div className="space-y-5">
-            <BandBar label="P/E" band={b.pe} unit="×" />
-            <BandBar label="EV / EBITDA" band={b.ev_ebitda} unit="×" />
-            <p className="text-xs leading-4 text-fg-3">
-              {b.window && <>Daily, {formatSessionDate(b.window.from)} – {formatSessionDate(b.window.to)}. </>}
-              {b.note} {b.price_source && `Prices: ${b.price_source}.`} The box spans the middle half of days; the line is the median; the amber mark is the latest day.
             </p>
           </div>
         )}

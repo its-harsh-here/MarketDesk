@@ -81,12 +81,14 @@ export function formatRatio(v: Num, digits = 2): string {
 export function formatLargeMoney(v: Num, ccy: string | null | undefined = "INR"): string {
   const n = toNumber(v);
   if (n === null) return DASH;
+  const sign = n < 0 ? "−" : ""; // the sign goes before the currency symbol: −₹1,089 Cr, not ₹-1,089.00 Cr
+  const a = Math.abs(n);
   if (ccy === "INR") {
-    const crore = n / 1e7;
+    const crore = a / 1e7;
     const digits = crore >= 100 ? 0 : 2;
-    return `₹${nf(`c${digits}`, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(crore)} Cr`;
+    return `${sign}₹${nf(`c${digits}`, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(crore)} Cr`;
   }
-  return `${currencySymbol(ccy)}${nf("cmp", { notation: "compact", maximumFractionDigits: 2 }, "en-US").format(n)}`;
+  return `${sign}${currencySymbol(ccy)}${nf("cmp", { notation: "compact", maximumFractionDigits: 2 }, "en-US").format(a)}`;
 }
 
 /** A count in international compact notation (e.g. 15.4B shares), for SEC filers' share counts. */
@@ -119,6 +121,24 @@ export function formatSessionDate(d: string | null | undefined, withYear = true)
   const [y, m, day] = d.slice(0, 10).split("-").map(Number);
   if (!y || !m || !day) return DASH;
   return withYear ? `${day} ${MONTHS[m - 1]} ${y}` : `${day} ${MONTHS[m - 1]}`;
+}
+
+/**
+ * A financial period as people name it: the fiscal year ("FY2026") or the quarter's month ("Sep 2026"), not the
+ * exact period-end day. A 52/53-week period ending in the first week of a month (e.g. 3 Oct) belongs to the month
+ * before. `long` gives the exact end for a tooltip.
+ */
+export function periodLabel(end: string | null | undefined, period: "annual" | "quarterly"): string {
+  if (!end) return DASH;
+  let [y, m] = end.slice(0, 10).split("-").map(Number);
+  const day = Number(end.slice(8, 10));
+  if (!y || !m) return DASH;
+  if (day <= 7) [y, m] = m === 1 ? [y - 1, 12] : [y, m - 1];
+  return period === "annual" ? `FY${y}` : `${MONTHS[m - 1]} ${y}`;
+}
+
+export function periodTitle(end: string, period: "annual" | "quarterly"): string {
+  return `${period === "annual" ? "Fiscal year" : "Quarter"} ended ${formatSessionDate(end)}`;
 }
 
 /** A UTC instant shown in the display timezone, e.g. "30 Jun 2026, 15:30 IST". */

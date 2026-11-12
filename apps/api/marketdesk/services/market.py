@@ -49,7 +49,7 @@ from marketdesk.providers.serialize import CODECS
 
 log = logging.getLogger("marketdesk.market")
 T = TypeVar("T")
-HEAVY_KINDS = frozenset({"history", "intraday", "statements", "options", "holders", "news", "actions"})
+HEAVY_KINDS = frozenset({"history", "intraday", "statements", "reported", "options", "holders", "news", "actions"})
 CIRCUIT_GROUPS = {
     "quote": "prices",
     "history": "prices",
@@ -57,6 +57,7 @@ CIRCUIT_GROUPS = {
     "actions": "prices",
     "fundamentals": "fundamentals",
     "statements": "fundamentals",
+    "reported": "fundamentals",
     "search": "search",
     "news": "search",  # a news outage must not pause price requests
     "holders": "fundamentals",
@@ -174,6 +175,7 @@ class MarketDataService:
             "fundamentals": settings.fundamentals_ttl_seconds,
             "actions": settings.fundamentals_ttl_seconds,
             "statements": settings.fundamentals_ttl_seconds,
+            "reported": settings.fundamentals_ttl_seconds,
             "search": settings.search_ttl_seconds,
             "news": 15 * 60,
             "holders": settings.fundamentals_ttl_seconds,
@@ -213,6 +215,11 @@ class MarketDataService:
     async def statements(self, symbol: str) -> Result[AnnualStatements]:
         # "|v2": entries cached before cash-flow lines were added (M11) are not reused.
         return await self._get("statements", f"{symbol}|v2", lambda: self.provider.annual_statements(symbol))
+
+    async def reported(self, symbol: str, period: str) -> Result[dict]:
+        """Full provider statements (services.reported shape) for listings outside SEC coverage."""
+        fetch = lambda: self.provider.reported_statements(symbol, period)  # noqa: E731
+        return await self._get("reported", f"{symbol}|{period}", fetch)
 
     async def actions(self, symbol: str) -> Result[list[CorporateAction]]:
         return await self._get("actions", symbol, lambda: self.provider.corporate_actions(symbol))
