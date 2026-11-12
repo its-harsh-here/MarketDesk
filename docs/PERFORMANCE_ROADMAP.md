@@ -158,7 +158,11 @@ Same soak test (18 companies × 17 endpoints, live data, production entrypoint),
 | Worker | 131 MB | 132 MB (reports its memory each cycle; restarts itself above 180 MB) |
 | Supervisor + web + worker | ~500 MB | **399 MB** (phase 1) → **270 MB** with 2.A (worker inside web) |
 
-Next: confirm on Render (Settings → Data status → Server memory), then phase 2 (merging the worker saves another
+Production (Render, 12 Nov 2026, after 2.A): the same browse of 8 companies × 6 tabs that previously caused two
+outages ran without any — total memory 287–321 MB (web peak 308 MB) with alerts evaluating inside the web
+process; Settings → Data status shows "276 MB of 512 MB · alerts run inside the web process".
+
+Next: phase 2 (merging the worker saves another
 ~110–130 MB, pending your approval) and phase 3–4 speed work.
 
 ## 5. How we will know it worked
