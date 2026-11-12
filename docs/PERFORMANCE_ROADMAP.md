@@ -112,30 +112,30 @@ Recommendation: **2.A first** (largest saving, smallest change), then 2.C. Keep 
 thin.
 
 ### Phase 3 — Faster pages: server side (1–2 sessions)
-- [ ] **3.1 Pre-warm what you look at**: during quiet periods the worker refreshes, for watchlist and holdings
+- [x] **3.1 Pre-warm what you look at** (6 symbols per cycle, round-robin; plus the Macro watchboard and official statistics): during quiet periods the worker refreshes, for watchlist and holdings
       symbols only, the description, fundamentals, news, peers, earnings and daily history into the persisted cache.
       Opening those pages then reads the database (tens of milliseconds) instead of calling providers (1–3 s).
-- [ ] **3.2 News tab**: fetch the three headline sources in parallel with a short per-source timeout (1.5 s),
+- [x] **3.2 News tab** (sources in parallel with per-source time limits; merged-list cache not yet): fetch the three headline sources in parallel with a short per-source timeout (1.5 s),
       show what has arrived, and cache the merged list for 10 minutes.
-- [ ] **3.3 Macro page**: serve the watchboard from one persisted, worker-refreshed snapshot instead of fetching
+- [x] **3.3 Macro page** (warmed by the worker instead of a separate snapshot): serve the watchboard from one persisted, worker-refreshed snapshot instead of fetching
       every series on page load (18 s → under 1 s).
 - [ ] **3.4 Cache assembled views**: persist the computed Description/Peers/Earnings payloads for a short time
       (5–15 min), so switching tabs or revisiting is instant.
-- [ ] **3.5 Keep small calls fast**: answer `/api/ai/status`, `/api/market/sessions` and other tiny shared calls
+- [x] **3.5 Keep small calls fast** (market sessions answered on the event loop from a 30 s memo; AI status cached 5 min in the browser): answer `/api/ai/status`, `/api/market/sessions` and other tiny shared calls
       from memory without touching the thread pool, so they never queue behind slow work.
 
 ### Phase 4 — Faster pages: browser side (1 session)
-- [ ] **4.1 Long-lived caching for hashed assets**: `Cache-Control: public, max-age=31536000, immutable` on
+- [x] **4.1 Long-lived caching for hashed assets**: `Cache-Control: public, max-age=31536000, immutable` on
       `/assets/*` (file names change on every build). *Repeat visits stop re-checking ~1.3 MB of JavaScript.*
-- [ ] **4.2 Prefetch on intent**: when the pointer rests on, or a phone scrolls past, an instrument link, prefetch
+- [x] **4.2 Prefetch on intent** (instrument links and table rows: page code + quote + description after a 120 ms rest): when the pointer rests on, or a phone scrolls past, an instrument link, prefetch
       its page code and first data (description + quote). Clicks then open instantly.
-- [ ] **4.3 Fetch once, reuse everywhere**: longer client cache times for data that changes slowly (fundamentals,
+- [~] **4.3 Fetch once, reuse everywhere** (AI status; more to tune): longer client cache times for data that changes slowly (fundamentals,
       sessions, AI status, mappings), and share one request across tabs of the same company.
 - [ ] **4.4 Instant revisits**: let the service worker (already present for the offline view) serve the last
       response for read-only API calls immediately and refresh in the background, clearly marked as refreshing.
 - [ ] **4.5 Trim the main bundle** (397 KB → under 250 KB): move rarely used parts (AI dialog, import mapping form,
       research export, lab) and heavy libraries behind on-demand loading.
-- [ ] **4.6 Lighter effects where they cost most**: automatically use the calm effects mode on phones, on
+- [x] **4.6 Lighter effects where they cost most** (phones and touch devices default to calm effects; animation pauses in hidden tabs): automatically use the calm effects mode on phones, on
       battery-saver, and when the browser reports reduced motion; keep the full look on desktop. Pause background
       animation when the tab is hidden.
 
@@ -163,6 +163,15 @@ outages ran without any — total memory 287–321 MB (web peak 308 MB) with ale
 process; Settings → Data status shows "276 MB of 512 MB · alerts run inside the web process".
 
 Next: 2.C (lazy heavy imports), 1.7 (streaming large SEC documents), and phases 3–4 speed work.
+
+### Speed results (local, live data, 12 Nov 2026)
+| Call | Watchlist/holdings symbol (pre-warmed) | Other symbol |
+| --- | --- | --- |
+| Description tab | 0.13 s (US), 0.01 s (India) | 3.3 s, 2.7 s |
+| Price history (6M) | 0.01 s | 0.55–0.6 s |
+| News tab | 0.7–0.9 s | 1.2–1.9 s |
+| Macro: watchboard / official statistics | 0.07 s / 0.01 s | was 9.7 s / 17.6 s cold |
+| Market sessions | 0.03 s | (was up to 1.1 s when queued) |
 
 ## 5. How we will know it worked
 - Soak test (0.3): total ≤ 400 MB after 24 companies × all tabs; web memory flat after the first 6 companies.

@@ -5,12 +5,17 @@ import { useEffect, useRef, useState } from "react";
 export type FxMode = "full" | "calm";
 const KEY = "md-fx";
 
+/** Phones and touch devices default to calm effects (blur and animation cost most there); a stored choice wins. */
+const lowPower = () => typeof window.matchMedia === "function" && window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;
+
 export function readFx(): FxMode {
   try {
-    return localStorage.getItem(KEY) === "calm" ? "calm" : "full";
+    const v = localStorage.getItem(KEY);
+    if (v === "calm" || v === "full") return v;
   } catch {
-    return "full";
+    /* storage unavailable */
   }
+  return lowPower() ? "calm" : "full";
 }
 
 export function applyFx(mode: FxMode) {
@@ -53,7 +58,11 @@ export function FxBackground() {
       if (!frame) frame = requestAnimationFrame(flush);
     };
     window.addEventListener("pointermove", onMove, { passive: true });
+    // Pause the background animation while the tab is hidden (no CPU spent on what nobody sees).
+    const onVisibility = () => document.documentElement.toggleAttribute("data-hidden", document.hidden);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pointermove", onMove);
       if (frame) cancelAnimationFrame(frame);
     };

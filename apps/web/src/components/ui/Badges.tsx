@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { usePrefetchOnHover } from "@/lib/prefetch";
 import type { DataMeta } from "@/lib/api/client";
 import { formatInstant, formatRelative } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -78,6 +79,7 @@ export function InstrumentBadge({
   link?: boolean;
   className?: string;
 }) {
+  const hover = usePrefetchOnHover(link ? symbol : null);
   const body = (
     <span className="flex min-w-0 flex-col">
       <span className="flex items-center gap-1.5">
@@ -89,7 +91,7 @@ export function InstrumentBadge({
   );
   if (!link) return <span className={cn("min-w-0", className)}>{body}</span>;
   return (
-    <Link to={`/instrument/${encodeURIComponent(symbol)}`} className={cn("min-w-0 rounded hover:[&_.num]:text-accent-text", className)}>
+    <Link to={`/instrument/${encodeURIComponent(symbol)}`} {...hover} className={cn("min-w-0 rounded hover:[&_.num]:text-accent-text", className)}>
       {body}
     </Link>
   );

@@ -228,6 +228,9 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
             response.headers.setdefault(k, v)
         if request.url.path.startswith("/api/"):
             response.headers.setdefault("Cache-Control", "no-store")
+        elif request.url.path.startswith("/assets/") and response.status_code == 200:
+            # Build output with content hashes in the file names: safe to cache for a year (roadmap 4.1).
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
         return response
 
     for r in (

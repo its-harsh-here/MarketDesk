@@ -9,7 +9,7 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>MarketDesk</title>
-    <script>(function(){try{var t=localStorage.getItem("md-theme")||"dark";if(t==="system"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}document.documentElement.setAttribute("data-theme",t==="light"?"light":"dark");var d=localStorage.getItem("md-density");if(d==="compact"||d==="terminal"){document.documentElement.setAttribute("data-density",d)}if(localStorage.getItem("md-fx")==="calm"){document.documentElement.setAttribute("data-fx","off")}}catch(e){}})();</script>
+    <script>(function(){try{var t=localStorage.getItem("md-theme")||"dark";if(t==="system"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}document.documentElement.setAttribute("data-theme",t==="light"?"light":"dark");var d=localStorage.getItem("md-density");if(d==="compact"||d==="terminal"){document.documentElement.setAttribute("data-density",d)}var f=localStorage.getItem("md-fx");if(f==="calm"||(f===null&&window.matchMedia("(max-width: 768px), (pointer: coarse)").matches)){document.documentElement.setAttribute("data-fx","off")}}catch(e){}})();</script>
   </head>
   <body>
     <div id="root"></div>

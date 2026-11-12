@@ -1,5 +1,7 @@
 import { Star } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { prefetchInstrument } from "@/lib/prefetch";
 import { useNavigate } from "react-router";
 import { DataTable, type Column, type SortState } from "@/components/ui/DataTable";
 import { FreshnessBadge, InstrumentBadge, LiveBadge } from "@/components/ui/Badges";
@@ -101,6 +103,13 @@ export function WatchlistTable({
   region?: "all" | "IN" | "US" | "other";
 }) {
   const navigate = useNavigate();
+  const qc = useQueryClient();
+  const intentTimer = useRef<number | undefined>(undefined);
+  // Prefetch the instrument page once the pointer rests on a row (roadmap 4.2).
+  const intent = (symbol: string) => {
+    window.clearTimeout(intentTimer.current);
+    intentTimer.current = window.setTimeout(() => prefetchInstrument(qc, symbol), 120);
+  };
   const symbols = useMemo(() => watchlist.items.map((i) => i.symbol), [watchlist.items]);
   const live = useLiveTrades(symbols);
   // Polled snapshots with any newer regular-session IEX trade applied; `liveSyms` marks which prices are streamed.
@@ -297,6 +306,7 @@ export function WatchlistTable({
       sort={sort}
       onSortChange={onSortChange}
       onRowClick={(r) => navigate(`/instrument/${encodeURIComponent(r.symbol)}`)}
+      onRowIntent={(r) => intent(r.symbol)}
       mobileDetailKeys={["change", "volume", "trend", "fresh"]}
       mobileSummary={(r) => (
         <div className="flex items-center gap-3">

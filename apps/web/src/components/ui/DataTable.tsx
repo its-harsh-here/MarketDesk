@@ -28,6 +28,8 @@ interface DataTableProps<T> {
   rows: T[];
   rowKey: (row: T) => string;
   onRowClick?: (row: T) => void;
+  /** Called when the pointer rests on a row or it gets focus (e.g. to prefetch the page the row opens). */
+  onRowIntent?: (row: T) => void;
   sort?: SortState | null;
   onSortChange?: (s: SortState) => void;
   /** Phone layout: a legible summary row; other columns go in an expandable details list. */
@@ -44,6 +46,7 @@ export function DataTable<T>({
   rows,
   rowKey,
   onRowClick,
+  onRowIntent,
   sort,
   onSortChange,
   mobileSummary,
@@ -183,6 +186,8 @@ export function DataTable<T>({
             <tr
               key={rowKey(row)}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
+              onPointerEnter={onRowIntent ? () => onRowIntent(row) : undefined}
+              onFocus={onRowIntent ? () => onRowIntent(row) : undefined}
               tabIndex={onRowClick ? 0 : undefined}
               data-row={onRowClick ? "1" : undefined}
               onKeyDown={onRowClick ? rowKeys(row, () => onRowClick(row)) : undefined}

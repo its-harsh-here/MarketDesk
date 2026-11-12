@@ -646,3 +646,6 @@ textarea:focus { box-shadow: 0 0 0 3px var(--accent-soft), 0 0 22px -8px var(--g
 }
 .live-flash { border-radius: 4px; animation: md-live-flash 900ms ease-out; }
 @media (prefers-reduced-motion: reduce) { .live-flash { animation: none; } }
+
+/* Hidden tab: pause decorative animation (docs/PERFORMANCE_ROADMAP.md 4.6). */
+[data-hidden] .fx-bg *, [data-hidden] .fx-bg { animation-play-state: paused !important; }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
@@ -126,10 +127,19 @@ async def intraday(
     return await intraday_payload(market, validate_symbol(market, symbol), range)
 
 
+_SESSIONS: dict = {"at": 0.0, "value": None}
+
+
 @router.get("/sessions", response_model=list[MarketSessionOut])
-def sessions():
-    """Exchange session states for the supported markets (published calendars, not a live exchange feed)."""
-    return market_sessions()
+async def sessions():
+    """Exchange session states for the supported markets (published calendars, not a live exchange feed).
+
+    Answered on the event loop from a 30-second memo, so this call on every page never waits behind slow requests
+    for a worker thread (docs/PERFORMANCE_ROADMAP.md 3.5)."""
+    now = time.monotonic()
+    if _SESSIONS["value"] is None or now - _SESSIONS["at"] > 30:
+        _SESSIONS["value"], _SESSIONS["at"] = market_sessions(), now
+    return _SESSIONS["value"]
 
 
 @router.get("/compare", response_model=CompareOut)

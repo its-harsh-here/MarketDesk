@@ -149,6 +149,13 @@ def merge(items: list[dict]) -> list[dict]:
     return sorted(out, key=sort_key, reverse=True)[:MAX_ITEMS]
 
 
+class _NoNews:
+    """Stands in for a provider result that did not arrive in time."""
+
+    value = None
+    meta = type("Meta", (), {"message": "The headline provider did not answer in time.", "fetched_at": None})()
+
+
 def alpaca_item(n: dict, symbol: str) -> dict:
     others = [s for s in n.get("symbols") or [] if s != symbol]
     return {
@@ -275,8 +282,22 @@ def about(headline: str, terms: list[str], ticker: str | None = None) -> bool:
 
 async def stream(db: Session, market: MarketDataService, research, inst: Instrument, alpaca=None, gnews=None) -> dict:
     sources, notes, items = [], [], []
-    tagged, web = await asyncio.gather(_alpaca_news(alpaca, inst), _web_news(gnews, inst))
-    news = await market.news(inst.symbol)
+
+    # All three sources at once, each with its own time limit, so one slow source cannot hold the tab
+    # (docs/PERFORMANCE_ROADMAP.md 3.2). A source that times out is simply missing from this answer.
+    async def limited(coro, default, seconds: float = 6.0):
+        try:
+            return await asyncio.wait_for(coro, timeout=seconds)
+        except TimeoutError:
+            return default
+
+    tagged, web, news = await asyncio.gather(
+        limited(_alpaca_news(alpaca, inst), None),
+        limited(_web_news(gnews, inst), []),
+        limited(market.news(inst.symbol), None, 10.0),
+    )
+    if news is None:
+        news = _NoNews()
     terms = name_terms(inst)
     ticker = inst.symbol.split(".")[0].split(":")[-1]
     candidates = (tagged or []) + web + ([news_item(n) for n in news.value] if news.value is not None else [])

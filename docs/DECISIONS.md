@@ -496,4 +496,12 @@ Consequential choices, newest last. Routine choices live in code comments.
     compose) must hold, renewed each cycle; alert events also keep their unique keys. Each cycle first waits up to
     30 s for no page request in flight. `WORKER_MODE=separate` restores the two-process layout. Local soak test
     (18 companies × 17 endpoints with cycles running): supervisor + web 270 MB, against ~500 MB originally.
+78. **Speed work (12 Nov 2026, roadmap phases 3–4).** The worker pre-warms the data behind watchlist and holdings
+    symbols (6 per cycle, round-robin; daily history, fundamentals, corporate actions, headlines) and the Macro
+    watchboard and official statistics; anything fresh is not fetched again. News sources are fetched in parallel
+    with per-source time limits. Market sessions are answered on the event loop from a 30 s memo. Hashed static
+    assets are cached for a year (`immutable`). Instrument links and table rows prefetch the page's code and first
+    data after a 120 ms rest. Phones and touch devices default to calm effects (a stored choice wins) and the
+    background animation pauses in hidden tabs. Measured: Description for a watchlist symbol 3.3 s → 0.13 s;
+    Macro official statistics 17.6 s → 0.01 s once warmed.
 

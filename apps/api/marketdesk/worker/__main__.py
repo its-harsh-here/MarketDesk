@@ -60,6 +60,20 @@ async def _briefings(market) -> dict:
         return {"error": type(exc).__name__}
 
 
+async def _prewarm(market) -> dict:
+    """Refresh the data behind a few watchlist/holdings symbols, so their pages open from cache."""
+    from marketdesk.services.prewarm import warm
+
+    if market.source == "fixture":
+        return {"skipped": "sample dataset"}
+    try:
+        with db_session() as db:
+            return await warm(db, market)
+    except Exception as exc:  # never let warming break the alert worker
+        log.warning("pre-warm failed: %s", type(exc).__name__)
+        return {"error": type(exc).__name__}
+
+
 async def _screener_snapshots(market) -> dict:
     """A few stale screening snapshots per cycle (watchlists, holdings, lists, peers), so screens stay current."""
     from marketdesk.services.screener import refresh_instruments, tracked_instruments
@@ -99,6 +113,7 @@ async def run_cycle(market, research=None, embedded: bool = False) -> dict:
         summary["research"] = await _refresh_research(market)
         summary["briefings"] = await _briefings(market)
         summary["screener"] = await _screener_snapshots(market)
+        summary["prewarm"] = await _prewarm(market)
         memory.trim(min_interval=0)  # give back what the cycle used before reporting
         summary["memory"] = {"rss_mb": memory.rss_mb(), "peak_mb": memory.peak_mb(), "embedded": embedded}
         skipped = summary.get("skipped") or []

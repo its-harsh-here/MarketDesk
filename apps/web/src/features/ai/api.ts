@@ -69,7 +69,8 @@ export type AiAnswer = AiAnswerSummary & {
 };
 
 export function useAiStatus(enabled = true) {
-  return useQuery({ queryKey: ["ai", "status"], queryFn: () => api.get<AiStatus>("/api/ai/status"), enabled, staleTime: 15_000 });
+  // Budget figures change only when an answer is requested (that mutation refreshes this); no need to refetch on every page.
+  return useQuery({ queryKey: ["ai", "status"], queryFn: () => api.get<AiStatus>("/api/ai/status"), enabled, staleTime: 5 * 60_000 });
 }
 
 export function useAiAnswers(symbol: string | undefined, enabled = true) {
