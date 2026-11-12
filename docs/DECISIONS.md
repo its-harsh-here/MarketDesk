@@ -452,4 +452,26 @@ Consequential choices, newest last. Routine choices live in code comments.
     headlines per publisher so no outlet fills the list. Google News RSS is offered for personal reading; the
     product shows headlines and links only and does not republish articles. Small companies with no established
     coverage show fewer or no headlines, with the reason. The sample dataset keeps its fictitious headlines.
+72. **Broker CSV presets and saved column mappings (12 Nov 2026; CLAUDE.md optional item).** A broker export is
+    converted into the canonical CSV and then goes through the same preview, row validation, duplicate detection,
+    ledger replay and atomic commit as any import — no second import path. A mapping names the column for each
+    field (date, buy/sell, symbol, quantity, price; optional charges, exchange, order id, currency), the words for
+    buy and sell, the date format, how a symbol becomes a listing (add .NS/.BO, or from the exchange column), and
+    whether partial fills of one order are combined (quantity summed, volume-weighted price) so they are not taken
+    for duplicates. Built-in: Zerodha Console tradebook (equity) — its published column names, not yet checked
+    against a real file from the owner. Owner mappings are stored in app settings (up to 20). Exports without a
+    charges column import with zero fees and the preview says so; rows that are not buys or sells are skipped and
+    counted. Purchases still need cash in the ledger (record a deposit first): no deposits are invented.
+73. **Alert delivery beyond the inbox (12 Nov 2026).** Telegram is an optional channel registered only when
+    `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are set and well-formed; it uses the existing delivery rows (one per
+    event and channel, failures recorded as failed, never shown as sent) and now also sends events released after
+    quiet hours. The token travels in the Bot API path, so errors are built without the URL. Desktop notifications
+    are a per-device opt-in (browser permission) that show new inbox items while MarketDesk is open; background push
+    and email remain out (the hosted server sleeps when idle, and no mail service is configured). The Alerts page
+    lists each channel with its state.
+74. **First-run checklist and QA fixes (12 Nov 2026).** The Overview shows a three-step "Getting started" panel
+    (watchlist with symbols, a recorded transaction, an alert) computed from real data; it disappears when all are
+    done or is dismissed per device. QA sweep: mobile table rows were a button containing buttons (axe
+    nested-interactive); the row stays a touch target and a separate "Open" button carries keyboard and
+    screen-reader access.
 

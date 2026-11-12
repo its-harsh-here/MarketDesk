@@ -11,7 +11,9 @@ import { InstrumentBadge, Pill } from "@/components/ui/Badges";
 import { Segmented } from "@/components/ui/Segmented";
 import { EmptyState, ErrorState, InlineNotice, SkeletonRows } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
-import { errorMessage, type Alert, type InboxItem } from "@/lib/api/client";
+import { api, errorMessage, type Alert, type InboxItem } from "@/lib/api/client";
+import { useQuery } from "@tanstack/react-query";
+import { useNotifySetting } from "@/lib/desktopNotify";
 import { DASH, formatInstant, formatMoney, formatPercent, formatRelative, formatSessionDate, toNumber } from "@/lib/format";
 import { useFixture, useFixtureAction, usePrefs, useSession, useStatus } from "@/features/settings/api";
 import { BriefingItems } from "@/features/briefing/BriefingItems";
@@ -361,11 +363,11 @@ export function AlertsPage() {
       </Panel>
       <div className="space-y-4 lg:col-span-4 lg:space-y-5">
         <WorkerPanel />
+        <DeliveryPanel />
         <UpcomingResultsPanel />
       </div>
       <InboxPanel readOnly={readOnly} tz={tz} />
       <UniverseEventsPanel className="lg:col-span-12" />
-      {!readOnly && <InlineNotice className="lg:col-span-12">Only in-app notices are available. Email, Telegram and background push are not configured.</InlineNotice>}
       <ConfirmDialog
         open={deleting !== null}
         onOpenChange={(o) => !o && setDeleting(null)}
@@ -378,5 +380,38 @@ export function AlertsPage() {
         }}
       />
     </div>
+  );
+}
+
+/** Where alert notices go: the inbox always; this device and Telegram only when switched on / configured. */
+export function DeliveryPanel() {
+  const q = useQuery({
+    queryKey: ["alert-channels"],
+    queryFn: ({ signal }) => api.get<{ channels: { channel: string; enabled: boolean; note: string }[] }>("/api/alert-channels", undefined, signal),
+    staleTime: 5 * 60_000,
+  });
+  const { state, enable, disable } = useNotifySetting();
+  const label: Record<string, string> = { in_app: "Inbox", telegram: "Telegram" };
+  return (
+    <Panel title="Delivery" titleId="delivery-title" className="lg:col-span-4">
+      <dl className="space-y-2.5 text-[13px]">
+        {(q.data?.channels ?? []).map((c) => (
+          <div key={c.channel} className="flex items-start justify-between gap-3">
+            <dt className="text-fg-2">{label[c.channel] ?? c.channel}<span className="block text-xs text-fg-3">{c.note}</span></dt>
+            <dd><Pill tone={c.enabled ? "pos" : "neutral"}>{c.enabled ? "On" : "Off"}</Pill></dd>
+          </div>
+        ))}
+        <div className="flex items-start justify-between gap-3">
+          <dt className="text-fg-2">This device<span className="block text-xs text-fg-3">
+            {state === "unsupported" ? "This browser does not support notifications." : state === "denied" ? "Notifications are blocked for this site in the browser settings." : "Desktop notifications while MarketDesk is open in a tab."}
+          </span></dt>
+          <dd>
+            {state === "on" ? <Button size="sm" variant="ghost" onClick={disable}>Turn off</Button>
+              : <Button size="sm" disabled={state === "unsupported" || state === "denied"} onClick={enable}>Turn on</Button>}
+          </dd>
+        </div>
+      </dl>
+      <p className="mt-3 text-xs leading-4 text-fg-3">Alerts are evaluated by the server's worker; while the hosted server sleeps, nothing is evaluated or sent.</p>
+    </Panel>
   );
 }

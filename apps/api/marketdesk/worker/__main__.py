@@ -103,6 +103,9 @@ async def run_cycle(market, research=None) -> dict:
 
 async def main_async(once: bool) -> None:
     settings = get_settings()
+    from marketdesk.services.alerts import configure_channels
+
+    configure_channels(settings)
     validate_settings(settings, role="worker")
     init_engine(settings)
     from marketdesk.db.migrations import ensure_migrated

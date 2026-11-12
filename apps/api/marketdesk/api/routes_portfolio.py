@@ -20,7 +20,7 @@ from marketdesk.schemas import (
     TransactionOut,
     TransactionPage,
 )
-from marketdesk.services import csv_io
+from marketdesk.services import broker_csv, csv_io
 from marketdesk.services import portfolio as svc
 from marketdesk.services.market import MarketDataService
 
@@ -89,15 +89,41 @@ def delete(tid: int, db: Session = Depends(get_db)):
 @off_event_loop
 async def import_preview(
     file: UploadFile = File(...),
+    mapping: str | None = Query(default=None, max_length=64, description="Broker mapping id; omit for canonical"),
     db: Session = Depends(get_db),
     settings: Settings = Depends(settings_dep),
     market: MarketDataService = Depends(market_dep),
 ):
     name = (file.filename or "").lower()
     if not name.endswith(".csv") or (file.content_type or "") not in CSV_TYPES:
-        raise AppError(415, "unsupported_media_type", "Upload a .csv file in the canonical MarketDesk format.")
+        raise AppError(415, "unsupported_media_type", "Upload a .csv file.")
     content = await file.read(settings.max_upload_bytes + 1)
-    return await csv_io.build_preview(db, settings, market, file.filename, content)
+    if len(content) > settings.max_upload_bytes:
+        raise AppError(413, "payload_too_large", f"CSV files are limited to {settings.max_upload_bytes // 1000} KB.")
+    notes: list[str] = []
+    if mapping:
+        m = broker_csv.get_mapping(db, mapping)
+        content, notes = broker_csv.convert(content, m)
+    out = await csv_io.build_preview(db, settings, market, file.filename, content)
+    return {**out, "conversion_notes": notes, "mapping": mapping}
+
+
+@router.get("/csv-mappings", dependencies=[Depends(require_reader)])
+def csv_mappings(db: Session = Depends(get_db)) -> dict:
+    """Broker CSV presets (built-in) and the owner's saved column mappings."""
+    return {"mappings": broker_csv.all_mappings(db), "fields": list(broker_csv.FIELDS),
+            "required": list(broker_csv.REQUIRED_FIELDS), "date_formats": list(broker_csv.DATE_FORMATS)}  # fmt: skip
+
+
+@router.post("/csv-mappings", status_code=201, dependencies=[Depends(require_writer)])
+def save_csv_mapping(body: dict, db: Session = Depends(get_db)) -> dict:
+    return broker_csv.save_mapping(db, body)
+
+
+@router.delete("/csv-mappings/{mid}", status_code=204, dependencies=[Depends(require_writer)])
+def delete_csv_mapping(mid: str, db: Session = Depends(get_db)) -> Response:
+    broker_csv.delete_mapping(db, mid)
+    return Response(status_code=204)
 
 
 @router.post("/import/{token}/commit", response_model=ImportCommitOut, dependencies=[Depends(require_writer)])

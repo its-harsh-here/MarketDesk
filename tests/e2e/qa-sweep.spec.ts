@@ -110,6 +110,13 @@ const PAGES: { name: string; url: string; ready?: (p: Page) => Promise<void> }[]
   { name: "journal", url: "/journal" },
   { name: "journal-empty", url: "/journal?q=no-such-note" },
   { name: "settings", url: "/settings" },
+  { name: "movers", url: "/movers" },
+  { name: "desk", url: "/desk" },
+  { name: "inst-news", url: "/instrument/SX%3AAURORA?tab=news" },
+  { name: "inst-holders", url: "/instrument/SX%3AAURORA?tab=holders" },
+  { name: "inst-options", url: "/instrument/SX%3AHALCYON?tab=options" },
+  { name: "inst-relations", url: "/instrument/SX%3AAURORA?tab=relations" },
+  { name: "inst-intraday", url: "/instrument/SX%3AAURORA?tab=chart", ready: (p) => p.getByRole("radio", { name: "1D" }).first().click() },
   { name: "not-found", url: "/nope" },
   { name: "instrument-error", url: "/instrument/SX%3ANOPE" },
 ];
@@ -159,6 +166,10 @@ for (const width of [1440, 390] as const) {
     await openAndAudit("shortcuts", async () => { await page.keyboard.press("?"); }, "Keyboard shortcuts");
     await openAndAudit("transaction", async () => { await page.getByRole("button", { name: "Add transaction" }).first().click(); await page.getByRole("dialog").getByRole("button", { name: "Record transaction" }).click(); }, "Add transaction");
     await openAndAudit("import", async () => { await page.getByRole("button", { name: "Import CSV" }).first().click(); }, /Import/);
+    await openAndAudit("import-mapping", async () => {
+      await page.getByRole("button", { name: "Import CSV" }).first().click();
+      await page.getByRole("dialog").getByRole("button", { name: "New broker mapping" }).click();
+    }, /Import/);
     await page.goto("/instrument/SX%3AAURORA");
     await page.getByRole("heading", { name: "SX:AURORA" }).waitFor();
     await openAndAudit("alert", async () => { await page.getByRole("button", { name: "Create alert" }).click(); }, "Create alert");

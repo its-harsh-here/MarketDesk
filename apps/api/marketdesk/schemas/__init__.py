@@ -393,6 +393,8 @@ class ImportPreviewOut(Model):
     blocking_reason: str | None = None
     ledger_error: dict | None = None
     header_errors: list[str] = []
+    conversion_notes: list[str] = []
+    mapping: str | None = None
     rows: list[ImportRowOut]
 
 

@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { useMediaQuery } from "@/lib/hooks";
@@ -82,15 +82,26 @@ export function DataTable<T>({
           const expanded = Boolean(open[k]);
           return (
             <li key={k} className={rowClassName?.(row)}>
+              {/* The row is a tap target for touch; keyboard and screen readers use the Open button, so no control is
+                  nested inside another (the summary can hold its own buttons, e.g. a watchlist star). */}
               <div
-                className={cn("flex min-h-14 items-center gap-2 px-4 py-2", onRowClick && cn("cursor-pointer active:bg-hover", focusRing))}
+                className={cn("flex min-h-14 items-center gap-2 px-4 py-2", onRowClick && "cursor-pointer active:bg-hover")}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                role={onRowClick ? "button" : undefined}
-                tabIndex={onRowClick ? 0 : undefined}
-                data-row={onRowClick ? "1" : undefined}
-                onKeyDown={onRowClick ? rowKeys(row, () => onRowClick(row)) : undefined}
               >
                 <div className="min-w-0 flex-1">{mobileSummary(row)}</div>
+                {onRowClick && (
+                  <button
+                    type="button"
+                    aria-label={/^\d+$/.test(String(k)) ? "Open" : `Open ${k}`}
+                    className={cn("flex size-11 shrink-0 items-center justify-center rounded-md text-fg-3 hover:bg-hover", focusRing)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRowClick(row);
+                    }}
+                  >
+                    <ChevronRight className="size-4" aria-hidden />
+                  </button>
+                )}
                 {detailCols.length > 0 && (
                   <button
                     type="button"

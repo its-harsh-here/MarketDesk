@@ -40,6 +40,12 @@ def delete(aid: int, db: Session = Depends(get_db)):
     return Response(status_code=204)
 
 
+@router.get("/alert-channels", dependencies=[Depends(require_reader)])
+def alert_channels() -> dict:
+    """Where alert notices are delivered: the in-app inbox always; external channels only when configured."""
+    return {"channels": svc.channel_status()}
+
+
 @router.get("/alert-events", response_model=list[AlertEventOut], dependencies=[Depends(require_reader)])
 def events(limit: int = Query(default=50, ge=1, le=200), unread: bool = False, db: Session = Depends(get_db)):
     return svc.list_events(db, limit, unread)

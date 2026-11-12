@@ -37,6 +37,9 @@ test("overview opens on the dashboard with a sample-data badge and honest empty 
   await expect(page.getByRole("button", { name: /Sample data, dataset date 30 Jun 2026/ })).toBeVisible();
   await expect(page.getByText("No watchlist yet", { exact: true })).toBeVisible();
   await expect(page.getByText("No transactions yet", { exact: true })).toBeVisible(); // never invents holdings
+  const start = page.getByRole("region", { name: "Getting started" });
+  await expect(start.getByText("0 of 3 done")).toBeVisible();
+  await expect(start.getByText("Build a watchlist")).toBeVisible();
   await page.getByRole("button", { name: "Create watchlist" }).click();
   const dialog = page.getByRole("dialog", { name: "New watchlist" });
   await dialog.getByLabel("Name").fill("E2E list");
@@ -1158,10 +1161,45 @@ test("sidebar: an icon rail that expands while the pointer is on it and for keyb
   await page.mouse.move(700, 400);
   await page.mouse.move(28, 300, { steps: 4 });
   await expect.poll(width).toBeGreaterThan(150);
-  await rail.getByRole("link", { name: "Movers" }).click();
+  await rail.getByRole("link", { name: "Movers" }).click({ position: { x: 20, y: 20 } }); // on the icon, inside the rail strip
   await expect(page).toHaveURL(/\/movers$/);
   await expect.poll(width).toBeLessThan(70);
   await page.mouse.move(30, 320, { steps: 3 }); // small moves inside the rail do not reopen it
   await page.waitForTimeout(300);
   expect(await width()).toBeLessThan(70);
+});
+
+test("broker CSV: save a column mapping, preview a broker export through it (fills combined), delete the mapping", async ({ page }) => {
+  await page.goto("/portfolio");
+  await page.getByRole("button", { name: "Import CSV" }).first().click();
+  const dialog = page.getByRole("dialog", { name: /Import transactions/ });
+  await expect(dialog.getByRole("combobox", { name: "File format" }).locator("option", { hasText: "Zerodha Console" })).toHaveCount(1);
+  await dialog.getByRole("button", { name: "New broker mapping" }).click();
+  const form = dialog.getByRole("group", { name: "New broker mapping" });
+  await form.getByLabel("Mapping name").fill("E2E broker");
+  await form.getByLabel(/^Trade date/).fill("When");
+  await form.getByLabel(/^Buy \/ sell/).fill("Side");
+  await form.getByLabel(/^Symbol \*/).fill("Code");
+  await form.getByLabel(/^Quantity/).fill("Units");
+  await form.getByLabel(/^Price/).fill("Px");
+  await form.getByLabel(/^Order id/).fill("Order");
+  await form.getByLabel("Symbols").selectOption("none");
+  await form.getByRole("button", { name: "Save mapping" }).click();
+  await expect(dialog.getByRole("combobox", { name: "File format" })).toHaveValue("custom_e2e_broker");
+  const csv = "When,Side,Code,Units,Px,Order\n2026-06-01,buy,SX:BANYAN,1,10,X1\n2026-06-01,buy,SX:BANYAN,1,12,X1\n2026-06-02,hold,SX:BANYAN,1,1,X2\n";
+  await dialog.locator("#csv-file").setInputFiles({ name: "broker.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
+  await expect(dialog.getByText(/1 partial fill\(s\) were combined/)).toBeVisible();
+  await expect(dialog.getByText(/1 row\(s\) skipped: not a buy or sell/)).toBeVisible();
+  await expect(dialog.getByText("1 rows")).toBeVisible();
+  await dialog.getByRole("button", { name: "Delete mapping" }).click();
+  await dialog.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(dialog.getByRole("combobox", { name: "File format" })).toHaveValue("");
+});
+
+test("alerts: delivery panel lists the inbox as on and Telegram as off until configured", async ({ page }) => {
+  await page.goto("/alerts");
+  const panel = page.getByRole("region", { name: "Delivery" });
+  await expect(panel.getByText("Inbox")).toBeVisible();
+  await expect(panel.getByText(/Telegram delivery is not configured/)).toBeVisible();
+  await expect(panel.getByText("This device")).toBeVisible();
 });

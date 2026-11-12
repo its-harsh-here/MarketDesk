@@ -46,9 +46,31 @@ class InAppChannel:
         """The inbox reads events directly; recording the delivery is the delivery."""
 
 
-# External channels (email, Telegram, push) are registered here only when configured. None are configured, and the
-# UI says so; nothing is ever shown as sent through a channel that does not exist.
+# External channels are registered here only when configured (configure_channels); the UI lists what exists, and
+# nothing is ever shown as sent through a channel that does not exist.
 CHANNELS: dict[str, object] = {"in_app": InAppChannel()}
+CHANNEL_PROBLEMS: dict[str, str] = {}
+
+
+def configure_channels(settings) -> None:
+    """Register optional external channels from server settings (called by the web app and the worker)."""
+    from marketdesk.providers.telegram import TelegramChannel
+
+    token, chat = settings.telegram_bot_token, settings.telegram_chat_id
+    problem = TelegramChannel.problem(token, chat)
+    if problem is None:
+        CHANNELS["telegram"] = TelegramChannel(token.strip(), chat.strip())
+        CHANNEL_PROBLEMS.pop("telegram", None)
+    else:
+        CHANNELS.pop("telegram", None)
+        CHANNEL_PROBLEMS["telegram"] = problem
+
+
+def channel_status() -> list[dict]:
+    out = [{"channel": "in_app", "enabled": True, "note": "Inbox and the notification bell."}]
+    note = CHANNEL_PROBLEMS.get("telegram") or "Messages go to the configured Telegram chat."
+    out.append({"channel": "telegram", "enabled": "telegram" in CHANNELS, "note": note})
+    return out
 
 
 # --------------------------------------------------------------------------- serialisation
@@ -375,7 +397,16 @@ def maintenance(db: Session, now: datetime | None = None) -> dict:
         .where(AlertDelivery.status == "held", AlertEvent.deliver_after <= now)
     ).scalars()
     for d in held:
-        d.status, d.attempts = "delivered", d.attempts + 1
+        channel = CHANNELS.get(d.channel)
+        d.attempts += 1
+        if channel is None:
+            d.status, d.last_error = "failed", "Channel no longer configured."
+            continue
+        try:
+            channel.deliver(db.get(AlertEvent, d.event_id))
+            d.status = "delivered"
+        except Exception as exc:  # recorded, never shown as sent
+            d.status, d.last_error = "failed", f"{type(exc).__name__}: {exc}"[:200]
         released += 1
     db.commit()
     return {"rearmed": rearmed, "released": released}

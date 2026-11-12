@@ -694,6 +694,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portfolio/csv-mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Csv Mappings
+         * @description Broker CSV presets (built-in) and the owner's saved column mappings.
+         */
+        get: operations["csv_mappings_api_portfolio_csv_mappings_get"];
+        put?: never;
+        /** Save Csv Mapping */
+        post: operations["save_csv_mapping_api_portfolio_csv_mappings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/csv-mappings/{mid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Csv Mapping */
+        delete: operations["delete_csv_mapping_api_portfolio_csv_mappings__mid__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portfolio/import/{token}/commit": {
         parameters: {
             query?: never;
@@ -2725,6 +2763,13 @@ export interface components {
              * @default []
              */
             header_errors: string[];
+            /**
+             * Conversion Notes
+             * @default []
+             */
+            conversion_notes: string[];
+            /** Mapping */
+            mapping?: string | null;
             /** Rows */
             rows: components["schemas"]["ImportRowOut"][];
         };
@@ -5280,7 +5325,10 @@ export interface operations {
     };
     import_preview_api_portfolio_import_preview_post: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Broker mapping id; omit for canonical */
+                mapping?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5299,6 +5347,94 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ImportPreviewOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    csv_mappings_api_portfolio_csv_mappings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    save_csv_mapping_api_portfolio_csv_mappings_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_csv_mapping_api_portfolio_csv_mappings__mid__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

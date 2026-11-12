@@ -116,6 +116,9 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
         openapi_url="/api/openapi.json" if not settings.is_production else None,
     )
     app.state.settings = settings
+    from marketdesk.services.alerts import configure_channels
+
+    configure_channels(settings)
     app.state.market = market or build_market_service(settings, session_factory())
     from marketdesk.services.research import ResearchService
 

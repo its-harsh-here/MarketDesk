@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { GettingStarted } from "./GettingStarted";
 import { ArrowRight, BookOpen, Briefcase, FileUp, ListChecks, Plus, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
@@ -222,6 +223,7 @@ export function OverviewPage() {
         </div>
       )}
       <div className="grid grid-cols-1 gap-4 p-4 md:p-6 lg:grid-cols-12 lg:gap-5">
+        <GettingStarted />
         {chartSymbol ? (
           <ChartPanel
             key={chartSymbol}

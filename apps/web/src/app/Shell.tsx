@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useDialogs } from "./dialogs";
 import { MOD } from "@/features/search/ShortcutsDialog";
 import { useAlertMutations, useInbox, useInboxCounts } from "@/features/alerts/api";
+import { useDesktopNotifications } from "@/lib/desktopNotify";
 import { applyTheme, usePatchPrefs, usePrefs, useSession, useStatus } from "@/features/settings/api";
 import { useBenchmarks, useSessions } from "@/features/market/api";
 import { REGION_LABEL, sessionText } from "@/lib/markets";
@@ -176,6 +177,7 @@ function ProviderStatus() {
 
 function NotificationsMenu() {
   const { data: unread } = useInbox({ unread: true }, 6);
+  useDesktopNotifications(unread);
   const { data: counts } = useInboxCounts();
   const { read } = useAlertMutations();
   const navigate = useNavigate();

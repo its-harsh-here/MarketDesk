@@ -83,6 +83,9 @@ class Settings(BaseSettings):
     # Alpaca Market Data (free Basic plan; docs/DECISIONS.md #65): US option chains from the indicative feed and
     # streaming IEX trades. Optional; without both values options fall back to the market-data provider and
     # quotes are polled. ALPACA_STREAMING=false keeps the key for option chains but turns streaming off.
+    # Telegram alert delivery (optional, DECISIONS #73): a bot token from @BotFather and the chat id to message.
+    telegram_bot_token: str | None = None
+    telegram_chat_id: str | None = None
     alpaca_api_key_id: str | None = None
     alpaca_api_secret_key: str | None = None
     alpaca_streaming: bool = True
