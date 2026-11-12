@@ -42,7 +42,7 @@ export function Panel({ title, titleId, meta, actions, children, className, body
               Refreshing
             </span>
           )}
-          {actions && <div className="ml-auto flex shrink-0 items-center gap-1">{actions}</div>}
+          {actions && <div className="ml-auto flex max-w-full min-w-0 flex-wrap items-center justify-end gap-1">{actions}</div>}
         </header>
       )}
       <div className={cn("min-w-0 flex-1", bodyClassName ?? "p-[var(--panel-pad)]")}>{children}</div>

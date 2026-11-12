@@ -34,8 +34,8 @@ export function OfficialPanel({ className }: { className?: string }) {
       {q.isLoading ? <SkeletonRows rows={6} /> : q.isError || !d ? <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} /> : d.status === "not_configured" ? (
         <InlineNotice>{d.reason} {d.how}</InlineNotice>
       ) : (
-        <div className="grid gap-5 lg:grid-cols-3">
-          <div tabIndex={0} className="scroll-x scrollbar-thin overflow-x-auto lg:col-span-2">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          <div tabIndex={0} className="scroll-x scrollbar-thin min-w-0 overflow-x-auto lg:col-span-2">
             <table className="w-full min-w-[32rem] text-[13px]" aria-label="US official statistics from FRED">
               <thead><tr className="border-b border-line-subtle text-xs text-fg-3">
                 <th scope="col" className="py-1.5 text-left font-medium">Series</th>
@@ -56,7 +56,7 @@ export function OfficialPanel({ className }: { className?: string }) {
               ))}</tbody>
             </table>
           </div>
-          <div>
+          <div className="min-w-0">
             <h3 className="mb-1 text-xs font-medium text-fg-2">Next releases</h3>
             {d.calendar && d.calendar.length ? (
               <ul className="divide-y divide-line-subtle text-[13px]" aria-label="Upcoming US data releases">
