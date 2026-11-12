@@ -162,8 +162,7 @@ Production (Render, 12 Nov 2026, after 2.A): the same browse of 8 companies × 6
 outages ran without any — total memory 287–321 MB (web peak 308 MB) with alerts evaluating inside the web
 process; Settings → Data status shows "276 MB of 512 MB · alerts run inside the web process".
 
-Next: phase 2 (merging the worker saves another
-~110–130 MB, pending your approval) and phase 3–4 speed work.
+Next: 2.C (lazy heavy imports), 1.7 (streaming large SEC documents), and phases 3–4 speed work.
 
 ## 5. How we will know it worked
 - Soak test (0.3): total ≤ 400 MB after 24 companies × all tabs; web memory flat after the first 6 companies.
