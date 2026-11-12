@@ -405,61 +405,70 @@ def compute_ratios(
     """Deterministic ratios for the latest period that has the inputs. Inputs are listed with their sources."""
     lines = statements["lines"]
     out = []
-    for end in statements["period_ends"][:1]:
-        rev = _value_at(lines, "revenue", end)
-        out.append(
-            _ratio("gross_margin", "Gross profit ÷ revenue (same period)", _value_at(lines, "gross_profit", end), rev)
+    ends = statements["period_ends"]
+    if not ends:
+        return out
+
+    def latest(key: str):
+        """Each statement's own latest period: a quarterly table's newest column can be a balance-sheet date from
+        an annual report, with no quarterly income figures for it."""
+        return next((e for e in ends if _value_at(lines, key, e) is not None), ends[0])
+
+    inc, bal, cfe = latest("revenue"), latest("equity"), latest("operating_cash_flow")
+    rev = _value_at(lines, "revenue", inc)
+    out.append(
+        _ratio("gross_margin", "Gross profit ÷ revenue (same period)", _value_at(lines, "gross_profit", inc), rev)
+    )
+    out.append(
+        _ratio(
+            "operating_margin",
+            "Operating income ÷ revenue (same period)",
+            _value_at(lines, "operating_income", inc),
+            rev,
         )
+    )
+    out.append(_ratio("net_margin", "Net income ÷ revenue (same period)", _value_at(lines, "net_income", inc), rev))
+    out.append(
+        _ratio(
+            "debt_to_equity",
+            "Long-term debt ÷ shareholders' equity (same balance-sheet date)",
+            _value_at(lines, "long_term_debt", bal),
+            _value_at(lines, "equity", bal),
+        )
+    )
+    if statements["period"] == "annual":
         out.append(
             _ratio(
-                "operating_margin",
-                "Operating income ÷ revenue (same period)",
-                _value_at(lines, "operating_income", end),
-                rev,
+                "return_on_equity",
+                "Net income for the year ÷ shareholders' equity at year end (ending, not average, equity)",
+                _value_at(lines, "net_income", inc),
+                _value_at(lines, "equity", inc),
             )
         )
-        out.append(_ratio("net_margin", "Net income ÷ revenue (same period)", _value_at(lines, "net_income", end), rev))
-        out.append(
-            _ratio(
-                "debt_to_equity",
-                "Long-term debt ÷ shareholders' equity (same balance-sheet date)",
-                _value_at(lines, "long_term_debt", end),
-                _value_at(lines, "equity", end),
-            )
-        )
-        if statements["period"] == "annual":
-            out.append(
-                _ratio(
-                    "return_on_equity",
-                    "Net income for the year ÷ shareholders' equity at year end (ending, not average, equity)",
-                    _value_at(lines, "net_income", end),
-                    _value_at(lines, "equity", end),
-                )
-            )
-            eps = _value_at(lines, "eps_diluted", end)
-            pe = {
-                "key": "price_to_earnings",
-                "unit": "multiple",
-                "value": None,
-                "inputs": [eps],
-                "formula": "Last price ÷ diluted EPS of the latest fiscal year (both in the same currency)",
-                "price": price,
-                "price_date": price_date,
-            }
-            if eps and price is not None and eps["value"] > 0 and price_currency == eps["unit"].split("/")[0]:
-                pe["value"] = price / eps["value"]
-            out.append(pe)
-        ocf, capex = _value_at(lines, "operating_cash_flow", end), _value_at(lines, "capex", end)
-        fcf = None
-        if ocf and capex and ocf["unit"] == capex["unit"]:
-            fcf = ocf["value"] - capex["value"]
-        out.append(
-            {
-                "key": "free_cash_flow",
-                "formula": "Operating cash flow − capital expenditure (same period)",
-                "value": fcf,
-                "unit": ocf["unit"] if ocf else None,
-                "inputs": [ocf, capex],
-            }
-        )
+        eps = _value_at(lines, "eps_diluted", inc)
+        pe = {
+            "key": "price_to_earnings",
+            "unit": "multiple",
+            "value": None,
+            "inputs": [eps],
+            "formula": "Last price ÷ diluted EPS of the latest fiscal year (both in the same currency)",
+            "price": price,
+            "price_date": price_date,
+        }
+        if eps and price is not None and eps["value"] > 0 and price_currency == eps["unit"].split("/")[0]:
+            pe["value"] = price / eps["value"]
+        out.append(pe)
+    ocf, capex = _value_at(lines, "operating_cash_flow", cfe), _value_at(lines, "capex", cfe)
+    fcf = None
+    if ocf and capex and ocf["unit"] == capex["unit"]:
+        fcf = ocf["value"] - capex["value"]
+    out.append(
+        {
+            "key": "free_cash_flow",
+            "formula": "Operating cash flow − capital expenditure (same period)",
+            "value": fcf,
+            "unit": ocf["unit"] if ocf else None,
+            "inputs": [ocf, capex],
+        }
+    )
     return out

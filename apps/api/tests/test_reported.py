@@ -90,3 +90,19 @@ def test_efficiency_ratios_follow_their_formulas():
     assert rows["cash_conversion_cycle"] == D("26.645") + 30 - 20
     assert fa.efficiency({"period": "annual", "period_ends": [e], "lines": [line("revenue", 1)]}) is None
     assert fa.efficiency({**st, "period": "quarterly"}) is None  # day counts need a full year
+
+
+def test_ratios_use_each_statements_latest_period():
+    from marketdesk.services.financials import compute_ratios
+
+    sep, jun = date(2026, 9, 30), date(2026, 6, 30)  # Sep: balance sheet from the annual report only
+
+    def line(key, vals):
+        return {"key": key, "values": [{"value": D(v), "end": e, "unit": "USD"} for e, v in vals]}
+
+    st = {"period": "quarterly", "period_ends": [sep, jun], "lines": [
+        line("revenue", [(jun, 100)]), line("net_income", [(jun, 25)]),
+        line("equity", [(sep, 200), (jun, 190)]), line("long_term_debt", [(sep, 50)]),
+    ]}  # fmt: skip
+    r = {x["key"]: x["value"] for x in compute_ratios(st)}
+    assert r["net_margin"] == D("0.25") and r["debt_to_equity"] == D("0.25")

@@ -156,6 +156,7 @@ export function FinancialsTab({ symbol }: { symbol: string }) {
                       </dt>
                       <dd className="text-xs text-fg-3">
                         {r.formula}
+                        {r.inputs.find(Boolean) ? ` · ${periodLabel(r.inputs.find(Boolean)!.end, st.period)}` : ""}
                         {r.price_date ? ` · price of ${formatSessionDate(r.price_date)}` : ""}
                       </dd>
                     </div>
