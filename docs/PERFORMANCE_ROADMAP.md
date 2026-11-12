@@ -100,7 +100,7 @@ in §1 hold for a week of normal use.
       a slow worker cycle shares CPU with page requests (mitigated by running it at low priority in its own thread
       and pausing while requests are in flight). **Needs your approval:** CLAUDE.md §4 asks for a separate worker
       process; the reason for that rule (no duplicate schedulers) is still met by the lease.
-- [ ] **2.B Keep two processes but slim both**: replace yfinance + pandas with a small dedicated client for the few
+- [ ] **2.B Keep two processes but slim both** (owner, 12 Nov 2026: not now — keep yfinance; revisit if memory gets tight or the library breaks): replace yfinance + pandas with a small dedicated client for the few
       endpoints used (chart/history, quote, search, statements), parsing JSON directly into the app's own types.
       Saves **≈ −60 to −90 MB per process**; also faster imports and cold starts. Larger change: every provider
       path needs regression tests against recorded responses; same endpoints and limits as today (no change in how
@@ -139,7 +139,7 @@ thin.
       battery-saver, and when the browser reports reduced motion; keep the full look on desktop. Pause background
       animation when the tab is hidden.
 
-### Phase 5 — Cold starts on Render Free (decision for you)
+### Phase 5 — Cold starts on Render Free (owner decided 12 Nov 2026: leave as is — no keep-alive, no paid plan)
 Render Free stops the service after 15 idle minutes; the next visit waits for a restart (30–60 s), and alerts are not
 evaluated while it sleeps. Options:
 - [ ] **5.A Keep it awake** with a free uptime monitor that requests `/api/health` every 10–14 minutes. One service
