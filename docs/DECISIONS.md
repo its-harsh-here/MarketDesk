@@ -474,4 +474,11 @@ Consequential choices, newest last. Routine choices live in code comments.
     done or is dismissed per device. QA sweep: mobile table rows were a button containing buttons (axe
     nested-interactive); the row stays a touch target and a separate "Open" button carries keyboard and
     screen-reader access.
+75. **Memory limits for Render Free (12 Nov 2026, owner report of two out-of-memory restarts).** Measured and
+    planned in docs/PERFORMANCE_ROADMAP.md. Phase 0–1: `MALLOC_ARENA_MAX=2`; `malloc_trim` after growth, every 25
+    API requests and after worker cycles; in-memory cache 150 entries with heavy kinds kept only in the database
+    cache; one shared pool of 6 threads (instead of a new pool per request); PostgreSQL pool 6 + 4 (web) and 2 + 1
+    (worker); screener batch 15; memory shown in Settings and `/api/status`; each process restarts itself above a
+    soft limit (web 300 MB, worker 180 MB) and the supervisor restarts only that process. Soak test: web 342 MB and
+    rising → 243 MB flat; three processes ~500 MB → 399 MB.
 

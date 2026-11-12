@@ -708,6 +708,7 @@ class SchemaOut(Model):
 
 
 class StatusOut(Model):
+    memory: dict | None = None
     version: str
     environment: str
     provider: str

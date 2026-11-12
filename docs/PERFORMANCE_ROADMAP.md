@@ -66,31 +66,31 @@ Each step lists what to do, why, the expected effect, and how to check it. Do th
 in §1 hold for a week of normal use.
 
 ### Phase 0 — Measure in production (½ session, no behaviour change)
-- [ ] **0.1 Report memory in the app.** Add each process's resident memory (and peak) to `/api/system/status` and
+- [x] **0.1 Report memory in the app.** Add each process's resident memory (and peak) to `/api/system/status` and
       Settings → Data status; the worker reports its own in its heartbeat. *Check:* numbers visible on the live site.
-- [ ] **0.2 Log memory per request type** (web): record resident memory before/after the 20 heaviest routes in a
+- [x] **0.2 Log memory per request type** (in `/api/status` → `memory.routes`; not yet shown in Settings) (web): record resident memory before/after the 20 heaviest routes in a
       bounded in-memory table, so growth is attributable. *Check:* top routes by memory growth listed in Settings.
-- [ ] **0.3 Soak-test script in the repo** (`scripts/memory_soak.py` / Playwright): browse N companies × all tabs
+- [x] **0.3 Soak-test script in the repo** (`scripts/memory_soak.py`, standard library; passes at ≤ 300 MB web, ≤ 40 MB growth after warm-up) (`scripts/memory_soak.py` / Playwright): browse N companies × all tabs
       against a local production-mode server and fail if the total exceeds 400 MB. This is the test used for this
       document, made repeatable.
 
 ### Phase 1 — Quick wins, low risk (1 session) · expected total ≈ −90 to −140 MB
-- [ ] **1.1 `MALLOC_ARENA_MAX=2`** for all processes (set in `serve.py` before starting children, and in the
+- [x] **1.1 `MALLOC_ARENA_MAX=2`** for all processes (set in `serve.py` before starting children, and in the
       Dockerfile). *Measured −28 MB on the web process.*
-- [ ] **1.2 Return freed memory to the system**: call glibc `malloc_trim(0)` after large requests and after each
+- [x] **1.2 Return freed memory to the system** (after growth > 4 MB, every 25 API requests, near the soft limit, and after each worker cycle): call glibc `malloc_trim(0)` after large requests and after each
       worker cycle (via `ctypes`, Linux only, no-op elsewhere). *Expect −20 to −60 MB after spikes; verify with 0.3.*
-- [ ] **1.3 Bound the in-memory cache by size, not just count**: lower `MEMORY_CACHE_ENTRIES` from 1,024 to ~150,
+- [x] **1.3 Bound the in-memory cache by size, not just count** (150 entries; history, intraday, statements, options, holders, news and corporate actions are database-only; the option-chain client keeps ≤ 8 slimmed entries): lower `MEMORY_CACHE_ENTRIES` from 1,024 to ~150,
       and keep heavy kinds (5-year history, intraday, statements, option chains) only in the persisted database
       cache, which is already shared and survives restarts. *Expect the web process to stop growing per company.*
-- [ ] **1.4 Fewer threads**: cap the default asyncio thread pool (used by `to_thread` and blocking routes) at 4–6
+- [x] **1.4 Fewer threads** (one shared pool of 6 for blocking routes and `to_thread`, replacing a new pool per request; worker 4): cap the default asyncio thread pool (used by `to_thread` and blocking routes) at 4–6
       threads; provider concurrency is already 4. Two users never need 32 threads. *Fewer arenas, less memory.*
-- [ ] **1.5 Smaller database pool**: PostgreSQL `pool_size=3, max_overflow=2` for web and `2/1` for the worker
-      (today 10/10 each). *Less client memory and fewer Neon connections.*
-- [ ] **1.6 Worker batch sizes**: screener refresh batch 60 → 15 per cycle; SEC research and relationship scans one
+- [x] **1.5 Smaller database pool**: web 6 + 4 (a page's parallel requests can use two sessions each), worker
+      2 + 1 (was 10 + 10 each). *Less client memory and fewer Neon connections.*
+- [~] **1.6 Worker batch sizes**: screener refresh batch 60 → 15 per cycle (done); SEC research and relationship scans one
       company at a time with `malloc_trim` between. *Lower worker peaks.*
-- [ ] **1.7 Stream large documents**: read SEC company facts and annual reports in bounded chunks, keep only the
+- [ ] **1.7 Stream large documents** (not done yet): read SEC company facts and annual reports in bounded chunks, keep only the
       fields used, and drop raw text immediately. *Removes the largest single spikes.*
-- [ ] **1.8 Safety valve**: if a process passes a soft limit (web 300 MB, worker 180 MB), it finishes the current
+- [x] **1.8 Safety valve**: if a process passes a soft limit (web 300 MB, worker 180 MB), it finishes the current
       request/cycle and exits; the supervisor restarts **only that process** (today one exit stops the whole
       container). *Turns a hard Render kill into a 2–5 s self-restart of one process.*
 
@@ -149,7 +149,19 @@ evaluated while it sleeps. Options:
 - [ ] **5.C Paid instance**: Render Starter removes sleeping but still has 512 MB, so Phases 1–2 are needed either
       way; a 2 GB plan removes the memory concern but costs more.
 
-## 4. How we will know it worked
+## 4. Results so far (12 Nov 2026, phases 0–1)
+Same soak test (18 companies × 17 endpoints, live data, production entrypoint), local:
+
+| | Before | After phase 1 |
+| --- | --- | --- |
+| Web process after 18 companies | 342 MB and still rising (~7–8 MB per company) | **243 MB, flat** (+7 MB over the last 12 companies) |
+| Worker | 131 MB | 132 MB (reports its memory each cycle; restarts itself above 180 MB) |
+| Supervisor + web + worker | ~500 MB | **399 MB** |
+
+Next: confirm on Render (Settings → Data status → Server memory), then phase 2 (merging the worker saves another
+~110–130 MB, pending your approval) and phase 3–4 speed work.
+
+## 5. How we will know it worked
 - Soak test (0.3): total ≤ 400 MB after 24 companies × all tabs; web memory flat after the first 6 companies.
 - Production (0.1): a week with no memory restarts; peak total shown in Settings ≤ 420 MB.
 - Speed: watchlist companies' Description/News/Peers under 300 ms from cache; Macro under 1 s; repeat visits load

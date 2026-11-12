@@ -30,7 +30,7 @@ def _sqlite_pragmas(dbapi_connection, _record) -> None:  # pragma: no cover - ex
     cursor.close()
 
 
-def make_engine(url: str) -> Engine:
+def make_engine(url: str, pool_size: int = 6, max_overflow: int = 4) -> Engine:
     if url.startswith("sqlite"):
         engine = create_engine(url, connect_args={"check_same_thread": False, "timeout": 5})
         event.listen(engine, "connect", _sqlite_pragmas)
@@ -41,7 +41,7 @@ def make_engine(url: str) -> Engine:
         # page's parallel requests (each may also use a second, short-lived session for the market-data
         # cache) so bursts reuse open TLS connections; overflow covers rare peaks. Hosted poolers such
         # as Neon's accept far more client connections than this.
-        engine = create_engine(url, pool_size=10, max_overflow=10, pool_timeout=30, pool_recycle=1800)
+        engine = create_engine(url, pool_size=pool_size, max_overflow=max_overflow, pool_timeout=30, pool_recycle=1800)
         event.listen(engine, "checkin", _mark_idle)
         event.listen(engine, "checkout", _ping_if_idle)
     return engine
@@ -75,7 +75,7 @@ def init_engine(settings: Settings | None = None) -> Engine:
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     if _engine is not None:
         _engine.dispose()
-    _engine = make_engine(settings.effective_database_url)
+    _engine = make_engine(settings.effective_database_url, settings.db_pool_size, settings.db_max_overflow)
     _session_factory = sessionmaker(bind=_engine, expire_on_commit=False, autoflush=False)
     if _engine.dialect.name == "sqlite":
         _read_session_factory = None

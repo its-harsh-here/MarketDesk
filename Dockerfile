@@ -28,6 +28,7 @@ RUN --mount=type=secret,id=ca_bundle,required=false \
 # ---------------------------------------------------------------- runtime
 FROM ${PYTHON_IMAGE} AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
+    MALLOC_ARENA_MAX=2 \
     PYTHONUNBUFFERED=1 \
     PATH=/opt/venv/bin:$PATH \
     PYTHONPATH=/app/api \

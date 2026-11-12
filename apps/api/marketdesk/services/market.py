@@ -49,6 +49,7 @@ from marketdesk.providers.serialize import CODECS
 
 log = logging.getLogger("marketdesk.market")
 T = TypeVar("T")
+HEAVY_KINDS = frozenset({"history", "intraday", "statements", "options", "holders", "news", "actions"})
 CIRCUIT_GROUPS = {
     "quote": "prices",
     "history": "prices",
@@ -415,6 +416,11 @@ class MarketDataService:
         raise AssertionError("unreachable")  # pragma: no cover
 
     def _mem_put(self, key: str, entry: _MemEntry) -> None:
+        # Large payloads live only in the database cache when there is one; keeping them as Python objects is what
+        # made the web process grow per company viewed (docs/PERFORMANCE_ROADMAP.md 1.3). Errors stay in memory so a
+        # failing symbol is not retried on every request.
+        if entry.error is None and self._sf is not None and key.split(":", 1)[0] in HEAVY_KINDS:
+            return
         self._mem[key] = entry
         self._mem.move_to_end(key)
         while len(self._mem) > self.settings.memory_cache_entries:

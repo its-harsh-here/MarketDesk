@@ -57,14 +57,21 @@ class Settings(BaseSettings):
     screener_max_universe: int = 150
     screener_snapshot_hours: int = 24
     screener_refresh_per_cycle: int = 6
-    screener_refresh_batch: int = 60
+    screener_refresh_batch: int = 15
     search_ttl_seconds: int = 86400
     provider_timeout_seconds: float = 15.0
     provider_max_concurrency: int = 4
     provider_max_retries: int = 2
     circuit_failure_threshold: int = 5
     circuit_open_seconds: int = 60
-    memory_cache_entries: int = 1024
+    # Memory (docs/PERFORMANCE_ROADMAP.md): Render Free stops the container above 512 MB. Heavy payloads (history,
+    # intraday, statements, option chains, holders) stay in the database cache only; the in-memory cache is small.
+    memory_cache_entries: int = 150
+    db_pool_size: int = 6  # a page's parallel requests each use up to two sessions (request + market-data cache)
+    db_max_overflow: int = 4
+    blocking_threads: int = 6  # threads for blocking handlers and asyncio.to_thread (two users need few)
+    web_memory_soft_limit_mb: int = 300  # above this after a trim, the web process restarts itself gracefully
+    worker_memory_soft_limit_mb: int = 180
     persisted_cache_rows: int = 4000
 
     # Worker

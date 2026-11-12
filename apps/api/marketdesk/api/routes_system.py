@@ -10,7 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
-from marketdesk import __version__
+from marketdesk import __version__, memory
 from marketdesk.api.deps import current_principal, market_dep, require_reader, require_writer, settings_dep
 from marketdesk.api.errors import AppError
 from marketdesk.api.routes_market import benchmark_symbols
@@ -207,6 +207,24 @@ def readiness(db: Session = Depends(get_db)):
     return {"status": "ready"}
 
 
+def _memory_status(db: Session, settings: Settings) -> dict:
+    """Resident memory of this web process and the worker's last report, against Render Free's 512 MB."""
+    from marketdesk.models import WorkerStatus
+
+    row = db.get(WorkerStatus, "alerts")
+    w = (row.last_summary or {}).get("memory") if row is not None and isinstance(row.last_summary, dict) else None
+    return {
+        "web": {
+            "rss_mb": memory.rss_mb(),
+            "peak_mb": memory.peak_mb(),
+            "soft_limit_mb": settings.web_memory_soft_limit_mb,
+        },
+        "worker": {**(w or {}), "soft_limit_mb": settings.worker_memory_soft_limit_mb} if w else None,
+        "routes": memory.ROUTES.top(10),
+        "limit_mb": 512,
+    }
+
+
 @router.get("/status", response_model=StatusOut)
 def status(
     request: Request,
@@ -237,6 +255,7 @@ def status(
         ),
         "provider_health": market.health(),
         "worker": worker_status(db, settings),
+        "memory": _memory_status(db, settings),
         "storage": storage_status(settings, db),
         "schema": schema_status(db),
         "research": {

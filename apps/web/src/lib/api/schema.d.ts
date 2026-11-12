@@ -836,6 +836,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/alert-channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Alert Channels
+         * @description Where alert notices are delivered: the in-app inbox always; external channels only when configured.
+         */
+        get: operations["alert_channels_api_alert_channels_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/alert-events": {
         parameters: {
             query?: never;
@@ -3622,6 +3642,10 @@ export interface components {
         };
         /** StatusOut */
         StatusOut: {
+            /** Memory */
+            memory?: {
+                [key: string]: unknown;
+            } | null;
             /** Version */
             version: string;
             /** Environment */
@@ -5674,6 +5698,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    alert_channels_api_alert_channels_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

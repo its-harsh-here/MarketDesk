@@ -55,6 +55,7 @@ function SettingsBody({ prefs }: { prefs: Prefs }) {
     patch.mutate(p, { onSuccess: () => toast("success", msg), onError: (e) => toast("error", errorMessage(e)) });
 
   const health = (status?.provider_health ?? {}) as { circuit?: string; consecutive_failures?: number; last_success_at?: string | null; last_failure_at?: string | null; last_error?: { kind?: string; message?: string } | null; endpoints?: Record<string, { circuit: string; consecutive_failures: number }> };
+  const mem = status?.memory as { web?: { rss_mb: number }; worker?: { rss_mb: number } | null; limit_mb?: number } | null | undefined;
 
   return (
     <div className="grid grid-cols-1 gap-4 p-4 md:p-6 lg:grid-cols-2 lg:gap-5">
@@ -150,6 +151,13 @@ function SettingsBody({ prefs }: { prefs: Prefs }) {
               )}
               <Row label="Last successful fetch">{health.last_success_at ? `${formatRelative(health.last_success_at)}` : "None in this server process yet"}</Row>
               {health.last_error && <Row label="Last error"><span className="text-warn">{health.last_error.message}</span></Row>}
+              {mem?.web && (
+                <Row label="Server memory">
+                  <span className="num text-right" title="Render Free stops the service above 512 MB; each process restarts itself before its soft limit.">
+                    web {Math.round(mem.web.rss_mb)} MB{mem.worker ? ` · worker ${Math.round(mem.worker.rss_mb)} MB` : ""} of {mem.limit_mb} MB
+                  </span>
+                </Row>
+              )}
               <Row label="Storage">
                 {status.storage.persistent ? (
                   <span>Persistent · <span className="num">{status.storage.path}</span></span>

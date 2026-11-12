@@ -32,6 +32,17 @@ _KEY_ID = re.compile(r"^[A-Z0-9]{16,40}$")
 _MAX_PAGES = 12
 
 
+_CONTRACT_KEYS = ("symbol", "type", "strike_price", "expiration_date", "open_interest", "open_interest_date")
+
+
+def _slim_snapshot(s: dict) -> dict:
+    """Only the fields the chain view reads (keeps cached chains small)."""
+    q, t, b = s.get("latestQuote") or {}, s.get("latestTrade") or {}, s.get("dailyBar") or {}
+    return {"latestQuote": {"bp": q.get("bp"), "ap": q.get("ap"), "t": q.get("t")},
+            "latestTrade": {"p": t.get("p"), "t": t.get("t")}, "dailyBar": {"v": b.get("v"), "t": b.get("t")},
+            "impliedVolatility": s.get("impliedVolatility")}  # fmt: skip
+
+
 def us_symbol(symbol: str) -> str | None:
     """Alpaca symbol for a US listing, or None (Indian listings, indices, currencies and fixture names)."""
     s = (symbol or "").strip().upper()
@@ -169,8 +180,9 @@ class AlpacaClient:
                 return hit[1]
         value = fn()
         with self._lock:
-            if len(self._cache) > 64:
-                self._cache.clear()
+            # Few entries: an option chain is thousands of rows (docs/PERFORMANCE_ROADMAP.md, Render's 512 MB).
+            while len(self._cache) >= 8:
+                self._cache.pop(min(self._cache, key=lambda k: self._cache[k][0]))
             self._cache[key] = (time.monotonic(), value)
         return value
 
@@ -187,7 +199,8 @@ class AlpacaClient:
             out: list[dict] = []
             for _ in range(_MAX_PAGES):
                 data = self._get(TRADING, "/v2/options/contracts", params)
-                out += [c for c in data.get("option_contracts") or [] if isinstance(c, dict)]
+                out += [{k: c.get(k) for k in _CONTRACT_KEYS} for c in data.get("option_contracts") or []
+                        if isinstance(c, dict)]  # fmt: skip
                 token = data.get("next_page_token")
                 if not token:
                     break
@@ -208,7 +221,7 @@ class AlpacaClient:
                 data = self._get(DATA, f"/v1beta1/options/snapshots/{sym}", params)
                 snaps = data.get("snapshots") or {}
                 if isinstance(snaps, dict):
-                    out.update(snaps)
+                    out.update({k: _slim_snapshot(v) for k, v in snaps.items() if isinstance(v, dict)})
                 token = data.get("next_page_token")
                 if not token:
                     break

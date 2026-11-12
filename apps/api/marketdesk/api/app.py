@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import os
 import re
 import secrets
+import signal
 import threading
 import time
 from contextlib import asynccontextmanager
@@ -15,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from marketdesk import __version__
+from marketdesk import __version__, memory
 from marketdesk.api import (
     routes_ai,
     routes_alerts,
@@ -102,6 +105,10 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
 
         ensure_migrated(settings.effective_database_url, settings.data_dir)
         _stamp_database_created()
+        from marketdesk.asyncbridge import SHARED_EXECUTOR, configure_threads
+
+        configure_threads(settings.blocking_threads)
+        asyncio.get_running_loop().set_default_executor(SHARED_EXECUTOR)
         warm = getattr(app.state.market.provider, "warm", None)
         if warm is not None:  # load the market-data library without delaying the first page
             threading.Thread(target=warm, name="provider-warm", daemon=True).start()
@@ -157,6 +164,27 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
 
     timing.install_db_listeners()
 
+    def _account_memory(request: Request, before: float, ms: float) -> None:
+        """Record growth per route, give memory back after growth, and restart gracefully above the soft limit."""
+        route = request.scope.get("route")
+        name = f"{request.method} {getattr(route, 'path', request.url.path)}"
+        after = memory.rss_mb()
+        memory.ROUTES.record(name, after - before, ms)
+        app.state.api_requests += 1
+        if after - before > 4 or after > settings.web_memory_soft_limit_mb * 0.85 or app.state.api_requests % 25 == 0:
+            memory.trim()
+            after = memory.rss_mb()
+        supervised = os.environ.get("MARKETDESK_SUPERVISED") == "1"  # only under marketdesk.serve, which restarts it
+        if supervised and after > settings.web_memory_soft_limit_mb and not app.state.restart_requested:
+            app.state.restart_requested = True
+            log.warning("web memory %.0f MB above the %d MB soft limit: restarting gracefully",
+                        after, settings.web_memory_soft_limit_mb)  # fmt: skip
+            # uvicorn finishes in-flight requests on SIGTERM; the supervisor (marketdesk.serve) starts a new process
+            signal.raise_signal(signal.SIGTERM)
+
+    app.state.restart_requested = False
+    app.state.api_requests = 0
+
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
         started = time.perf_counter()
@@ -165,8 +193,11 @@ def create_app(settings: Settings | None = None, market: MarketDataService | Non
         # X-Request-ID header and in error bodies, and written on server-side failure log lines.
         inbound = request.headers.get("x-request-id", "")
         request.state.request_id = inbound if _REQUEST_ID_RE.fullmatch(inbound) else secrets.token_hex(8)
+        before = memory.rss_mb() if request.url.path.startswith("/api/") else 0.0
         response = await call_next(request)
         response.headers["X-Request-ID"] = request.state.request_id
+        if before and not request.url.path.startswith("/api/stream"):
+            _account_memory(request, before, (time.perf_counter() - started) * 1000)
         if request.url.path.startswith("/api/"):
             response.headers["Server-Timing"] = timing.header(timings, (time.perf_counter() - started) * 1000)
         for k, v in SECURITY_HEADERS.items():

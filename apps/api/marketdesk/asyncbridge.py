@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import functools
 from collections.abc import Awaitable, Callable
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 import anyio.to_thread
@@ -56,5 +57,28 @@ def off_event_loop[T](handler: Callable[..., Awaitable[T]]) -> Callable[..., Awa
     return wrapper
 
 
+class _SharedExecutor(ThreadPoolExecutor):
+    """One small pool shared by every request loop. asyncio.Runner shuts its loop's default executor down on exit;
+    for the shared pool that is a no-op, so threads are reused instead of created per request (thread churn makes
+    glibc keep per-thread memory arenas, which is where much of the process growth came from)."""
+
+    def shutdown(self, wait: bool = True, *, cancel_futures: bool = False) -> None:  # noqa: ARG002
+        return None
+
+
+SHARED_EXECUTOR = _SharedExecutor(max_workers=6, thread_name_prefix="blocking")
+
+
+def configure_threads(n: int) -> None:
+    """Size the shared pool and anyio's thread limiter (blocking routes) for this process."""
+    SHARED_EXECUTOR._max_workers = max(2, n)  # noqa: SLF001 - sized once at startup, before use
+    try:
+        anyio.to_thread.current_default_thread_limiter().total_tokens = max(2, n)
+    except RuntimeError:  # no running event loop yet: called again from the app's lifespan
+        pass
+
+
 def _run[T](handler: Callable[..., Awaitable[T]], args: tuple, kwargs: dict) -> T:
-    return asyncio.run(handler(*args, **kwargs))  # type: ignore[arg-type]
+    with asyncio.Runner() as runner:
+        runner.get_loop().set_default_executor(SHARED_EXECUTOR)
+        return runner.run(handler(*args, **kwargs))  # type: ignore[arg-type]

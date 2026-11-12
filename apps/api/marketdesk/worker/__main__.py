@@ -10,9 +10,11 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
 import signal
 from datetime import UTC, datetime
 
+from marketdesk import memory
 from marketdesk.config import get_settings, validate_settings
 from marketdesk.db import db_session, init_engine, session_factory
 from marketdesk.models import WorkerStatus
@@ -90,6 +92,8 @@ async def run_cycle(market, research=None) -> dict:
         summary["research"] = await _refresh_research(market)
         summary["briefings"] = await _briefings(market)
         summary["screener"] = await _screener_snapshots(market)
+        memory.trim(min_interval=0)  # give back what the cycle used before reporting
+        summary["memory"] = {"rss_mb": memory.rss_mb(), "peak_mb": memory.peak_mb()}
         skipped = summary.get("skipped") or []
         if skipped and not row.last_error:
             row.last_error = f"{len(skipped)} symbol(s) skipped: provider data was stale or unavailable."
@@ -102,8 +106,13 @@ async def run_cycle(market, research=None) -> dict:
 
 
 async def main_async(once: bool) -> None:
-    settings = get_settings()
+    # The worker needs few database connections and threads (docs/PERFORMANCE_ROADMAP.md).
+    settings = get_settings().model_copy(update={"db_pool_size": 2, "db_max_overflow": 1})
+    from marketdesk.asyncbridge import SHARED_EXECUTOR, configure_threads
     from marketdesk.services.alerts import configure_channels
+
+    configure_threads(4)
+    asyncio.get_running_loop().set_default_executor(SHARED_EXECUTOR)
 
     configure_channels(settings)
     validate_settings(settings, role="worker")
@@ -130,6 +139,11 @@ async def main_async(once: bool) -> None:
         summary = await run_cycle(market, research)
         log.info("cycle: %s", {k: v for k, v in summary.items() if k != "skipped"})
         if once:
+            return
+        rss = memory.rss_mb()
+        if os.environ.get("MARKETDESK_SUPERVISED") == "1" and rss > settings.worker_memory_soft_limit_mb:
+            log.warning("worker memory %.0f MB above the %d MB soft limit: exiting for a clean restart",
+                        rss, settings.worker_memory_soft_limit_mb)  # fmt: skip
             return
         try:
             await asyncio.wait_for(stop.wait(), timeout=settings.alert_poll_seconds)
