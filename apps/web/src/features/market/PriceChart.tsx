@@ -1,4 +1,5 @@
 import {
+  AreaSeries,
   CandlestickSeries,
   ColorType,
   CrosshairMode,
@@ -13,6 +14,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { fxActive } from "@/lib/fx";
 import type { Bar } from "@/lib/api/client";
 import { formatMoney, formatNumber, formatPercent, formatSessionDate, formatVolume, toNumber } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -232,8 +234,16 @@ export function PriceChart({
       );
       priceRef.current = s as unknown as ISeriesApi<SeriesType>;
     } else {
-      const s = chart.addSeries(LineSeries, { color: p.accent, lineWidth: 2, priceLineVisible: false, crosshairMarkerRadius: 3 });
+      // The price line with a gradient fill fading to nothing below it.
+      const s = chart.addSeries(AreaSeries, { lineColor: p.accent, topColor: hexAlpha(p.accent, 0.34), bottomColor: hexAlpha(p.accent, 0), lineWidth: 2, priceLineVisible: false, crosshairMarkerRadius: 4 });
       s.setData(bars.map((b) => ({ time: chartTime(b.time), value: b.close })));
+      // Decoration: the chart wipes in from the left when its data or style changes.
+      const host = ref.current;
+      if (host && fxActive()) {
+        host.classList.remove("fx-chart-in");
+        void host.offsetWidth;
+        host.classList.add("fx-chart-in");
+      }
       priceRef.current = s as unknown as ISeriesApi<SeriesType>;
     }
     if (showVolume && bars.some((b) => b.volume)) {

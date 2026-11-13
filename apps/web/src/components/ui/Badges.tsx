@@ -106,7 +106,7 @@ export function Pill({ children, tone = "neutral", className }: { children: Reac
     neg: "border-neg/40 bg-neg-soft text-neg",
     accent: "border-accent/40 bg-accent-soft text-accent-text",
   };
-  return <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap", tones[tone], className)}>{children}</span>;
+  return <span className={cn("md-pill inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap", tones[tone], className)}>{children}</span>;
 }
 
 /** Marks a price that comes from the streaming trade feed rather than the polled quote. */

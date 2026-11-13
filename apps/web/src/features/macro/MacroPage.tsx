@@ -115,7 +115,7 @@ export function MacroPage() {
 
 function SeriesCard({ s }: { s: MacroSeries }) {
   return (
-    <li className="rounded-[var(--radius-control)] border border-line-subtle p-3">
+    <li className="fx-tilt rounded-[var(--radius-control)] border border-line-subtle p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-[13px] font-medium" title={s.name}>{s.name}</p>

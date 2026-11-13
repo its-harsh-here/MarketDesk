@@ -71,7 +71,7 @@ export function GettingStarted() {
       actions={<IconButton size="sm" label="Hide getting started" onClick={dismiss}><X className="size-4" aria-hidden /></IconButton>}>
       <ol className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {steps.map((s) => (
-          <li key={s.title} className={cn("flex gap-3 rounded-[var(--radius-control)] border border-line-subtle p-3", s.done && "opacity-60")}>
+          <li key={s.title} className={cn("fx-tilt flex gap-3 rounded-[var(--radius-control)] border border-line-subtle p-3", s.done && "opacity-60")}>
             {s.done ? <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-pos" aria-label="Done" /> : <Circle className="mt-0.5 size-5 shrink-0 text-fg-3" aria-label="To do" />}
             <div className="min-w-0 space-y-1.5">
               <div className="text-[14px] font-medium text-fg">{s.title}</div>

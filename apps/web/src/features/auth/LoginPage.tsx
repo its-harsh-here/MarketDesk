@@ -43,20 +43,21 @@ export function LoginPage() {
   return (
     <main className="flex min-h-dvh items-center justify-center p-4">
       <form
-        className="w-full max-w-sm rounded-[var(--radius-panel)] border border-line-subtle bg-panel p-6"
+        className="fx-login-card fx-beam w-full max-w-sm rounded-[var(--radius-panel)] border border-line-subtle bg-panel p-6"
         aria-busy={busy}
         onSubmit={(e) => {
           e.preventDefault();
           void submit();
         }}
       >
+        <span className="beam" aria-hidden />
         <div className="mb-5 flex items-center gap-2.5">
-          <svg viewBox="0 0 32 32" className="size-8" aria-hidden>
+          <svg viewBox="0 0 32 32" className="fx-logo-draw size-9" aria-hidden>
             <rect width="32" height="32" rx="7" fill="var(--elevated)" stroke="var(--border)" />
             <path d="M7 21.5 12.5 15l4 3.5L25 9.5" fill="none" stroke="var(--accent)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <div>
-            <h1 className="text-base font-semibold">MarketDesk</h1>
+            <h1 className="md-title text-lg font-semibold">MarketDesk</h1>
             <p className="text-xs text-fg-3">Private workspace · owner sign-in</p>
           </div>
         </div>
