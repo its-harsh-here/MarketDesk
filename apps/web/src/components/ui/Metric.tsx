@@ -20,14 +20,7 @@ export function Metric({ label, value, sub, caption, size = "md", className, tit
     <div className={cn("min-w-0", className)} title={title}>
       <div className="text-xs font-medium text-fg-3">{label}</div>
       <div className={cn("num fx-reveal mt-1 truncate font-semibold text-fg", flash, size === "lg" ? "text-[26px] leading-8" : "text-lg leading-6")}>
-        {plain !== null ? (
-          <>
-            <span aria-hidden>{counted}</span>
-            <span className="sr-only">{plain}</span>
-          </>
-        ) : (
-          value
-        )}
+        {plain !== null ? counted : value}
       </div>
       {sub && <div className="num mt-0.5 text-[13px]">{sub}</div>}
       {caption && <div className="mt-1 text-xs text-fg-3">{caption}</div>}

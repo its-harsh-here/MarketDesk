@@ -548,5 +548,5 @@ Consequential choices, newest last. Routine choices live in code comments.
     the sign-in card; a one-time entrance for panels that scroll into view (never left hidden: the class is added only
     when a panel that was built off screen enters); header underline and light sweep; pointer tilt on small cards;
     button ripples; a loading beam while data is fetched; the price line drawn as a gradient-filled area that wipes
-    in; figures in metric tiles count up (screen readers get the final value only); floating empty-state icons. A
+    in; figures in metric tiles count up over 0.75 s and always end on the exact value; floating empty-state icons. A
     scroll-linked blur reveal was tried and rejected because panels at the fold stayed blurred until scrolled.
