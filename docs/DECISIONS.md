@@ -551,4 +551,5 @@ Consequential choices, newest last. Routine choices live in code comments.
     in; figures in metric tiles count up over 0.75 s and always end on the exact value; floating empty-state icons. A
     scroll-linked blur reveal was tried and rejected because panels at the fold stayed blurred until scrolled. CI fixes (14 Nov): the header light sweep moves as a background inside its own box (a positioned band that slid
     past the edge widened the page while it ran), and pills, market-strip items and arrows enter without fading,
-    so their text never has reduced contrast.
+    so their text never has reduced contrast. Live check after merge: the sign-in card's continuous float made Sign in a moving
+    target that automated clicks could not press; the card now only animates in (journey added).
