@@ -98,6 +98,7 @@ export function ChartPanel({
       title={title}
       titleId={titleId}
       className={className}
+      beam
       refreshing={q.isFetching && !q.isLoading}
       wrapHeader
       meta={

@@ -1242,3 +1242,11 @@ The roadmap (M00–M14) is complete, including M04 (Alpaca IEX streaming). Termi
   treat a headline as verified or as the cause of a move. Headlines are the first evidence dropped when a free-tier
   request must be trimmed. This closes the safe part of M03's "no web search" gap; open web search is not added.
 - Local: pytest 405 passed / 3 skipped.
+
+### Full check and effects layer 2 (13 Nov 2026, PR)
+- Whole-repo check before any change: pytest 405 passed / 3 skipped, ruff clean, tsc + eslint clean, vitest 60,
+  Playwright journeys 45/45, QA sweep (every page and dialog at 1440/1024/768/390 with axe) 7/7. Live sweep, signed
+  in, 42 routes (all pages, all 13 instrument tabs for AAPL and RELIANCE.NS) at 1440 and 390: no page errors, console
+  errors, failed API calls, overflow or error boundaries; only the deliberate unknown-symbol page reports its 422s.
+  Slowest first visits after a deploy: AAPL Description and Risk about 13 s (cold caches), sub-second afterwards.
+- Nothing was found broken. Visual work: DECISIONS #84.

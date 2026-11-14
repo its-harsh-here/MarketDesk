@@ -541,3 +541,14 @@ Consequential choices, newest last. Routine choices live in code comments.
     ping, no paid instance; alerts run only while the service is awake, as documented). Market-data library: keep
     yfinance + pandas for now (roadmap 2.B deferred; revisit if memory gets tight). Indian data: research licensed
     options first — comparison in docs/INDIA_DATA_SOURCES.md; nothing bought, no scraping.
+84. **Effects layer 2 (owner request, 13 Nov 2026: "as visually stunning and animated as possible").** Added on top of
+    the aurora-glass layer (#55), all decoration, all off in calm mode and under reduced motion, and reduced on
+    phones: a rotating colour ribbon, a 46-point constellation canvas that brightens near the pointer, film grain and
+    scroll parallax in the background; a light beam travelling round the principal chart, the instrument header and
+    the sign-in card; a one-time entrance for panels that scroll into view (never left hidden: the class is added only
+    when a panel that was built off screen enters); header underline and light sweep; pointer tilt on small cards;
+    button ripples; a loading beam while data is fetched; the price line drawn as a gradient-filled area that wipes
+    in; figures in metric tiles count up over 0.75 s and always end on the exact value; floating empty-state icons. A
+    scroll-linked blur reveal was tried and rejected because panels at the fold stayed blurred until scrolled. CI fixes (14 Nov): the header light sweep moves as a background inside its own box (a positioned band that slid
+    past the edge widened the page while it ran), and pills, market-strip items and arrows enter without fading,
+    so their text never has reduced contrast.

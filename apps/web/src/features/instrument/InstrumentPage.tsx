@@ -162,7 +162,8 @@ export function InstrumentPage() {
   return (
     <div className="grid grid-cols-1 gap-4 p-4 md:p-6 lg:grid-cols-12 lg:gap-5">
       <section className="lg:col-span-12" aria-labelledby="inst-title">
-        <div className="flex flex-wrap items-start gap-x-6 gap-y-3 rounded-[var(--radius-panel)] border border-line-subtle bg-panel px-5 py-4">
+        <div className="md-panel fx-beam relative flex flex-wrap items-start gap-x-6 gap-y-3 rounded-[var(--radius-panel)] border border-line-subtle bg-panel px-5 py-4">
+          <span className="beam" aria-hidden />
           {/* No min-w-0 here: the column must never be narrower than the (unbreakable) symbol, otherwise a long
               ticker such as RELIANCE.NS overlaps the price. When space runs short the price/actions wrap instead. */}
           <div className="flex-1">

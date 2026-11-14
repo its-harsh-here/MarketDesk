@@ -16,16 +16,19 @@ interface PanelProps {
    * actions move to their own line when the row is too narrow, instead of clipping the title.
    */
   wrapHeader?: boolean;
+  /** Decoration: a light beam travels round the edge (for a page's principal panel). */
+  beam?: boolean;
 }
 
 /** A bordered surface with an optional header row. Panels label themselves for screen readers. */
-export function Panel({ title, titleId, meta, actions, children, className, bodyClassName, as = "section", refreshing, wrapHeader }: PanelProps) {
+export function Panel({ title, titleId, meta, actions, children, className, bodyClassName, as = "section", refreshing, wrapHeader, beam }: PanelProps) {
   const Tag = as;
   return (
     <Tag
       aria-labelledby={title && titleId ? titleId : undefined}
-      className={cn("md-panel relative flex min-w-0 flex-col rounded-[var(--radius-panel)] border border-line-subtle bg-panel", className)}
+      className={cn("md-panel relative flex min-w-0 flex-col rounded-[var(--radius-panel)] border border-line-subtle bg-panel", beam && "fx-beam", className)}
     >
+      {beam && <span className="beam" aria-hidden />}
       {(title || actions || meta) && (
         <header className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 border-b border-line-subtle px-[var(--panel-pad)] py-2">
           <div className={cn("flex min-w-0 items-baseline", wrapHeader ? "flex-[1_1_16rem] flex-wrap gap-x-3 gap-y-0.5" : "flex-1 gap-3")}>
