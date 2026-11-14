@@ -73,8 +73,8 @@ export interface Guidance {
 
 const enc = encodeURIComponent;
 
-export function useEarnings(symbol: string) {
-  return useQuery({ queryKey: ["earnings", symbol], queryFn: () => api.get<EarningsSummary>(`/api/earnings/${enc(symbol)}`), staleTime: 5 * 60_000 });
+export function useEarnings(symbol: string, enabled = true) {
+  return useQuery({ queryKey: ["earnings", symbol], queryFn: () => api.get<EarningsSummary>(`/api/earnings/${enc(symbol)}`), staleTime: 5 * 60_000, enabled });
 }
 
 export function useFilingChanges(symbol: string, form: string, enabled: boolean) {

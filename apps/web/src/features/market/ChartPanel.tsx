@@ -1,5 +1,5 @@
 import * as DM from "@radix-ui/react-dropdown-menu";
-import { Check, ChartCandlestick, ChartColumn, ChartLine, Download, RotateCcw, Sigma, Table2 } from "lucide-react";
+import { Check, ChartCandlestick, ChartColumn, ChartLine, Download, Flag, RotateCcw, Sigma, Table2 } from "lucide-react";
 import { useId, useMemo, useState, type ReactNode } from "react";
 import { Panel } from "@/components/ui/Panel";
 import { Segmented } from "@/components/ui/Segmented";
@@ -7,14 +7,15 @@ import { IconButton } from "@/components/ui/Button";
 import { ErrorState, EmptyState, InlineNotice, Skeleton } from "@/components/ui/States";
 import { FreshnessBadge } from "@/components/ui/Badges";
 import { errorMessage } from "@/lib/api/client";
-import { formatMoney, formatNumber, formatVolume } from "@/lib/format";
+import { formatMoney, formatNumber, formatSessionDate, formatVolume } from "@/lib/format";
 import { useMediaQuery } from "@/lib/hooks";
 import { INDICATORS, type IndicatorKey } from "@/lib/indicators";
 import { resample, type Frequency } from "@/lib/resample";
 import { ChangeText } from "@/components/ui/Change";
-import { RANGES, useHistory, useIntraday, type IntradayRange, type Range } from "./api";
+import { RANGES, useActions, useHistory, useIntraday, type IntradayRange, type Range } from "./api";
+import { useEarnings } from "@/features/earnings/api";
 import { usePrefs } from "@/features/settings/api";
-import { PriceChart, barLabel, cleanBars, summarizeBars, type ChartKind } from "./PriceChart";
+import { EVENT_LETTER, PriceChart, barLabel, cleanBars, placeEvents, summarizeBars, type ChartEvent, type ChartKind } from "./PriceChart";
 
 /** Daily bars as CSV (session, OHLC, volume). Cells are numbers or ISO dates only, so no formula can be injected. */
 function downloadBars(symbol: string, range: string, bars: { time: string; open: number | null; high: number | null; low: number | null; close: number; volume: number | null }[], freq = "daily") {
@@ -92,6 +93,37 @@ export function ChartPanel({
   // Weekly/monthly views aggregate the validated daily bars (first open, high, low, last close, summed volume).
   const shownBars = useMemo(() => resample(clean.bars, intraday ? "daily" : freq), [clean.bars, freq, intraday]);
   const freqWord = intraday ? (range === "1D" ? "5-minute" : "15-minute") : freq === "daily" ? "daily" : freq === "weekly" ? "weekly" : "monthly";
+  // Event markers: dividends and splits (corporate actions) and results releases (SEC filings, US filers).
+  const [showEvents, setShowEvents] = useState(() => {
+    try {
+      return localStorage.getItem("md-chart-events") !== "off";
+    } catch {
+      return true;
+    }
+  });
+  const wantEvents = showEvents && !intraday && !table;
+  const actions = useActions(wantEvents ? symbol : undefined);
+  const earnings = useEarnings(symbol, wantEvents);
+  const events = useMemo<ChartEvent[]>(() => {
+    if (!wantEvents) return [];
+    const out: ChartEvent[] = [];
+    for (const a of actions.data?.actions ?? []) {
+      if (a.kind === "DIVIDEND") out.push({ date: a.date, kind: "dividend", label: `Dividend ${formatMoney(a.value, currency)} per share` });
+      else if (a.kind === "SPLIT") out.push({ date: a.date, kind: "split", label: `Split ${Number(a.value)}-for-1` });
+    }
+    for (const r of earnings.data?.calendar?.past ?? []) out.push({ date: r.date.slice(0, 10), kind: "results", label: "Results released" });
+    return out;
+  }, [wantEvents, actions.data, earnings.data, currency]);
+  const placed = useMemo(() => placeEvents(events, shownBars), [events, shownBars]);
+  const toggleEvents = () =>
+    setShowEvents((v) => {
+      try {
+        localStorage.setItem("md-chart-events", v ? "off" : "on");
+      } catch {
+        /* per-browser convenience only */
+      }
+      return !v;
+    });
 
   return (
     <Panel
@@ -194,6 +226,17 @@ export function ChartPanel({
           >
             <ChartColumn className="size-4" aria-hidden />
           </IconButton>
+          <IconButton
+            size="sm"
+            label={showEvents ? "Hide event markers" : "Show event markers"}
+            aria-pressed={showEvents}
+            active={showEvents && !intraday}
+            disabled={intraday || table}
+            title={intraday ? "Event markers are shown on daily, weekly and monthly charts" : "Dividends (D), splits (S) and results releases (R) on the chart"}
+            onClick={toggleEvents}
+          >
+            <Flag className="size-4" aria-hidden />
+          </IconButton>
           <IconButton size="sm" label="Reset zoom" onClick={() => setReset((n) => n + 1)} disabled={table || !clean.bars.length}>
             <RotateCcw className="size-4" aria-hidden />
           </IconButton>
@@ -245,9 +288,21 @@ export function ChartPanel({
             </table>
           </div>
         ) : (
-          <PriceChart bars={shownBars} kind={kind} showVolume={volume && hasVolume} currency={currency} height={chartHeight + indicators.filter((k) => k === "rsi" || k === "macd").length * Math.round(chartHeight * 0.25)} resetSignal={reset} indicators={indicators} timeZone={intraday ? tz : undefined} className="mx-1 my-2 flex-1" />
+          <PriceChart bars={shownBars} kind={kind} showVolume={volume && hasVolume} currency={currency} height={chartHeight + indicators.filter((k) => k === "rsi" || k === "macd").length * Math.round(chartHeight * 0.25)} resetSignal={reset} indicators={indicators} timeZone={intraday ? tz : undefined} events={events} className="mx-1 my-2 flex-1" />
         )}
       </figure>
+      {wantEvents && placed.length > 0 && (
+        <p className="border-t border-line-subtle px-[var(--panel-pad)] py-2 text-xs text-fg-3" aria-label="Events on the chart">
+          <span className="font-medium text-fg-2">Events in this range: </span>
+          {placed.slice(-6).reverse().map(({ event }, i) => (
+            <span key={`${event.kind}-${event.date}`}>
+              {i > 0 && " · "}
+              <span className="num">{EVENT_LETTER[event.kind]}</span> {formatSessionDate(event.date)} {event.label.toLowerCase()}
+            </span>
+          ))}
+          {placed.length > 6 && ` · and ${placed.length - 6} earlier`}
+        </p>
+      )}
       {(adjustment || clean.dropped > 0 || q.data?.meta.status === "stale") && (
         <div className="space-y-2 border-t border-line-subtle px-[var(--panel-pad)] py-2 text-xs text-fg-3">
           {q.data?.meta.status === "stale" && <InlineNotice tone="warn">{q.data.meta.message}</InlineNotice>}

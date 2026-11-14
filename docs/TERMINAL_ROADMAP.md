@@ -26,26 +26,26 @@ Function names are the common terminal shorthand used in university guides (e.g.
 [CFI](https://corporatefinanceinstitute.com/resources/equities/bloomberg-functions-shortcuts-list/)). MarketDesk
 copies none of that branding; the codes are only a checklist.
 
-Legend: ✅ have · 🟡 partial · ⬜ missing · 🔒 needs licensed data or an owner decision.
+Legend: ✅ have · 🟡 partial · ⬜ missing · 🔒 needs licensed data or an owner decision. (Status column refreshed 15 Nov 2026.)
 
 | Area (terminal shorthand) | What it covers | MarketDesk today | US source (free unless noted) | India source |
 | --- | --- | --- | --- | --- |
-| Description (DES) | Identity, business, key stats, listings, next events | 🟡 header, fundamentals panel, identity | SEC submissions (SIC, addresses, fiscal year end); 10-K Item 1 text | Yahoo profile (unofficial); annual report is a PDF → 🔒/manual |
-| Price graph & history (GP/HP) | Charts, intraday, comparisons, events on chart | ✅ daily chart, compare ≤3; ⬜ intraday, event markers | Yahoo (unofficial); Alpaca (owner key, M04) | Yahoo (delayed, unofficial) |
+| Description (DES) | Identity, business, key stats, listings, next events | ✅ T1 description view, key statistics, coverage panel | SEC submissions (SIC, addresses, fiscal year end); 10-K Item 1 text | Provider profile (unofficial); annual report is a PDF → 🔒/manual |
+| Price graph & history (GP/HP) | Charts, intraday, comparisons, events on chart | ✅ daily/weekly/monthly, 1D/5D intraday, compare ≤3, indicators, event markers (dividends, splits, results; 15 Nov 2026) | Market-data provider (unofficial); IEX trades via Alpaca (M04) | Provider (delayed, unofficial) |
 | Financial analysis (FA) | Statements, ratios, segments, per-share, history | ✅ SEC annual/quarterly + segments (US); provider statements annual/quarterly (other listings) | SEC companyfacts/frames; segments need filing XBRL instances | Yahoo statements (unofficial); exchange XBRL results 🔒 |
-| Earnings (EE, ERN) | Dates, history, surprises, guidance | 🟡 results release via 8-K (AI) | 8-K Item 2.02 history (dates, releases); estimates 🔒 | Board-meeting/results announcements 🔒 |
-| Analyst views (ANR) | Consensus, targets, ratings | ⬜ | 🔒 paid provider; Yahoo analyst data is unofficial | 🔒 |
-| Dividends & actions (DVD) | Dividend/split history, ex-dates, buybacks | 🟡 Yahoo actions, Events tab | Yahoo; 8-K/10-Q text for buybacks | Yahoo; exchange corporate actions 🔒 |
-| Holders (HDS) | Institutions, insiders, promoters | ⬜ | SEC DERA Form 13F and Insider Transactions data sets (quarterly); Form 4 XML per filing | Quarterly shareholding pattern (promoter/FII/DII/public, pledges) — exchange filings 🔒 |
-| News & filings (CN) | Tagged news, filings, press releases | 🟡 SEC filings list, results release | SEC submissions + 8-K items; company press releases (Ex-99) | Exchange announcements 🔒; company IR pages |
-| Relative value (RV) | Peers on multiples and growth | ✅ M06 peers; ⬜ history of multiples | Derived from prices + statements | Same |
-| Risk (BETA, correlation) | Beta, volatility, drawdown | 🟡 volatility (M06); M09 adds portfolio risk | Derived from prices | Derived from prices |
-| Short interest | Shares short, days to cover | ⬜ | FINRA Equity Short Interest (API with developer credentials; files) | Not published comparably → n/a |
-| Options (OMON) | Chains, IV, OI, put/call | ⬜ | 🔒 entitlement (Alpaca options data plan to verify); Yahoo unofficial | NSE option chain web page — terms unverified 🔒 |
-| Supply chain (SPLC) | Customers, suppliers, competitors | ⬜ | 10-K major-customer disclosures (model extraction with citations) | Annual report 🔒 |
-| Economic context (ECO, WEI) | Calendar, macro series, indices | ⬜ (M12 planned) | FRED (free key, attribution) | RBI/MOSPI releases — to verify in M12 |
+| Earnings (EE, ERN) | Dates, history, surprises, guidance | ✅ T4 deadlines, reported history, filing changes, guidance quotes; estimates 🔒 | 8-K Item 2.02 history; estimates 🔒 | Board-meeting/results announcements 🔒 |
+| Analyst views (ANR) | Consensus, targets, ratings | 🔒 not built: needs a paid estimates provider | 🔒 paid provider | 🔒 |
+| Dividends & actions (DVD) | Dividend/split history, ex-dates, buybacks | ✅ dividends panel, Events tab, chart markers; buybacks from SEC filings | Provider actions; 8-K/10-Q text for buybacks | Provider actions; exchange corporate actions 🔒 |
+| Holders (HDS) | Institutions, insiders, promoters | ✅ T3 (US: 13D/13G, Form 4); India shareholding pattern 🔒 | SEC 13D/13G and Form 4 | Quarterly shareholding pattern — exchange filings 🔒 (docs/INDIA_DATA_SOURCES.md) |
+| News & filings (CN) | Tagged news, filings, press releases | ✅ T5 stream (filings with 8-K items, established publishers, company releases) | SEC submissions + 8-K items; press releases | Exchange announcements 🔒 |
+| Relative value (RV) | Peers on multiples and growth | ✅ M06 peers (with Indian-style measures), P/E and EV/EBITDA history bands, peer valuation | Derived from prices + statements | Same |
+| Risk (BETA, correlation) | Beta, volatility, drawdown | ✅ T6 security risk; M09 portfolio risk | Derived from prices | Derived from prices |
+| Short interest | Shares short, days to cover | 🔒 built, switches on with the owner's FINRA credentials | FINRA Equity Short Interest | Not published comparably → n/a |
+| Options (OMON) | Chains, IV, OI, put/call | ✅ T7 read-only chains (US); NSE F&O 🔒 | Provider / Alpaca indicative | NSE option chain — terms unverified 🔒 |
+| Supply chain (SPLC) | Customers, suppliers, competitors | ✅ T10 quoted from the latest 10-K (low confidence) | 10-K disclosures | Annual report 🔒 |
+| Economic context (ECO, WEI) | Calendar, macro series, indices | ✅ T8 Macro page, context strip, official statistics (FRED key) | FRED | RBI/MOSPI 🔒 to verify |
 | Screener (EQS) | Screen a universe | ✅ M06 (declared universes) | — | — |
-| Monitor (MOST, launchpad) | Movers, linked panels, layouts | 🟡 overview, watchlists; M14 workspaces | — | — |
+| Monitor (MOST, launchpad) | Movers, linked panels, layouts | ✅ T9 movers, Desk, workspaces | — | — |
 
 ### Source notes (checked 4 Nov 2026)
 - **SEC EDGAR APIs** — `data.sec.gov` submissions, companyconcept, companyfacts and frames; no API key; nightly bulk
