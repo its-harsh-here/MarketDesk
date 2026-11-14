@@ -697,12 +697,15 @@ textarea:focus { box-shadow: 0 0 0 3px var(--accent-soft), 0 0 22px -8px var(--g
 }
 .fx-beam > .beam::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: inherit; filter: blur(9px); opacity: 0.7; }
 /* one diagonal sweep of light when a panel first appears */
+/* The band moves as a background inside the header's own box, so it can never widen the page (a positioned band
+   that slid past the edge made the page scroll sideways while it ran). */
 .md-panel > header::before {
-  content: ""; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%; pointer-events: none; transform: skewX(-20deg);
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent-2) 22%, transparent), transparent);
-  animation: md-sweep 1.3s 0.35s ease-out backwards; opacity: 0;
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: linear-gradient(105deg, transparent 42%, color-mix(in srgb, var(--accent-2) 22%, transparent) 50%, transparent 58%) no-repeat;
+  background-size: 300% 100%;
+  animation: md-sweep 1.3s 0.35s ease-out backwards;
 }
-@keyframes md-sweep { 0% { left: -40%; opacity: 1; } 100% { left: 130%; opacity: 0; } }
+@keyframes md-sweep { 0% { background-position: 100% 0; opacity: 1; } 100% { background-position: 0% 0; opacity: 0; } }
 
 /* ---- tilt: small cards lean toward the pointer (--rx/--ry set by lib/fx) ----------------- */
 .fx-tilt { transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateZ(0); transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s, border-color 0.25s; will-change: transform; }
@@ -725,9 +728,9 @@ textarea:focus { box-shadow: 0 0 0 3px var(--accent-soft), 0 0 22px -8px var(--g
 /* ---- small things: pills, arrows, empty states, links, checkboxes, dialogs, tooltips -------- */
 .md-pill { animation: md-pill 0.4s cubic-bezier(0.2, 0.8, 0.2, 1.5) backwards; transition: transform 0.2s, box-shadow 0.25s; }
 .md-pill:hover { transform: translateY(-1px) scale(1.04); box-shadow: 0 6px 16px -8px var(--glow); }
-@keyframes md-pill { from { opacity: 0; transform: scale(0.7); } }
+@keyframes md-pill { from { transform: scale(0.7); } } /* no fade: text keeps full contrast throughout */
 .fx-arrow { animation: md-arrow 0.7s cubic-bezier(0.2, 0.8, 0.2, 1.6) backwards; }
-@keyframes md-arrow { from { opacity: 0; transform: translateY(var(--arrow-from, 6px)) scale(0.5); } }
+@keyframes md-arrow { from { transform: translateY(var(--arrow-from, 6px)) scale(0.5); } }
 .fx-float { animation: md-float 5s ease-in-out infinite; filter: drop-shadow(0 8px 14px var(--glow)); }
 @keyframes md-float { 50% { transform: translateY(-7px) rotate(-4deg); } }
 main a:not(.md-btn):not(.md-nav):not([class*="block"]) { transition: color 0.15s, text-shadow 0.2s, text-decoration-color 0.2s; }
@@ -744,7 +747,7 @@ tbody tr:hover .num { text-shadow: 0 0 14px color-mix(in srgb, var(--accent-2) 5
 .md-strip > * { animation: md-strip-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
 .md-strip > *:nth-child(2) { animation-delay: 80ms; } .md-strip > *:nth-child(3) { animation-delay: 160ms; }
 .md-strip > *:nth-child(4) { animation-delay: 240ms; } .md-strip > *:nth-child(n + 5) { animation-delay: 320ms; }
-@keyframes md-strip-in { from { opacity: 0; transform: translateY(-10px); filter: blur(4px); } }
+@keyframes md-strip-in { from { transform: translateY(-10px); } } /* no fade or blur: figures stay readable */
 .md-bottomnav { backdrop-filter: blur(18px) saturate(1.4); background: color-mix(in srgb, var(--sidebar) 70%, transparent); }
 .md-bottomnav a { transition: color 0.2s, transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1.6); }
 .md-bottomnav a:active { transform: scale(0.9); }
