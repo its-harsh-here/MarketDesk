@@ -549,4 +549,6 @@ Consequential choices, newest last. Routine choices live in code comments.
     when a panel that was built off screen enters); header underline and light sweep; pointer tilt on small cards;
     button ripples; a loading beam while data is fetched; the price line drawn as a gradient-filled area that wipes
     in; figures in metric tiles count up over 0.75 s and always end on the exact value; floating empty-state icons. A
-    scroll-linked blur reveal was tried and rejected because panels at the fold stayed blurred until scrolled.
+    scroll-linked blur reveal was tried and rejected because panels at the fold stayed blurred until scrolled. CI fixes (14 Nov): the header light sweep moves as a background inside its own box (a positioned band that slid
+    past the edge widened the page while it ran), and pills, market-strip items and arrows enter without fading,
+    so their text never has reduced contrast.
