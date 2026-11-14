@@ -1,6 +1,7 @@
 import {
   AreaSeries,
   CandlestickSeries,
+  createSeriesMarkers,
   ColorType,
   CrosshairMode,
   HistogramSeries,
@@ -8,6 +9,8 @@ import {
   TickMarkType,
   createChart,
   type IChartApi,
+  type ISeriesMarkersPluginApi,
+  type SeriesMarker,
   type ISeriesApi,
   type MouseEventParams,
   type SeriesType,
@@ -93,6 +96,27 @@ function hexAlpha(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+export type ChartEventKind = "dividend" | "split" | "results";
+export interface ChartEvent {
+  date: string; // YYYY-MM-DD (exchange date)
+  kind: ChartEventKind;
+  label: string;
+}
+export const EVENT_LETTER: Record<ChartEventKind, string> = { dividend: "D", split: "S", results: "R" };
+
+/** Each event on the first bar on or after its date; events outside the bars shown are left out (sorted by date). */
+export function placeEvents(events: ChartEvent[], bars: CleanBar[]): { bar: CleanBar; event: ChartEvent }[] {
+  if (!bars.length) return [];
+  const last = bars[bars.length - 1].time.slice(0, 10);
+  const out: { bar: CleanBar; event: ChartEvent }[] = [];
+  for (const event of [...events].sort((a, b) => a.date.localeCompare(b.date))) {
+    if (event.date < bars[0].time.slice(0, 10) || event.date > last) continue;
+    const bar = bars.find((b) => b.time.slice(0, 10) >= event.date);
+    if (bar) out.push({ bar, event });
+  }
+  return out;
+}
+
 export function PriceChart({
   bars,
   kind,
@@ -103,6 +127,7 @@ export function PriceChart({
   resetSignal,
   indicators = [],
   timeZone,
+  events = [],
 }: {
   bars: CleanBar[];
   kind: ChartKind;
@@ -114,12 +139,15 @@ export function PriceChart({
   indicators?: IndicatorKey[];
   /** Set for intraday bars: axis, crosshair and legend show clock times in this zone. */
   timeZone?: string;
+  /** Dated events drawn as markers on the bar on or after their date (daily, weekly or monthly bars). */
+  events?: ChartEvent[];
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const priceRef = useRef<ISeriesApi<SeriesType> | null>(null);
   const volRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const indRef = useRef<ISeriesApi<SeriesType>[]>([]);
+  const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
   const [hover, setHover] = useState<CleanBar | null>(null);
   // Width of the plot area (chart minus the price axis), so the legend never runs under the axis labels.
   const [plotWidth, setPlotWidth] = useState(0);
@@ -205,6 +233,8 @@ export function PriceChart({
     const chart = chartRef.current;
     if (!chart) return;
     const p = palette();
+    markersRef.current?.detach();
+    markersRef.current = null;
     if (priceRef.current) {
       chart.removeSeries(priceRef.current);
       priceRef.current = null;
@@ -245,6 +275,17 @@ export function PriceChart({
         host.classList.add("fx-chart-in");
       }
       priceRef.current = s as unknown as ISeriesApi<SeriesType>;
+    }
+    if (events.length && !timeZone && priceRef.current) {
+      const marks = placeEvents(events, bars).map(({ bar, event }): SeriesMarker<Time> => ({
+        time: chartTime(bar.time),
+        position: event.kind === "dividend" ? "belowBar" : "aboveBar",
+        shape: event.kind === "split" ? "square" : event.kind === "results" ? "arrowDown" : "circle",
+        color: event.kind === "dividend" ? p.pos : event.kind === "split" ? p.a1 : p.info,
+        text: EVENT_LETTER[event.kind],
+        size: 1,
+      }));
+      if (marks.length) markersRef.current = createSeriesMarkers(priceRef.current, marks);
     }
     if (showVolume && bars.some((b) => b.volume)) {
       const v = chart.addSeries(HistogramSeries, { priceScaleId: "vol", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
@@ -297,7 +338,7 @@ export function PriceChart({
     for (let i = 1; i < chart.panes().length; i++) chart.panes()[i].setHeight(Math.round(height * 0.22));
     chart.priceScale("right").applyOptions({ scaleMargins: { top: 0.08, bottom: showVolume ? 0.22 : 0.08 } });
     chart.timeScale().fitContent();
-  }, [bars, kind, showVolume, theme, indicators, height]);
+  }, [bars, kind, showVolume, theme, indicators, height, events, timeZone]);
 
   useEffect(() => {
     chartRef.current?.timeScale().fitContent();

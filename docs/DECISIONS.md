@@ -553,3 +553,8 @@ Consequential choices, newest last. Routine choices live in code comments.
     past the edge widened the page while it ran), and pills, market-strip items and arrows enter without fading,
     so their text never has reduced contrast. Live check after merge: the sign-in card's continuous float made Sign in a moving
     target that automated clicks could not press; the card now only animates in (journey added).
+85. **Event markers on price charts (15 Nov 2026, terminal roadmap GP/HP).** Dividends and splits (provider corporate
+    actions) and results releases (SEC filings, US filers) are drawn on the price line: D below, S and R above, each on
+    the first bar on or after its date so weekly and monthly bars carry them too. Hidden on intraday ranges and in the
+    table view; a per-browser toggle; a text list of the events in the shown range under the chart (also the
+    accessible alternative). Markers use lightweight-charts 5.2.1 `createSeriesMarkers`.

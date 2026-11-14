@@ -1256,3 +1256,23 @@ test("sign-in: the card settles after its entrance, so Sign in can be pressed an
   await expect.poll(() => sent).toEqual({ username: "owner", password: "not-the-password" });
   await expect(page.getByRole("alert").getByText("Incorrect username or password.")).toBeVisible(); // the app's own wording for a 401
 });
+
+test("chart events: dividends are marked on the price chart, listed under it, and can be hidden", async ({ page }) => {
+  await page.goto("/instrument/SX%3AAURORA?tab=chart");
+  await ready(page);
+  // the first chart panel on the page: the one whose toolbar holds the markers toggle
+  const chart = page.getByRole("region").filter({ has: page.getByRole("button", { name: /event markers/ }) }).first();
+  await chart.getByRole("radio", { name: "1Y" }).click();
+  const list = chart.getByLabel("Events on the chart");
+  await expect(list).toContainText(/D 12 Jun 2026 dividend/i); // the sample dataset pays INR 4 every June
+  await chart.getByRole("button", { name: "Hide event markers" }).click();
+  await expect(list).toHaveCount(0);
+  await expect(chart.getByRole("button", { name: "Show event markers" })).toHaveAttribute("aria-pressed", "false");
+  await page.reload();
+  const again = page.getByRole("region").filter({ has: page.getByRole("button", { name: /event markers/ }) }).first();
+  await expect(again.getByRole("button", { name: "Show event markers" })).toBeVisible(); // the choice is remembered
+  await again.getByRole("button", { name: "Show event markers" }).click();
+  await again.getByRole("radio", { name: "1D" }).click();
+  await expect(again.getByRole("button", { name: /event markers/ })).toBeDisabled(); // daily, weekly and monthly only
+});
+
