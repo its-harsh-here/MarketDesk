@@ -1238,3 +1238,21 @@ test("alerts: delivery panel lists the inbox as on and Telegram as off until con
   await expect(panel.getByText(/Telegram delivery is not configured/)).toBeVisible();
   await expect(panel.getByText("This device")).toBeVisible();
 });
+
+test("sign-in: the card settles after its entrance, so Sign in can be pressed and sends the login", async ({ page }) => {
+  // The fixture server runs with the development sign-in bypass; answer the session check as "signed out" so the
+  // sign-in page shows. Regression: a continuously floating card made Sign in a moving target that never settled.
+  await page.route("**/api/auth/session", (r) => r.fulfill({ json: { authenticated: false, read_only: false, csrf_token: "t" } }));
+  let sent: Record<string, unknown> | null = null;
+  await page.route("**/api/auth/login", async (r) => {
+    sent = r.request().postDataJSON();
+    await r.fulfill({ status: 401, json: { error: { code: "invalid_credentials", message: "Wrong username or password." } } });
+  });
+  await page.goto("/");
+  await page.waitForTimeout(2000); // past the entrance animation, when a person would press the button
+  await page.getByLabel("Username").fill("owner");
+  await page.getByLabel("Password").fill("not-the-password");
+  await page.getByRole("button", { name: "Sign in" }).click({ timeout: 5000 }); // waits for the button to be still
+  await expect.poll(() => sent).toEqual({ username: "owner", password: "not-the-password" });
+  await expect(page.getByRole("alert").getByText("Incorrect username or password.")).toBeVisible(); // the app's own wording for a 401
+});
