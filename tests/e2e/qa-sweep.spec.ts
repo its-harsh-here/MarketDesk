@@ -67,9 +67,29 @@ function watch(page: Page, view: () => string, width: number) {
   });
 }
 
+/**
+ * Waits until every one-off animation on the page has finished (entrance fades, count-ups, wipes), so checks such as
+ * colour contrast judge the settled page people read, not a frame of a fade-in. Endless decorative loops (aurora,
+ * beams) and scroll-linked effects are not waited for; nothing is turned off.
+ */
+async function settled(page: Page) {
+  await page.evaluate(async () => {
+    const finite = () => document.getAnimations().filter((a) => {
+      const t = a.effect?.getComputedTiming();
+      // time-based only: scroll-linked effects (parallax, progress line) follow scrolling and never "finish"
+      return a.playState === "running" && a.timeline instanceof DocumentTimeline && t !== undefined && t.endTime !== Infinity;
+    });
+    const deadline = performance.now() + 5000;
+    while (finite().length && performance.now() < deadline) {
+      await Promise.race([Promise.allSettled(finite().map((a) => a.finished)), new Promise((r) => setTimeout(r, 250))]);
+    }
+  });
+}
+
 async function audit(page: Page, name: string, width: number, opts: { fullPage?: boolean; dialog?: boolean } = {}) {
   await page.waitForLoadState("networkidle").catch(() => undefined);
   await page.waitForTimeout(600);
+  await settled(page);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   if (overflow > 0) findings.push({ view: name, width, kind: "overflow", detail: `${overflow}px horizontal overflow` });
   fs.mkdirSync(`${OUT}/${width}`, { recursive: true });

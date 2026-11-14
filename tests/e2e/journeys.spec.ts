@@ -9,6 +9,25 @@ test.describe.configure({ mode: "serial" });
 const MOD = process.platform === "darwin" ? "Meta" : "Control";
 
 /** The shell (and its global key handler) is mounted once the topbar search button exists. */
+/**
+ * Waits until every one-off animation on the page has finished (entrance fades, count-ups, wipes), so checks such as
+ * colour contrast judge the settled page people read, not a frame of a fade-in. Endless decorative loops (aurora,
+ * beams) and scroll-linked effects are not waited for; nothing is turned off.
+ */
+async function settled(page: Page) {
+  await page.evaluate(async () => {
+    const finite = () => document.getAnimations().filter((a) => {
+      const t = a.effect?.getComputedTiming();
+      // time-based only: scroll-linked effects (parallax, progress line) follow scrolling and never "finish"
+      return a.playState === "running" && a.timeline instanceof DocumentTimeline && t !== undefined && t.endTime !== Infinity;
+    });
+    const deadline = performance.now() + 5000;
+    while (finite().length && performance.now() < deadline) {
+      await Promise.race([Promise.allSettled(finite().map((a) => a.finished)), new Promise((r) => setTimeout(r, 250))]);
+    }
+  });
+}
+
 async function ready(page: Page) {
   await expect(page.getByRole("button", { name: /Search symbols, pages and actions/ })).toBeVisible();
 }
@@ -880,6 +899,7 @@ test("accessibility: no serious or critical WCAG 2.1 A/AA violations on the main
     await page.goto(url);
     await ready(page);
     await page.waitForLoadState("networkidle").catch(() => undefined);
+    await settled(page);
     const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
     for (const v of results.violations) {
       if (v.impact === "serious" || v.impact === "critical") problems.push(`${url}: ${v.id} (${v.impact}) ${v.nodes[0]?.target.join(" ")}`);
